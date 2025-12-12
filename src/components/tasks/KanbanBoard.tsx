@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Task, TaskStatus, STATUS_COLUMNS } from '../../types/project';
@@ -150,31 +150,17 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
   tasks,
   columns = ['todo', 'in_progress', 'in_review', 'done'],
 }) => {
-  const { updateTaskStatus, filters } = useProject();
+  const { filters, moveTask } = useProject(); // use moveTask from context
 
   // Filter tasks based on current filters
   const filteredTasks = tasks.filter(task => {
-    if (filters.search && !task.title.toLowerCase().includes(filters.search.toLowerCase())) {
-      return false;
-    }
-    if (filters.assignees.length > 0 && (!task.assignee || !filters.assignees.includes(task.assignee.id))) {
-      return false;
-    }
-    if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) {
-      return false;
-    }
-    if (filters.types.length > 0 && !filters.types.includes(task.type)) {
-      return false;
-    }
-    if (filters.labels.length > 0 && !task.labels.some(l => filters.labels.includes(l.id))) {
-      return false;
-    }
+    if (filters.search && !task.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.assignees.length > 0 && (!task.assignee || !filters.assignees.includes(task.assignee.id))) return false;
+    if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) return false;
+    if (filters.types.length > 0 && !filters.types.includes(task.type)) return false;
+    if (filters.labels.length > 0 && !task.labels.some(l => filters.labels.includes(l.id))) return false;
     return true;
   });
-
-  const moveTask = useCallback((taskId: string, toStatus: TaskStatus, _toIndex: number) => {
-    updateTaskStatus(taskId, toStatus);
-  }, [updateTaskStatus]);
 
   const activeColumns = STATUS_COLUMNS.filter(col => columns.includes(col.id));
 
@@ -192,7 +178,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
             name={column.name}
             color={column.color}
             tasks={columnTasks}
-            moveTask={moveTask}
+            moveTask={moveTask} // pass moveTask from context
           />
         );
       })}
