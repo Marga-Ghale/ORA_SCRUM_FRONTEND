@@ -83,17 +83,11 @@ const AppHeader: React.FC = () => {
             {/* Cross Icon */}
           </button>
 
-          <Link to="/" className="lg:hidden">
-            <img
-              className="dark:hidden"
-              src="./images/logo/logo.svg"
-              alt="Logo"
-            />
-            <img
-              className="hidden dark:block"
-              src="./images/logo/logo-dark.svg"
-              alt="Logo"
-            />
+          <Link to="/" className="lg:hidden flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white font-bold text-sm">
+              OS
+            </div>
+            <span className="font-bold text-gray-900 dark:text-white">ORA SCRUM</span>
           </Link>
 
           <button

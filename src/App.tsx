@@ -1,24 +1,20 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom"; // fixed import
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
-import UserProfiles from "./pages/UserProfiles";
-import Videos from "./pages/UiElements/Videos";
-import Images from "./pages/UiElements/Images";
-import Alerts from "./pages/UiElements/Alerts";
-import Badges from "./pages/UiElements/Badges";
-import Avatars from "./pages/UiElements/Avatars";
-import Buttons from "./pages/UiElements/Buttons";
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
 import Calendar from "./pages/Calendar";
-import BasicTables from "./pages/Tables/BasicTables";
-import FormElements from "./pages/Forms/FormElements";
-import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
-import Home from "./pages/Dashboard/Home";
 import setupLocatorUI from "@locator/runtime";
+
+// Project Management Pages
+import ProjectDashboard from "./pages/Dashboard/ProjectDashboard";
+import ProjectBoard from "./pages/Board/ProjectBoard";
+import Backlog from "./pages/Board/Backlog";
+import MyTasks from "./pages/MyTasks/MyTasks";
+import Team from "./pages/Team/Team";
+import Settings from "./pages/Settings/Settings";
+import UserProfiles from "./pages/UserProfiles";
 
 if (process.env.NODE_ENV === "development") {
   setupLocatorUI();
@@ -31,30 +27,25 @@ export default function App() {
       <Routes>
         {/* Dashboard Layout */}
         <Route element={<AppLayout />}>
-          <Route index path="/" element={<Home />} />
+          {/* Main Pages */}
+          <Route index path="/" element={<ProjectDashboard />} />
+          <Route path="/dashboard" element={<ProjectDashboard />} />
+          <Route path="/my-tasks" element={<MyTasks />} />
 
-          {/* Others Page */}
-          <Route path="/profile" element={<UserProfiles />} />
+          {/* Project Board Views */}
+          <Route path="/project/:projectId/board" element={<ProjectBoard />} />
+          <Route path="/board" element={<ProjectBoard />} />
+          <Route path="/backlog" element={<Backlog />} />
+
+          {/* Calendar */}
           <Route path="/calendar" element={<Calendar />} />
-          <Route path="/blank" element={<Blank />} />
 
-          {/* Forms */}
-          <Route path="/form-elements" element={<FormElements />} />
+          {/* Team & Settings */}
+          <Route path="/team" element={<Team />} />
+          <Route path="/settings" element={<Settings />} />
 
-          {/* Tables */}
-          <Route path="/basic-tables" element={<BasicTables />} />
-
-          {/* UI Elements */}
-          <Route path="/alerts" element={<Alerts />} />
-          <Route path="/avatars" element={<Avatars />} />
-          <Route path="/badge" element={<Badges />} />
-          <Route path="/buttons" element={<Buttons />} />
-          <Route path="/images" element={<Images />} />
-          <Route path="/videos" element={<Videos />} />
-
-          {/* Charts */}
-          <Route path="/line-chart" element={<LineChart />} />
-          <Route path="/bar-chart" element={<BarChart />} />
+          {/* User Profile */}
+          <Route path="/profile" element={<UserProfiles />} />
         </Route>
 
         {/* Auth Layout */}
