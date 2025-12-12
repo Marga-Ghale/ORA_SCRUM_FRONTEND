@@ -5,7 +5,7 @@ import PageMeta from '../../components/common/PageMeta';
 type SettingsTab = 'general' | 'members' | 'notifications' | 'integrations' | 'danger';
 
 const Settings: React.FC = () => {
-  const { currentProject, users } = useProject();
+  const { currentProject, users, setIsInviteMemberModalOpen } = useProject();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [projectName, setProjectName] = useState(currentProject?.name || '');
   const [projectKey, setProjectKey] = useState(currentProject?.key || '');
@@ -149,7 +149,10 @@ const Settings: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Team Members</h2>
-                  <button className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
+                  <button
+                    onClick={() => setIsInviteMemberModalOpen(true)}
+                    className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
                     Add Member
                   </button>
                 </div>

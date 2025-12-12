@@ -15,6 +15,8 @@ const ProjectBoard: React.FC = () => {
     filters,
     setFilters,
     users,
+    setIsCreateTaskModalOpen,
+    setCreateTaskInitialStatus,
   } = useProject();
 
   const [showFilters, setShowFilters] = useState(false);
@@ -50,7 +52,13 @@ const ProjectBoard: React.FC = () => {
 
           <div className="flex items-center gap-3">
             {/* Add Task Button */}
-            <button className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
+            <button
+              onClick={() => {
+                setCreateTaskInitialStatus('todo');
+                setIsCreateTaskModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
+            >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
