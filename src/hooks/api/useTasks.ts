@@ -185,12 +185,16 @@ export function useUpdateTask() {
 }
 
 // Update task status (optimistic update for drag & drop)
+
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
-      apiClient.patch<Task>(`/tasks/${id}`, { status }),
+    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => {
+      // Convert to uppercase for backend
+      const backendStatus = status.toUpperCase();
+      return apiClient.patch<Task>(`/tasks/${id}`, { status: backendStatus });
+    },
     onMutate: async ({ id, status }) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
@@ -222,7 +226,6 @@ export function useUpdateTaskStatus() {
     },
   });
 }
-
 // Delete task
 export function useDeleteTask() {
   const queryClient = useQueryClient();
