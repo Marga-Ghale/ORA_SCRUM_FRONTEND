@@ -43,6 +43,9 @@ interface ProjectContextType {
   currentSprint: Sprint | null;
   selectedTask: Task | null;
 
+  // All spaces (for sidebar)
+  allSpaces: Space[];
+
   // Loading states
   isInitializing: boolean;
   initError: string | null;
@@ -70,12 +73,12 @@ interface ProjectContextType {
   moveTask: (taskId: string, newStatus: TaskStatus, newIndex: number) => void;
 
   // Space operations
-  createSpace: (space: Omit<Space, 'id'>) => void;
+  createSpace: (spaceData: { name: string; color?: string; icon?: string }) => Promise<void>;
   updateSpace: (spaceId: string, updates: Partial<Space>) => void;
   deleteSpace: (spaceId: string) => void;
 
   // Project operations
-  createProject: (spaceId: string, project: Omit<Project, 'id'>) => void;
+  createProject: (spaceId: string, projectData: { name: string; key: string; description?: string }) => Promise<void>;
   updateProject: (projectId: string, updates: Partial<Project>) => void;
   deleteProject: (projectId: string) => void;
 
@@ -123,6 +126,9 @@ interface ProjectContextType {
   setIsCreateTaskModalOpen: (open: boolean) => void;
   createTaskInitialStatus: TaskStatus;
   setCreateTaskInitialStatus: (status: TaskStatus) => void;
+
+  // Refresh data
+  refreshSpaces: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -214,26 +220,6 @@ const mapBackendTask = (task: ApiTask): Task => {
   };
 };
 
-// Helper to convert API workspace to frontend format
-const mapApiWorkspace = (ws: ApiWorkspace): Workspace => ({
-  id: ws.id,
-  name: ws.name,
-  icon: '🏢',
-  spaces: [],
-  members: [],
-  createdAt: new Date(ws.createdAt),
-  updatedAt: new Date(ws.updatedAt),
-});
-
-// Helper to convert API space to frontend format
-const mapApiSpace = (space: ApiSpace): Space => ({
-  id: space.id,
-  name: space.name,
-  icon: '📁',
-  color: '#6366f1',
-  projects: [],
-});
-
 // Helper to convert API project to frontend format
 const mapApiProject = (project: ApiProject): Project => ({
   id: project.id,
@@ -246,6 +232,15 @@ const mapApiProject = (project: ApiProject): Project => ({
   members: [],
 });
 
+// Helper to convert API space to frontend format (with projects)
+const mapApiSpace = (space: ApiSpace, projects: Project[] = []): Space => ({
+  id: space.id,
+  name: space.name,
+  icon: '📁',
+  color: '#6366f1',
+  projects: projects,
+});
+
 export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
   
@@ -255,6 +250,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [currentSprint, setCurrentSprint] = useState<Sprint | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  
+  // All spaces for the current workspace
+  const [allSpaces, setAllSpaces] = useState<Space[]>([]);
   
   // Loading states
   const [isInitializing, setIsInitializing] = useState(false);
@@ -281,6 +279,43 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   
   const [users, setUsers] = useState<User[]>(mockUsers);
 
+  // Fetch all spaces with their projects for a workspace
+  const fetchSpacesWithProjects = useCallback(async (workspaceId: string): Promise<Space[]> => {
+    try {
+      const spaces = await apiClient.get<ApiSpace[]>(`/workspaces/${workspaceId}/spaces`);
+      console.log('[ProjectContext] Fetched spaces:', spaces.length);
+
+      // Fetch projects for each space
+      const spacesWithProjects = await Promise.all(
+        spaces.map(async (space) => {
+          try {
+            const projects = await apiClient.get<ApiProject[]>(`/spaces/${space.id}/projects`);
+            return mapApiSpace(space, projects.map(mapApiProject));
+          } catch {
+            console.log(`[ProjectContext] No projects found for space ${space.id}`);
+            return mapApiSpace(space, []);
+          }
+        })
+      );
+
+      return spacesWithProjects;
+    } catch {
+      console.log('[ProjectContext] No spaces found');
+      return [];
+    }
+  }, []);
+
+  // Refresh spaces (call this after creating a space)
+  const refreshSpaces = useCallback(async () => {
+    if (!currentWorkspace) return;
+    
+    const spaces = await fetchSpacesWithProjects(currentWorkspace.id);
+    setAllSpaces(spaces);
+    
+    // Update currentWorkspace with spaces
+    setCurrentWorkspace(prev => prev ? { ...prev, spaces } : null);
+  }, [currentWorkspace, fetchSpacesWithProjects]);
+
   // Initialize workspace/space/project from API when authenticated
   useEffect(() => {
     const initializeData = async () => {
@@ -288,6 +323,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         setCurrentWorkspace(null);
         setCurrentSpace(null);
         setCurrentProject(null);
+        setAllSpaces([]);
         setIsInitializing(false);
         return;
       }
@@ -316,51 +352,64 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
           });
           console.log('[ProjectContext] Created workspace:', workspace.id);
         }
-        setCurrentWorkspace(mapApiWorkspace(workspace));
 
-        // 2. Get spaces
-        let spaces: ApiSpace[] = [];
-        try {
-          spaces = await apiClient.get<ApiSpace[]>(`/workspaces/${workspace.id}/spaces`);
-          console.log('[ProjectContext] Found spaces:', spaces.length);
-        } catch {
-          console.log('[ProjectContext] No spaces found, will create one...');
-        }
+        // 2. Fetch ALL spaces with their projects
+        const spacesWithProjects = await fetchSpacesWithProjects(workspace.id);
+        setAllSpaces(spacesWithProjects);
 
-        let space: ApiSpace;
-        if (spaces.length > 0) {
-          space = spaces[0];
+        // Set workspace with spaces
+        const mappedWorkspace: Workspace = {
+          id: workspace.id,
+          name: workspace.name,
+          icon: '🏢',
+          spaces: spacesWithProjects,
+          members: [],
+          createdAt: new Date(workspace.createdAt),
+          updatedAt: new Date(workspace.updatedAt),
+        };
+        setCurrentWorkspace(mappedWorkspace);
+
+        // 3. Set current space (first one or create if none)
+        let activeSpace: Space;
+        if (spacesWithProjects.length > 0) {
+          activeSpace = spacesWithProjects[0];
         } else {
-          space = await apiClient.post<ApiSpace>(`/workspaces/${workspace.id}/spaces`, {
+          // Create a default space
+          const newSpace = await apiClient.post<ApiSpace>(`/workspaces/${workspace.id}/spaces`, {
             name: 'Engineering',
           });
-          console.log('[ProjectContext] Created space:', space.id);
+          activeSpace = mapApiSpace(newSpace, []);
+          setAllSpaces([activeSpace]);
+          setCurrentWorkspace(prev => prev ? { ...prev, spaces: [activeSpace] } : null);
         }
-        setCurrentSpace(mapApiSpace(space));
+        setCurrentSpace(activeSpace);
 
-        // 3. Get projects
-        let projects: ApiProject[] = [];
-        try {
-          projects = await apiClient.get<ApiProject[]>(`/spaces/${space.id}/projects`);
-          console.log('[ProjectContext] Found projects:', projects.length);
-        } catch {
-          console.log('[ProjectContext] No projects found, will create one...');
-        }
-
-        let project: ApiProject;
-        if (projects.length > 0) {
-          project = projects[0];
+        // 4. Set current project (first one from active space or create if none)
+        let activeProject: Project;
+        if (activeSpace.projects.length > 0) {
+          activeProject = activeSpace.projects[0];
         } else {
-          project = await apiClient.post<ApiProject>(`/spaces/${space.id}/projects`, {
+          // Create a default project
+          const newProject = await apiClient.post<ApiProject>(`/spaces/${activeSpace.id}/projects`, {
             name: 'My Project',
             key: 'PRJ',
           });
-          console.log('[ProjectContext] Created project:', project.id);
+          activeProject = mapApiProject(newProject);
+          
+          // Update the space with the new project
+          const updatedSpace = { ...activeSpace, projects: [activeProject] };
+          setCurrentSpace(updatedSpace);
+          setAllSpaces(prev => prev.map(s => s.id === activeSpace.id ? updatedSpace : s));
+          setCurrentWorkspace(prev => prev ? {
+            ...prev,
+            spaces: prev.spaces.map(s => s.id === activeSpace.id ? updatedSpace : s),
+          } : null);
         }
-        setCurrentProject(mapApiProject(project));
+        setCurrentProject(activeProject);
 
         console.log('[ProjectContext] ✅ Initialization complete!');
-        console.log('[ProjectContext] Project ID:', project.id, 'Key:', project.key);
+        console.log('[ProjectContext] Spaces loaded:', spacesWithProjects.length);
+        console.log('[ProjectContext] Current project:', activeProject.id, 'Key:', activeProject.key);
 
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to initialize workspace data';
@@ -372,7 +421,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
     initializeData();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, fetchSpacesWithProjects]);
 
   // Check if project ID is valid (UUID format)
   const isValidProjectId = currentProject?.id && 
@@ -417,68 +466,168 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     updateTaskStatus(taskId, newStatus);
   }, [updateTaskStatus]);
 
-  // Space operations
-  const createSpace = useCallback((spaceData: Omit<Space, 'id'>) => {
-    const newSpace: Space = { ...spaceData, id: `space-${Date.now()}` };
-    if (currentWorkspace) {
-      setCurrentWorkspace(prev => prev ? { ...prev, spaces: [...prev.spaces, newSpace] } : null);
+  // Space operations - NOW WITH API CALLS
+  const createSpace = useCallback(async (spaceData: { name: string; color?: string; icon?: string }) => {
+    if (!currentWorkspace) {
+      console.error('[ProjectContext] No workspace to create space in');
+      return;
+    }
+
+    try {
+      console.log('[ProjectContext] Creating space:', spaceData.name);
+      
+      // Create space via API
+      const newApiSpace = await apiClient.post<ApiSpace>(`/workspaces/${currentWorkspace.id}/spaces`, {
+        name: spaceData.name,
+      });
+      
+      const newSpace: Space = {
+        id: newApiSpace.id,
+        name: newApiSpace.name,
+        icon: spaceData.icon || '📁',
+        color: spaceData.color || '#6366f1',
+        projects: [],
+      };
+
+      console.log('[ProjectContext] Created space:', newSpace.id);
+
+      // Update local state
+      setAllSpaces(prev => [...prev, newSpace]);
+      setCurrentWorkspace(prev => prev ? { 
+        ...prev, 
+        spaces: [...prev.spaces, newSpace] 
+      } : null);
+      
+      // Set as current space
+      setCurrentSpace(newSpace);
+      
+    } catch (error) {
+      console.error('[ProjectContext] Failed to create space:', error);
+      throw error;
     }
   }, [currentWorkspace]);
 
   const updateSpace = useCallback((spaceId: string, updates: Partial<Space>) => {
-    if (currentWorkspace) {
-      setCurrentWorkspace(prev => prev ? { 
-        ...prev, 
-        spaces: prev.spaces.map(space => space.id === spaceId ? { ...space, ...updates } : space) 
-      } : null);
+    setAllSpaces(prev => prev.map(space => 
+      space.id === spaceId ? { ...space, ...updates } : space
+    ));
+    setCurrentWorkspace(prev => prev ? { 
+      ...prev, 
+      spaces: prev.spaces.map(space => space.id === spaceId ? { ...space, ...updates } : space) 
+    } : null);
+    if (currentSpace?.id === spaceId) {
+      setCurrentSpace(prev => prev ? { ...prev, ...updates } : null);
     }
-  }, [currentWorkspace]);
+  }, [currentSpace?.id]);
 
-  const deleteSpace = useCallback((spaceId: string) => {
-    if (currentWorkspace) {
+  const deleteSpace = useCallback(async (spaceId: string) => {
+    try {
+      // Delete via API
+      await apiClient.delete(`/spaces/${spaceId}`);
+      
+      // Update local state
+      setAllSpaces(prev => prev.filter(space => space.id !== spaceId));
       setCurrentWorkspace(prev => prev ? { 
         ...prev, 
         spaces: prev.spaces.filter(space => space.id !== spaceId) 
       } : null);
+      
+      if (currentSpace?.id === spaceId) {
+        // Switch to another space if available
+        const remainingSpaces = allSpaces.filter(s => s.id !== spaceId);
+        if (remainingSpaces.length > 0) {
+          setCurrentSpace(remainingSpaces[0]);
+          setCurrentProject(remainingSpaces[0].projects[0] || null);
+        } else {
+          setCurrentSpace(null);
+          setCurrentProject(null);
+        }
+      }
+    } catch (error) {
+      console.error('[ProjectContext] Failed to delete space:', error);
+      throw error;
     }
-    if (currentSpace?.id === spaceId) {
-      setCurrentSpace(null);
-      setCurrentProject(null);
-    }
-  }, [currentWorkspace, currentSpace?.id]);
+  }, [currentSpace?.id, allSpaces]);
 
-  // Project operations
-  const createProject = useCallback((spaceId: string, projectData: Omit<Project, 'id'>) => {
-    const newProject: Project = { ...projectData, id: `project-${Date.now()}` };
-    if (currentWorkspace) {
+  // Project operations - NOW WITH API CALLS
+  const createProject = useCallback(async (
+    spaceId: string, 
+    projectData: { name: string; key: string; description?: string }
+  ) => {
+    try {
+      console.log('[ProjectContext] Creating project:', projectData.name, 'in space:', spaceId);
+      
+      // Create project via API
+      const newApiProject = await apiClient.post<ApiProject>(`/spaces/${spaceId}/projects`, {
+        name: projectData.name,
+        key: projectData.key,
+        description: projectData.description,
+      });
+      
+      const newProject: Project = mapApiProject(newApiProject);
+      console.log('[ProjectContext] Created project:', newProject.id);
+
+      // Update local state
+      setAllSpaces(prev => prev.map(space => 
+        space.id === spaceId 
+          ? { ...space, projects: [...space.projects, newProject] }
+          : space
+      ));
       setCurrentWorkspace(prev => prev ? {
         ...prev,
         spaces: prev.spaces.map(space => 
-          space.id === spaceId ? { ...space, projects: [...space.projects, newProject] } : space
+          space.id === spaceId 
+            ? { ...space, projects: [...space.projects, newProject] }
+            : space
         ),
       } : null);
+      
+      // Update current space if it matches
+      if (currentSpace?.id === spaceId) {
+        setCurrentSpace(prev => prev ? { 
+          ...prev, 
+          projects: [...prev.projects, newProject] 
+        } : null);
+      }
+      
+      // Set as current project
+      setCurrentProject(newProject);
+      
+    } catch (error) {
+      console.error('[ProjectContext] Failed to create project:', error);
+      throw error;
     }
-  }, [currentWorkspace]);
+  }, [currentSpace?.id]);
 
   const updateProject = useCallback((projectId: string, updates: Partial<Project>) => {
-    if (currentWorkspace) {
-      setCurrentWorkspace(prev => prev ? {
-        ...prev,
-        spaces: prev.spaces.map(space => ({ 
-          ...space, 
-          projects: space.projects.map(project => 
-            project.id === projectId ? { ...project, ...updates } : project
-          ) 
-        })),
-      } : null);
-    }
+    setAllSpaces(prev => prev.map(space => ({
+      ...space,
+      projects: space.projects.map(project => 
+        project.id === projectId ? { ...project, ...updates } : project
+      ),
+    })));
+    setCurrentWorkspace(prev => prev ? {
+      ...prev,
+      spaces: prev.spaces.map(space => ({ 
+        ...space, 
+        projects: space.projects.map(project => 
+          project.id === projectId ? { ...project, ...updates } : project
+        ) 
+      })),
+    } : null);
     if (currentProject?.id === projectId) {
       setCurrentProject(prev => prev ? { ...prev, ...updates } : null);
     }
-  }, [currentWorkspace, currentProject?.id]);
+  }, [currentProject?.id]);
 
-  const deleteProject = useCallback((projectId: string) => {
-    if (currentWorkspace) {
+  const deleteProject = useCallback(async (projectId: string) => {
+    try {
+      await apiClient.delete(`/projects/${projectId}`);
+      
+      setAllSpaces(prev => prev.map(space => ({
+        ...space,
+        projects: space.projects.filter(project => project.id !== projectId),
+      })));
       setCurrentWorkspace(prev => prev ? {
         ...prev,
         spaces: prev.spaces.map(space => ({ 
@@ -486,11 +635,17 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
           projects: space.projects.filter(project => project.id !== projectId) 
         })),
       } : null);
+      
+      if (currentProject?.id === projectId) {
+        setCurrentProject(null);
+      }
+    } catch (error) {
+      console.error('[ProjectContext] Failed to delete project:', error);
+      throw error;
     }
-    if (currentProject?.id === projectId) setCurrentProject(null);
-  }, [currentWorkspace, currentProject?.id]);
+  }, [currentProject?.id]);
 
-  // Sprint operations
+  // Sprint operations (unchanged - these are local for now)
   const createSprint = useCallback((sprintData: Omit<Sprint, 'id'>) => {
     const newSprint: Sprint = { ...sprintData, id: `sprint-${Date.now()}` };
     if (currentProject) {
@@ -524,7 +679,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     updateSprint(sprintId, { status: 'completed', endDate: new Date() }); 
   }, [updateSprint]);
 
-  // Member operations
+  // Member operations (unchanged)
   const inviteMember = useCallback((memberData: { email: string; name: string; role: User['role'] }) => {
     const newMember: User = { 
       id: `user-${Date.now()}`, 
@@ -573,6 +728,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     currentProject,
     currentSprint,
     selectedTask,
+    allSpaces,
     isInitializing,
     initError,
     tasks,
@@ -622,6 +778,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsCreateTaskModalOpen,
     createTaskInitialStatus,
     setCreateTaskInitialStatus,
+    refreshSpaces,
   };
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

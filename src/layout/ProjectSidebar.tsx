@@ -11,6 +11,7 @@ const ProjectSidebar: React.FC = () => {
     currentWorkspace,
     currentSpace,
     currentProject,
+    allSpaces, // Use allSpaces instead of currentWorkspace.spaces
     setCurrentSpace,
     setCurrentProject,
     setIsCreateSpaceModalOpen,
@@ -150,7 +151,7 @@ const ProjectSidebar: React.FC = () => {
         {showFull && (
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Spaces
+              Spaces ({allSpaces.length})
             </span>
             <button
               onClick={() => setIsCreateSpaceModalOpen(true)}
@@ -164,9 +165,9 @@ const ProjectSidebar: React.FC = () => {
           </div>
         )}
 
-        {/* Show spaces if workspace exists */}
-        {currentWorkspace?.spaces && currentWorkspace.spaces.length > 0 ? (
-          currentWorkspace.spaces.map(space => (
+        {/* Render ALL spaces */}
+        {allSpaces.length > 0 ? (
+          allSpaces.map(space => (
             <div key={space.id} className="mb-1">
               {/* Space Header */}
               <button
@@ -201,30 +202,41 @@ const ProjectSidebar: React.FC = () => {
                 )}
               </button>
 
-              {/* Projects */}
+              {/* Projects under this space */}
               {showFull && expandedSpaces.has(space.id) && (
                 <div className="ml-4 pl-3 border-l border-gray-800 mt-1">
-                  {space.projects.map(project => (
-                    <Link
-                      key={project.id}
-                      to={`/project/${project.id}/board`}
-                      onClick={() => setCurrentProject(project)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5
-                        ${currentProject?.id === project.id
-                          ? 'bg-brand-500/20 text-brand-400'
-                          : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                        }
-                      `}
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: project.color }}
-                      />
-                      <span className="truncate">{project.name}</span>
-                    </Link>
-                  ))}
+                  {space.projects.length > 0 ? (
+                    space.projects.map(project => (
+                      <Link
+                        key={project.id}
+                        to={`/project/${project.id}/board`}
+                        onClick={() => {
+                          setCurrentSpace(space);
+                          setCurrentProject(project);
+                        }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5
+                          ${currentProject?.id === project.id
+                            ? 'bg-brand-500/20 text-brand-400'
+                            : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                          }
+                        `}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: project.color }}
+                        />
+                        <span className="truncate">{project.name}</span>
+                        <span className="ml-auto text-xs opacity-60">{project.key}</span>
+                      </Link>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-500 px-3 py-2">No projects yet</p>
+                  )}
                   <button
-                    onClick={() => setIsCreateProjectModalOpen(true)}
+                    onClick={() => {
+                      setCurrentSpace(space);
+                      setIsCreateProjectModalOpen(true);
+                    }}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors w-full"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -237,67 +249,21 @@ const ProjectSidebar: React.FC = () => {
             </div>
           ))
         ) : (
-          // No spaces yet - show current space/project from API
-          currentSpace && (
-            <div className="mb-1">
+          <div className="px-3 py-4 text-center text-gray-500 text-sm">
+            <p>No spaces yet</p>
+            {showFull && (
               <button
-                onClick={() => toggleSpace(currentSpace.id)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors bg-gray-800
-                  ${!showFull ? 'justify-center' : ''}
-                `}
+                onClick={() => setIsCreateSpaceModalOpen(true)}
+                className="mt-2 text-brand-400 hover:text-brand-300"
               >
-                <span
-                  className="w-6 h-6 rounded flex items-center justify-center text-xs flex-shrink-0"
-                  style={{ backgroundColor: `${currentSpace.color}30`, color: currentSpace.color }}
-                >
-                  {currentSpace.icon || currentSpace.name[0]}
-                </span>
-                {showFull && (
-                  <>
-                    <span className="flex-1 text-left text-gray-200 truncate">{currentSpace.name}</span>
-                    <svg
-                      className={`w-4 h-4 text-gray-500 transition-transform ${expandedSpaces.has(currentSpace.id) ? 'rotate-90' : ''}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </>
-                )}
+                Create your first space
               </button>
-
-              {/* Current Project */}
-              {showFull && expandedSpaces.has(currentSpace.id) && currentProject && (
-                <div className="ml-4 pl-3 border-l border-gray-800 mt-1">
-                  <Link
-                    to={`/project/${currentProject.id}/board`}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 bg-brand-500/20 text-brand-400"
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: currentProject.color }}
-                    />
-                    <span className="truncate">{currentProject.name}</span>
-                    <span className="ml-auto text-xs opacity-60">{currentProject.key}</span>
-                  </Link>
-                  <button
-                    onClick={() => setIsCreateProjectModalOpen(true)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors w-full"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Add project</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )
+            )}
+          </div>
         )}
 
         {/* Add Space Button */}
-        {showFull && (
+        {showFull && allSpaces.length > 0 && (
           <button
             onClick={() => setIsCreateSpaceModalOpen(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors mt-2"
