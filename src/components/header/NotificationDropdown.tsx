@@ -1,101 +1,347 @@
 // src/components/header/NotificationDropdown.tsx
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { Dropdown } from "../ui/dropdown/Dropdown";
-import { DropdownItem } from "../ui/dropdown/DropdownItem";
-import { 
-  useNotifications, 
-  useNotificationCount, 
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { formatDistanceToNow } from 'date-fns';
+import { Dropdown } from '../ui/dropdown/Dropdown';
+import {
+  useNotifications,
+  useNotificationCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
   useClearAllNotifications,
-  Notification 
-} from "../../hooks/api/useNotifications";
-import { formatDistanceToNow } from "date-fns";
+  useDeleteNotification,
+  useNotificationSound,
+  useBrowserNotifications,
+  getNotificationConfig,
+  getNotificationLink,
+  groupNotificationsByDate,
+  Notification,
+  NotificationType,
+} from '../../hooks/api/useNotifications';
 
-// Notification type icons and colors
-const NOTIFICATION_CONFIG: Record<string, { icon: string; color: string; bgColor: string }> = {
-  TASK_ASSIGNED: { 
-    icon: '📋', 
-    color: 'text-blue-500', 
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30' 
-  },
-  TASK_UPDATED: { 
-    icon: '✏️', 
-    color: 'text-yellow-500', 
-    bgColor: 'bg-yellow-100 dark:bg-yellow-900/30' 
-  },
-  TASK_COMMENTED: { 
-    icon: '💬', 
-    color: 'text-green-500', 
-    bgColor: 'bg-green-100 dark:bg-green-900/30' 
-  },
-  SPRINT_STARTED: { 
-    icon: '🚀', 
-    color: 'text-purple-500', 
-    bgColor: 'bg-purple-100 dark:bg-purple-900/30' 
-  },
-  SPRINT_COMPLETED: { 
-    icon: '✅', 
-    color: 'text-green-500', 
-    bgColor: 'bg-green-100 dark:bg-green-900/30' 
-  },
-  MENTION: { 
-    icon: '@', 
-    color: 'text-brand-500', 
-    bgColor: 'bg-brand-100 dark:bg-brand-900/30' 
-  },
-  DUE_DATE_REMINDER: { 
-    icon: '⏰', 
-    color: 'text-orange-500', 
-    bgColor: 'bg-orange-100 dark:bg-orange-900/30' 
-  },
-  PROJECT_INVITATION: { 
-    icon: '📁', 
-    color: 'text-indigo-500', 
-    bgColor: 'bg-indigo-100 dark:bg-indigo-900/30' 
-  },
-  WORKSPACE_INVITATION: { 
-    icon: '🏢', 
-    color: 'text-teal-500', 
-    bgColor: 'bg-teal-100 dark:bg-teal-900/30' 
-  },
+// ============================================
+// Notification Item Component
+// ============================================
+
+interface NotificationItemProps {
+  notification: Notification;
+  onRead: (id: string) => void;
+  onDelete: (id: string) => void;
+  onClick: (notification: Notification) => void;
+}
+
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onRead,
+  onDelete,
+  onClick,
+}) => {
+  const config = getNotificationConfig(notification.type);
+  const timeAgo = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true });
+  const [showActions, setShowActions] = useState(false);
+
+  return (
+    <div
+      className={`relative flex gap-3 rounded-lg p-3 transition-colors cursor-pointer group ${
+        !notification.read
+          ? 'bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+          : 'hover:bg-gray-100 dark:hover:bg-white/5'
+      }`}
+      onClick={() => onClick(notification)}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+    >
+      {/* Unread indicator */}
+      {!notification.read && (
+        <span className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500" />
+      )}
+
+      {/* Icon */}
+      <span
+        className={`flex items-center justify-center w-10 h-10 rounded-full ${config.bgColor} text-lg flex-shrink-0`}
+      >
+        {config.icon}
+      </span>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 dark:text-white/90 line-clamp-1">
+          {notification.title}
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">
+          {notification.message}
+        </p>
+        <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+          <span>{timeAgo}</span>
+          {notification.data?.taskKey && (
+            <>
+              <span className="w-1 h-1 bg-gray-400 rounded-full" />
+              <span className="font-mono text-brand-500">{notification.data.taskKey}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div
+        className={`flex items-start gap-1 transition-opacity ${
+          showActions ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        {!notification.read && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRead(notification.id);
+            }}
+            className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            title="Mark as read"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
+        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(notification.id);
+          }}
+          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+          title="Delete"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
 };
 
-function getNotificationConfig(type: string) {
-  return NOTIFICATION_CONFIG[type] || NOTIFICATION_CONFIG.TASK_ASSIGNED;
+// ============================================
+// Notification Group Component
+// ============================================
+
+interface NotificationGroupProps {
+  title: string;
+  notifications: Notification[];
+  onRead: (id: string) => void;
+  onDelete: (id: string) => void;
+  onClick: (notification: Notification) => void;
 }
 
-function getNotificationLink(notification: Notification): string {
-  const data = notification.data;
-  if (data?.taskId && data?.projectId) {
-    return `/project/${data.projectId}/board?task=${data.taskId}`;
-  }
-  if (data?.projectId) {
-    return `/project/${data.projectId}/board`;
-  }
-  if (data?.sprintId) {
-    return `/sprints/${data.sprintId}`;
-  }
-  if (data?.workspaceId) {
-    return `/workspace/${data.workspaceId}`;
-  }
-  return '/';
+const NotificationGroup: React.FC<NotificationGroupProps> = ({
+  title,
+  notifications,
+  onRead,
+  onDelete,
+  onClick,
+}) => {
+  if (notifications.length === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <h6 className="px-3 mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        {title}
+      </h6>
+      <div className="space-y-1">
+        {notifications.map((notification) => (
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            onRead={onRead}
+            onDelete={onDelete}
+            onClick={onClick}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// Empty State Component
+// ============================================
+
+const EmptyState: React.FC = () => (
+  <div className="flex flex-col items-center justify-center py-12 text-center">
+    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+      <svg
+        className="w-8 h-8 text-gray-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+        />
+      </svg>
+    </div>
+    <p className="text-gray-600 dark:text-gray-300 font-medium">No notifications</p>
+    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-[200px]">
+      When you get notifications, they'll show up here
+    </p>
+  </div>
+);
+
+// ============================================
+// Loading Skeleton Component
+// ============================================
+
+const LoadingSkeleton: React.FC = () => (
+  <div className="space-y-3 p-2">
+    {Array.from({ length: 4 }).map((_, i) => (
+      <div key={i} className="flex gap-3 p-3 animate-pulse">
+        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+        <div className="flex-1">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-3/4" />
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mt-2" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+// ============================================
+// Filter Tabs Component
+// ============================================
+
+type FilterType = 'all' | 'unread' | 'tasks' | 'sprints' | 'invitations';
+
+interface FilterTabsProps {
+  activeFilter: FilterType;
+  onChange: (filter: FilterType) => void;
+  counts: {
+    all: number;
+    unread: number;
+    tasks: number;
+    sprints: number;
+    invitations: number;
+  };
 }
+
+const FilterTabs: React.FC<FilterTabsProps> = ({ activeFilter, onChange, counts }) => {
+  const tabs: { id: FilterType; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'unread', label: 'Unread' },
+    { id: 'tasks', label: 'Tasks' },
+    { id: 'sprints', label: 'Sprints' },
+    { id: 'invitations', label: 'Invites' },
+  ];
+
+  return (
+    <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-x-auto">
+      {tabs.map((tab) => {
+        const count = counts[tab.id];
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+              activeFilter === tab.id
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            {tab.label}
+            {count > 0 && (
+              <span
+                className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeFilter === tab.id
+                    ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                {count > 99 ? '99+' : count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// ============================================
+// Main Component
+// ============================================
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const navigate = useNavigate();
+  const previousUnreadCount = useRef<number>(0);
 
   // API hooks
-  const { data: notifications = [], isLoading } = useNotifications();
+  const { data: notifications = [], isLoading } = useNotifications({ enabled: isOpen });
   const { data: countData } = useNotificationCount();
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
   const clearAll = useClearAllNotifications();
+  const deleteNotification = useDeleteNotification();
+  const { playSound } = useNotificationSound();
+  const { showNotification: showBrowserNotification, hasPermission } = useBrowserNotifications();
 
   const unreadCount = countData?.unread || 0;
   const hasUnread = unreadCount > 0;
+
+  // Play sound and show browser notification for new notifications
+  useEffect(() => {
+    if (unreadCount > previousUnreadCount.current && previousUnreadCount.current > 0) {
+      playSound();
+      if (hasPermission()) {
+        showBrowserNotification('New Notification', {
+          body: 'You have a new notification in ORA Scrum',
+        });
+      }
+    }
+    previousUnreadCount.current = unreadCount;
+  }, [unreadCount, playSound, showBrowserNotification, hasPermission]);
+
+  // Filter notifications
+  const getFilteredNotifications = (): Notification[] => {
+    switch (activeFilter) {
+      case 'unread':
+        return notifications.filter((n) => !n.read);
+      case 'tasks':
+        return notifications.filter((n) =>
+          ['TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMMENTED', 'TASK_STATUS_CHANGED', 'TASK_DUE_SOON', 'TASK_OVERDUE', 'TASK_CREATED', 'TASK_DELETED'].includes(n.type)
+        );
+      case 'sprints':
+        return notifications.filter((n) =>
+          ['SPRINT_STARTED', 'SPRINT_COMPLETED', 'SPRINT_ENDING'].includes(n.type)
+        );
+      case 'invitations':
+        return notifications.filter((n) =>
+          ['PROJECT_INVITATION', 'WORKSPACE_INVITATION'].includes(n.type)
+        );
+      default:
+        return notifications;
+    }
+  };
+
+  // Calculate filter counts
+  const filterCounts = {
+    all: notifications.length,
+    unread: notifications.filter((n) => !n.read).length,
+    tasks: notifications.filter((n) =>
+      ['TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMMENTED', 'TASK_STATUS_CHANGED', 'TASK_DUE_SOON', 'TASK_OVERDUE', 'TASK_CREATED', 'TASK_DELETED'].includes(n.type)
+    ).length,
+    sprints: notifications.filter((n) =>
+      ['SPRINT_STARTED', 'SPRINT_COMPLETED', 'SPRINT_ENDING'].includes(n.type)
+    ).length,
+    invitations: notifications.filter((n) =>
+      ['PROJECT_INVITATION', 'WORKSPACE_INVITATION'].includes(n.type)
+    ).length,
+  };
+
+  const filteredNotifications = getFilteredNotifications();
+  const groupedNotifications = groupNotificationsByDate(filteredNotifications);
 
   const toggleDropdown = () => setIsOpen(!isOpen);
   const closeDropdown = () => setIsOpen(false);
@@ -105,11 +351,19 @@ export default function NotificationDropdown() {
     if (!notification.read) {
       await markAsRead.mutateAsync(notification.id);
     }
-    
+
     // Navigate to relevant page
     const link = getNotificationLink(notification);
     navigate(link);
     closeDropdown();
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    await markAsRead.mutateAsync(id);
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteNotification.mutateAsync(id);
   };
 
   const handleMarkAllRead = async () => {
@@ -124,13 +378,15 @@ export default function NotificationDropdown() {
 
   return (
     <div className="relative">
+      {/* Trigger Button */}
       <button
-        className="relative flex items-center justify-center text-gray-500 transition-colors bg-white border border-gray-200 rounded-full dropdown-toggle hover:text-gray-700 h-11 w-11 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+        className="relative flex items-center justify-center text-gray-500 transition-colors bg-white border border-gray-200 rounded-full hover:text-gray-700 h-11 w-11 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
         onClick={toggleDropdown}
+        aria-label={`Notifications${hasUnread ? ` (${unreadCount} unread)` : ''}`}
       >
         {/* Notification badge */}
         {hasUnread && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-white bg-red-500 rounded-full">
+          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -150,136 +406,101 @@ export default function NotificationDropdown() {
         </svg>
       </button>
 
+      {/* Dropdown */}
       <Dropdown
         isOpen={isOpen}
         onClose={closeDropdown}
-        className="absolute -right-[240px] mt-[17px] flex h-[480px] w-[350px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark sm:w-[361px] lg:right-0"
+        className="absolute -right-[240px] mt-[17px] flex h-[560px] w-[380px] flex-col rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-dark sm:w-[400px] lg:right-0"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-              Notifications
-            </h5>
-            {hasUnread && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-600 rounded-full dark:bg-red-900/30 dark:text-red-400">
-                {unreadCount} new
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {hasUnread && (
+        <div className="flex-shrink-0 p-4 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                Notifications
+              </h5>
+              {hasUnread && (
+                <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-600 rounded-full dark:bg-red-900/30 dark:text-red-400">
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {hasUnread && (
+                <button
+                  onClick={handleMarkAllRead}
+                  disabled={markAllAsRead.isPending}
+                  className="text-xs text-brand-500 hover:text-brand-600 font-medium disabled:opacity-50 transition-colors"
+                >
+                  Mark all read
+                </button>
+              )}
               <button
-                onClick={handleMarkAllRead}
-                disabled={markAllAsRead.isPending}
-                className="text-xs text-brand-500 hover:text-brand-600 font-medium disabled:opacity-50"
+                onClick={toggleDropdown}
+                className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
-                Mark all read
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            )}
-            <button
-              onClick={toggleDropdown}
-              className="text-gray-500 transition dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            >
-              <svg
-                className="fill-current"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M6.21967 7.28131C5.92678 6.98841 5.92678 6.51354 6.21967 6.22065C6.51256 5.92775 6.98744 5.92775 7.28033 6.22065L11.999 10.9393L16.7176 6.22078C17.0105 5.92789 17.4854 5.92788 17.7782 6.22078C18.0711 6.51367 18.0711 6.98855 17.7782 7.28144L13.0597 12L17.7782 16.7186C18.0711 17.0115 18.0711 17.4863 17.7782 17.7792C17.4854 18.0721 17.0105 18.0721 16.7176 17.7792L11.999 13.0607L7.28033 17.7794C6.98744 18.0722 6.51256 18.0722 6.21967 17.7794C5.92678 17.4865 5.92678 17.0116 6.21967 16.7187L10.9384 12L6.21967 7.28131Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </button>
+            </div>
           </div>
+
+          {/* Filter Tabs */}
+          <FilterTabs
+            activeFilter={activeFilter}
+            onChange={setActiveFilter}
+            counts={filterCounts}
+          />
         </div>
 
-        {/* Notifications List */}
-        <ul className="flex flex-col h-auto overflow-y-auto custom-scrollbar flex-1">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           {isLoading ? (
-            // Loading skeleton
-            Array.from({ length: 4 }).map((_, i) => (
-              <li key={i} className="p-3 animate-pulse">
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-3/4" />
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                  </div>
-                </div>
-              </li>
-            ))
-          ) : notifications.length === 0 ? (
-            // Empty state
-            <li className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-              </div>
-              <p className="text-gray-500 dark:text-gray-400 font-medium">No notifications yet</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                We'll notify you when something happens
-              </p>
-            </li>
+            <LoadingSkeleton />
+          ) : filteredNotifications.length === 0 ? (
+            <EmptyState />
           ) : (
-            // Notification items
-            notifications.map((notification) => {
-              const config = getNotificationConfig(notification.type);
-              const timeAgo = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true });
-
-              return (
-                <li key={notification.id}>
-                  <DropdownItem
-                    onItemClick={() => handleNotificationClick(notification)}
-                    className={`flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 cursor-pointer transition-colors ${
-                      !notification.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
-                    }`}
-                  >
-                    {/* Icon */}
-                    <span className={`flex items-center justify-center w-10 h-10 rounded-full ${config.bgColor} text-lg flex-shrink-0`}>
-                      {config.icon}
-                    </span>
-
-                    {/* Content */}
-                    <span className="flex-1 min-w-0">
-                      <span className="mb-1 block text-theme-sm text-gray-500 dark:text-gray-400">
-                        <span className="font-medium text-gray-800 dark:text-white/90">
-                          {notification.title}
-                        </span>
-                      </span>
-                      <span className="block text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                        {notification.message}
-                      </span>
-                      <span className="flex items-center gap-2 mt-1.5 text-gray-500 text-theme-xs dark:text-gray-400">
-                        <span>{timeAgo}</span>
-                        {!notification.read && (
-                          <>
-                            <span className="w-1 h-1 bg-blue-500 rounded-full" />
-                            <span className="text-blue-500">New</span>
-                          </>
-                        )}
-                      </span>
-                    </span>
-                  </DropdownItem>
-                </li>
-              );
-            })
+            <div className="p-2">
+              <NotificationGroup
+                title="Today"
+                notifications={groupedNotifications.today}
+                onRead={handleMarkAsRead}
+                onDelete={handleDelete}
+                onClick={handleNotificationClick}
+              />
+              <NotificationGroup
+                title="Yesterday"
+                notifications={groupedNotifications.yesterday}
+                onRead={handleMarkAsRead}
+                onDelete={handleDelete}
+                onClick={handleNotificationClick}
+              />
+              <NotificationGroup
+                title="This Week"
+                notifications={groupedNotifications.thisWeek}
+                onRead={handleMarkAsRead}
+                onDelete={handleDelete}
+                onClick={handleNotificationClick}
+              />
+              <NotificationGroup
+                title="Older"
+                notifications={groupedNotifications.older}
+                onRead={handleMarkAsRead}
+                onDelete={handleDelete}
+                onClick={handleNotificationClick}
+              />
+            </div>
           )}
-        </ul>
+        </div>
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="flex items-center gap-2 pt-3 mt-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex-shrink-0 flex items-center gap-2 p-3 border-t border-gray-100 dark:border-gray-700">
             <Link
               to="/notifications"
               onClick={closeDropdown}
-              className="flex-1 px-4 py-2 text-sm font-medium text-center text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+              className="flex-1 px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
             >
               View All
             </Link>
