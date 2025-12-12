@@ -1,0 +1,13 @@
+# Migration Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install Prisma CLI
+RUN npm install -g prisma
+
+# Copy Prisma schema
+COPY prisma ./prisma/
+
+# Run migrations
+CMD ["prisma", "migrate", "deploy"]
