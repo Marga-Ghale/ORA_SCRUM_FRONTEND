@@ -1,4 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/query-client";
+
+
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -15,6 +19,9 @@ import MyTasks from "./pages/MyTasks/MyTasks";
 import Team from "./pages/Team/Team";
 import Settings from "./pages/Settings/Settings";
 import UserProfiles from "./pages/UserProfiles";
+import { AuthProvider } from "./components/UserProfile/AuthContext";
+import ProtectedRoute from "./components/Protected/ProtectedRoute";
+import GuestRoute from "./components/Protected/GuestRoute";
 
 if (process.env.NODE_ENV === "development") {
   setupLocatorUI();
@@ -22,39 +29,63 @@ if (process.env.NODE_ENV === "development") {
 
 export default function App() {
   return (
-    <Router>
-      <ScrollToTop />
-      <Routes>
-        {/* Dashboard Layout */}
-        <Route element={<AppLayout />}>
-          {/* Main Pages */}
-          <Route index path="/" element={<ProjectDashboard />} />
-          <Route path="/dashboard" element={<ProjectDashboard />} />
-          <Route path="/my-tasks" element={<MyTasks />} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router>
+          <ScrollToTop />
+          <Routes>
+            {/* Protected Routes with Dashboard Layout */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              {/* Main Pages */}
+              <Route index path="/" element={<ProjectDashboard />} />
+              <Route path="/dashboard" element={<ProjectDashboard />} />
+              <Route path="/my-tasks" element={<MyTasks />} />
 
-          {/* Project Board Views */}
-          <Route path="/project/:projectId/board" element={<ProjectBoard />} />
-          <Route path="/board" element={<ProjectBoard />} />
-          <Route path="/backlog" element={<Backlog />} />
+              {/* Project Board Views */}
+              <Route path="/project/:projectId/board" element={<ProjectBoard />} />
+              <Route path="/board" element={<ProjectBoard />} />
+              <Route path="/backlog" element={<Backlog />} />
 
-          {/* Calendar */}
-          <Route path="/calendar" element={<Calendar />} />
+              {/* Calendar */}
+              <Route path="/calendar" element={<Calendar />} />
 
-          {/* Team & Settings */}
-          <Route path="/team" element={<Team />} />
-          <Route path="/settings" element={<Settings />} />
+              {/* Team & Settings */}
+              <Route path="/team" element={<Team />} />
+              <Route path="/settings" element={<Settings />} />
 
-          {/* User Profile */}
-          <Route path="/profile" element={<UserProfiles />} />
-        </Route>
+              {/* User Profile */}
+              <Route path="/profile" element={<UserProfiles />} />
+            </Route>
 
-        {/* Auth Layout */}
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
+            {/* Guest Only Routes (redirect to dashboard if logged in) */}
+            <Route
+              path="/signin"
+              element={
+                <GuestRoute>
+                  <SignIn />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <GuestRoute>
+                  <SignUp />
+                </GuestRoute>
+              }
+            />
 
-        {/* Fallback Route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+            {/* Fallback Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

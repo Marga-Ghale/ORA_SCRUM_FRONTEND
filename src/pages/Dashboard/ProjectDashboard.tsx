@@ -1,20 +1,20 @@
-import React from 'react';
-import { Link } from 'react-router';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useProject } from '../../context/ProjectContext';
 import { STATUS_COLUMNS } from '../../types/project';
 import PageMeta from '../../components/common/PageMeta';
 import TaskCard from '../../components/tasks/TaskCard';
 import TaskDetailModal from '../../components/tasks/TaskDetailModal';
+import CreateTaskModal from '../../components/tasks/CreateTaskModal';
+import { useAuth } from '../../components/UserProfile/AuthContext';
 
 const ProjectDashboard: React.FC = () => {
   const { tasks, users } = useProject();
+  const { user } = useAuth();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Current user (mock)
-  const currentUserId = 'user-1';
-  const currentUser = users.find(u => u.id === currentUserId);
-
-  // Stats
-  const myTasks = tasks.filter(t => t.assignee?.id === currentUserId);
+  // Get user's tasks
+  const myTasks = tasks.filter(t => t.assignee?.id === user?.id);
   const recentTasks = [...tasks]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5);
@@ -46,7 +46,7 @@ const ProjectDashboard: React.FC = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold mb-1">
-                {getGreeting()}, {currentUser?.name.split(' ')[0]}! 👋
+                {getGreeting()}, {user?.name?.split(' ')[0] || 'User'}! 👋
               </h1>
               <p className="text-brand-100">
                 Here's what's happening with your projects today.
@@ -59,7 +59,10 @@ const ProjectDashboard: React.FC = () => {
               >
                 View Board
               </Link>
-              <button className="px-4 py-2 bg-white text-brand-600 hover:bg-brand-50 rounded-lg text-sm font-medium transition-colors">
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="px-4 py-2 bg-white text-brand-600 hover:bg-brand-50 rounded-lg text-sm font-medium transition-colors"
+              >
                 Create Task
               </button>
             </div>
@@ -75,7 +78,7 @@ const ProjectDashboard: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
               </div>
-              <span className="text-xs text-success-500 font-medium">+12%</span>
+              <span className="text-xs text-green-500 font-medium">+12%</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{tasks.length}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
@@ -152,17 +155,17 @@ const ProjectDashboard: React.FC = () => {
                   {recentTasks.map(task => (
                     <div key={task.id} className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                        {task.reporter.avatar ? (
+                        {task.reporter?.avatar ? (
                           <img src={task.reporter.avatar} alt="" className="w-8 h-8 rounded-full" />
                         ) : (
                           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                            {task.reporter.name.split(' ').map(n => n[0]).join('')}
+                            {task.reporter?.name?.split(' ').map(n => n[0]).join('') || '?'}
                           </span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-900 dark:text-white">
-                          <span className="font-medium">{task.reporter.name}</span>
+                          <span className="font-medium">{task.reporter?.name || 'Unknown'}</span>
                           {' updated '}
                           <span className="font-medium text-brand-500">{task.key}</span>
                         </p>
@@ -180,6 +183,11 @@ const ProjectDashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  {recentTasks.length === 0 && (
+                    <div className="text-center py-8 text-gray-400">
+                      <p>No recent activity</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -272,6 +280,11 @@ const ProjectDashboard: React.FC = () => {
                     </span>
                   </div>
                 ))}
+                {users.length === 0 && (
+                  <div className="text-center py-4 text-gray-400">
+                    <p>No team members</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -313,7 +326,12 @@ const ProjectDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Modals */}
       <TaskDetailModal />
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </>
   );
 };

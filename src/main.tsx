@@ -6,6 +6,7 @@ import "flatpickr/dist/flatpickr.css";
 import App from "./App.tsx";
 import { AppWrapper } from "./components/common/PageMeta.tsx";
 import { ThemeProvider } from "./context/ThemeContext.tsx";
+<<<<<<< Updated upstream
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -14,5 +15,22 @@ createRoot(document.getElementById("root")!).render(
         <App />
       </AppWrapper>
     </ThemeProvider>
+=======
+import { queryClient } from "./lib/query-client.ts";
+import { AuthProvider } from "./components/UserProfile/AuthContext.tsx";
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+        <AppWrapper>
+          <App />
+        </AppWrapper>
+        </AuthProvider>
+      </ThemeProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
+>>>>>>> Stashed changes
   </StrictMode>,
 );

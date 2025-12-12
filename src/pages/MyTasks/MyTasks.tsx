@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import TaskCard from '../../components/tasks/TaskCard';
 import TaskDetailModal from '../../components/tasks/TaskDetailModal';
+import CreateTaskModal from '../../components/tasks/CreateTaskModal';
 import PageMeta from '../../components/common/PageMeta';
 import { STATUS_COLUMNS, PRIORITY_CONFIG } from '../../types/project';
+import { useAuth } from '../../components/UserProfile/AuthContext';
 
 const MyTasks: React.FC = () => {
   const { tasks } = useProject();
+  const { user } = useAuth();
   const [groupBy, setGroupBy] = useState<'status' | 'priority' | 'dueDate'>('status');
   const [showCompleted, setShowCompleted] = useState(false);
-
-  // Current user (mock - would come from auth context in real app)
-  const currentUserId = 'user-1';
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Get user's tasks
-  const myTasks = tasks.filter(task => task.assignee?.id === currentUserId);
+  const myTasks = tasks.filter(task => task.assignee?.id === user?.id);
   const filteredTasks = showCompleted ? myTasks : myTasks.filter(t => t.status !== 'done');
 
   // Stats
@@ -124,7 +125,10 @@ const MyTasks: React.FC = () => {
               {myTasks.length} tasks assigned to you
             </p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
+          >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -220,7 +224,12 @@ const MyTasks: React.FC = () => {
         </div>
       </div>
 
+      {/* Modals */}
       <TaskDetailModal />
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </>
   );
 };
