@@ -214,7 +214,15 @@ const SprintSection: React.FC<SprintSectionProps> = ({
 };
 
 const BacklogContent: React.FC = () => {
-  const { tasks, openTaskModal } = useProject();
+  const {
+    tasks,
+    openTaskModal,
+    setIsCreateSprintModalOpen,
+    setIsCreateTaskModalOpen,
+    setCreateTaskInitialStatus,
+    startSprint,
+    completeSprint,
+  } = useProject();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['sprint-2', 'backlog']));
 
   // Mock sprints data
@@ -265,13 +273,22 @@ const BacklogContent: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-medium transition-colors">
+          <button
+            onClick={() => setIsCreateSprintModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-medium transition-colors"
+          >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <span>Create Sprint</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
+          <button
+            onClick={() => {
+              setCreateTaskInitialStatus('backlog');
+              setIsCreateTaskModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
+          >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>

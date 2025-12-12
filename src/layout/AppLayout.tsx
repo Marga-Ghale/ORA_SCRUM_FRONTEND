@@ -4,6 +4,7 @@ import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import ProjectSidebar from "./ProjectSidebar";
 import { ProjectProvider } from "../context/ProjectContext";
+import GlobalModals from "../components/modals/GlobalModals";
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
@@ -22,6 +23,8 @@ const LayoutContent: React.FC = () => {
           <Outlet />
         </div>
       </div>
+      {/* Global Modals */}
+      <GlobalModals />
     </div>
   );
 };
