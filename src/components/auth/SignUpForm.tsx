@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
@@ -9,6 +10,7 @@ import { useRegister } from "../../hooks/api/useAuth";
 export default function SignUpForm() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [error, setError] = useState("");
 
@@ -17,6 +19,7 @@ export default function SignUpForm() {
     lastName: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const { mutate: register, isPending } = useRegister();
@@ -27,26 +30,80 @@ export default function SignUpForm() {
     setError("");
   };
 
+  const validateForm = () => {
+    // Name validation
+    if (!formData.firstName.trim()) {
+      setError("First name is required");
+      return false;
+    }
+
+    if (!formData.lastName.trim()) {
+      setError("Last name is required");
+      return false;
+    }
+
+    // Email validation
+    if (!formData.email.trim()) {
+      setError("Email is required");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+
+    // Password validation
+    if (!formData.password) {
+      setError("Password is required");
+      return false;
+    }
+
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return false;
+    }
+
+    if (!/(?=.*[a-z])/.test(formData.password)) {
+      setError("Password must contain at least one lowercase letter");
+      return false;
+    }
+
+    if (!/(?=.*[A-Z])/.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter");
+      return false;
+    }
+
+    if (!/(?=.*\d)/.test(formData.password)) {
+      setError("Password must contain at least one number");
+      return false;
+    }
+
+    // Confirm password
+    if (!formData.confirmPassword) {
+      setError("Please confirm your password");
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return false;
+    }
+
+    // Terms acceptance
+    if (!isChecked) {
+      setError("You must accept the terms and conditions");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.firstName.trim() || !formData.lastName.trim()) {
-      setError("Please enter your full name");
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      setError("Please enter your email");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    if (!isChecked) {
-      setError("Please accept the terms and conditions");
+    if (!validateForm()) {
       return;
     }
 
@@ -58,10 +115,22 @@ export default function SignUpForm() {
       },
       {
         onSuccess: () => {
+          // Clear form
+          setFormData({
+            firstName: "",
+            lastName: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+          });
+          setIsChecked(false);
+          
+          // Navigate to dashboard
           navigate("/");
         },
         onError: (err: any) => {
-          setError(err.message || "Registration failed. Please try again.");
+          const errorMessage = err?.response?.data?.message || err?.message || "Registration failed. Please try again.";
+          setError(errorMessage);
         },
       }
     );
@@ -85,7 +154,7 @@ export default function SignUpForm() {
               Sign Up
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password to sign up!
+              Create your account to get started
             </p>
           </div>
           <div>
@@ -150,13 +219,17 @@ export default function SignUpForm() {
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 mb-4 text-sm text-red-600 bg-red-50 rounded-lg dark:bg-red-900/20 dark:text-red-400">
-                {error}
+              <div className="flex items-start gap-2 p-3 mb-4 text-sm text-red-600 bg-red-50 rounded-lg dark:bg-red-900/20 dark:text-red-400">
+                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span>{error}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit}>
               <div className="space-y-5">
+                {/* Name Fields */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div className="sm:col-span-1">
                     <Label>
@@ -168,7 +241,9 @@ export default function SignUpForm() {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleChange}
-                      placeholder="Enter your first name"
+                      placeholder="John"
+                      disabled={isPending}
+                    
                     />
                   </div>
                   <div className="sm:col-span-1">
@@ -181,10 +256,14 @@ export default function SignUpForm() {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleChange}
-                      placeholder="Enter your last name"
+                      placeholder="Doe"
+                      disabled={isPending}
+                    
                     />
                   </div>
                 </div>
+
+                {/* Email */}
                 <div>
                   <Label>
                     Email<span className="text-error-500">*</span>
@@ -195,9 +274,13 @@ export default function SignUpForm() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="Enter your email"
+                    placeholder="john.doe@example.com"
+                    disabled={isPending}
+                  
                   />
                 </div>
+
+                {/* Password */}
                 <div>
                   <Label>
                     Password<span className="text-error-500">*</span>
@@ -209,37 +292,86 @@ export default function SignUpForm() {
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
-                      placeholder="Enter your password"
+                      placeholder="••••••••"
+                      disabled={isPending}
+                    
                     />
-                    <span
+                    <button
+                      type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                      tabIndex={-1}
                     >
                       {showPassword ? (
                         <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
                       ) : (
                         <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
                       )}
-                    </span>
+                    </button>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    className="w-5 h-5"
-                    checked={isChecked}
-                    onChange={setIsChecked}
-                  />
-                  <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
-                    By creating an account means you agree to the{" "}
-                    <span className="text-gray-800 dark:text-white/90">
-                      Terms and Conditions,
-                    </span>{" "}
-                    and our{" "}
-                    <span className="text-gray-800 dark:text-white">
-                      Privacy Policy
-                    </span>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Must be at least 8 characters with uppercase, lowercase, and number
                   </p>
                 </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <Label>
+                    Confirm Password<span className="text-error-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      disabled={isPending}
+                    
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                      ) : (
+                        <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Terms Checkbox */}
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    className="w-5 h-5 mt-0.5 flex-shrink-0"
+                    checked={isChecked}
+                    onChange={setIsChecked}
+                    disabled={isPending}
+                  />
+                  <p className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                    By creating an account means you agree to the{" "}
+                    <Link 
+                      to="/terms" 
+                      className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline"
+                    >
+                      Terms and Conditions
+                    </Link>
+                    , and our{" "}
+                    <Link 
+                      to="/privacy" 
+                      className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </p>
+                </div>
+
+                {/* Submit Button */}
                 <div>
                   <button
                     type="submit"
@@ -267,7 +399,7 @@ export default function SignUpForm() {
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                           />
                         </svg>
-                        Signing up...
+                        Creating account...
                       </>
                     ) : (
                       "Sign Up"
@@ -282,7 +414,7 @@ export default function SignUpForm() {
                 Already have an account?{" "}
                 <Link
                   to="/signin"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline"
                 >
                   Sign In
                 </Link>
