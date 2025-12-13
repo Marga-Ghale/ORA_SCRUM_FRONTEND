@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/context/ProjectContext.tsx
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { Task, TaskStatus, Project, Space, Sprint, User, Workspace, Label } from '../types/project';
@@ -152,18 +153,23 @@ const mapStatusFromBackend = (status: string): TaskStatus => {
 
 // Helper to map backend task to frontend task format
 const mapBackendTask = (task: ApiTask): Task => {
-  const priorityMap: Record<string, Task['priority']> = {
-    'LOWEST': 'lowest',
-    'LOW': 'low',
-    'MEDIUM': 'medium',
-    'HIGH': 'high',
-    'HIGHEST': 'highest',
-    'lowest': 'lowest',
-    'low': 'low',
-    'medium': 'medium',
-    'high': 'high',
-    'highest': 'highest',
-  };
+ const priorityMap: Record<string, Task['priority']> = {
+  'URGENT': 'urgent',
+  'HIGH': 'high',
+  'MEDIUM': 'medium',
+  'LOW': 'low',
+  'NONE': 'none',
+  'urgent': 'urgent',
+  'high': 'high',
+  'medium': 'medium',
+  'low': 'low',
+  'none': 'none',
+  // Backwards compatibility (map lowest/highest to low/urgent)
+  'LOWEST': 'low',
+  'HIGHEST': 'urgent',
+  'lowest': 'low',
+  'highest': 'urgent',
+};
 
   const typeMap: Record<string, Task['type']> = {
     'EPIC': 'epic',

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/api/useNotifications.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api-client';
@@ -506,6 +507,7 @@ export function useNotificationSound() {
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // Audio not supported or blocked
       console.log('Notification sound not available');

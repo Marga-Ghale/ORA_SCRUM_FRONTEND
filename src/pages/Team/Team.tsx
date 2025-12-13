@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
+import { 
+  UserPlus, 
+  Search, 
+  Grid3x3, 
+  List,
+  MoreVertical,
+  MessageCircle,
+  Users as UsersIcon,
+} from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { User } from '../../types/project';
 import PageMeta from '../../components/common/PageMeta';
+import { useProjectUsers } from '../../hooks/useUser';
 
 interface TeamMemberCardProps {
   member: User;
@@ -69,9 +79,7 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
             View Profile
           </button>
           <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
+            <MessageCircle className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -80,7 +88,12 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
 };
 
 const Team: React.FC = () => {
-  const { users, tasks, currentWorkspace, setIsInviteMemberModalOpen } = useProject();
+  const { tasks, currentWorkspace, currentProject, setIsInviteMemberModalOpen } = useProject();
+  
+  // Fetch real users from project API
+  const { data: projectUsers } = useProjectUsers(currentProject?.id || '');
+  const users = projectUsers || [];
+  
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -113,44 +126,42 @@ const Team: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Team</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {users.length} members in {currentWorkspace.name}
+              {users.length} members in {currentWorkspace?.name || 'workspace'}
             </p>
           </div>
           <button
             onClick={() => setIsInviteMemberModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
+            <UserPlus className="w-4 h-4" />
             <span>Invite Member</span>
           </button>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2 h-2 rounded-full bg-success-500" />
               <span className="text-sm text-gray-500 dark:text-gray-400">Online</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.online}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2 h-2 rounded-full bg-warning-500" />
               <span className="text-sm text-gray-500 dark:text-gray-400">Busy</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.busy}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2 h-2 rounded-full bg-gray-400" />
               <span className="text-sm text-gray-500 dark:text-gray-400">Away</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.away}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2 h-2 rounded-full bg-gray-300" />
               <span className="text-sm text-gray-500 dark:text-gray-400">Offline</span>
@@ -164,9 +175,7 @@ const Team: React.FC = () => {
           <div className="flex items-center gap-3">
             {/* Search */}
             <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search members..."
@@ -199,9 +208,7 @@ const Team: React.FC = () => {
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
+              <Grid3x3 className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
@@ -211,9 +218,7 @@ const Team: React.FC = () => {
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
+              <List className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -279,7 +284,12 @@ const Team: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span
                           className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: member.status === 'online' ? '#10B981' : member.status === 'busy' ? '#F59E0B' : '#9CA3AF' }}
+                          style={{ 
+                            backgroundColor: 
+                              member.status === 'online' ? '#10B981' : 
+                              member.status === 'busy' ? '#F59E0B' : 
+                              member.status === 'away' ? '#6B7280' : '#9CA3AF' 
+                          }}
                         />
                         <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">{member.status}</span>
                       </div>
@@ -291,9 +301,7 @@ const Team: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
+                        <MoreVertical className="w-5 h-5" />
                       </button>
                     </td>
                   </tr>
@@ -305,9 +313,9 @@ const Team: React.FC = () => {
 
         {filteredMembers.length === 0 && (
           <div className="text-center py-12">
-            <svg className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <UsersIcon className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+            </div>
             <p className="text-gray-500 dark:text-gray-400">No team members found</p>
           </div>
         )}

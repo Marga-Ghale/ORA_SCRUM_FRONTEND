@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api-client';
 import { queryKeys } from '../../lib/query-client';
+import { TaskStatus, Priority as TaskPriority, TaskType } from '../../types/project';
 
-// Types
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done';
-export type TaskPriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
-export type TaskType = 'story' | 'task' | 'bug' | 'epic' | 'subtask';
+// Re-export for convenience
+export type { TaskStatus, TaskPriority, TaskType };
 
 export interface Task {
   id: string;
@@ -137,11 +136,12 @@ export function useSprintTasks(sprintId: string) {
 }
 
 // Get single task
-export function useTask(id: string) {
+export function useTask(id: string, options?: { enabled?: boolean; refetchOnMount?: boolean }) {
   return useQuery({
     queryKey: queryKeys.tasks.detail(id),
     queryFn: () => apiClient.get<Task>(`/tasks/${id}`),
-    enabled: !!id,
+    enabled: options?.enabled !== false && !!id,
+    refetchOnMount: options?.refetchOnMount,
   });
 }
 
@@ -175,8 +175,14 @@ export function useUpdateTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTaskData> }) =>
-      apiClient.put<Task>(`/tasks/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTaskData> }) => {
+      // Convert status to uppercase if present (for backend compatibility)
+      const normalizedData = { ...data };
+      if (normalizedData.status) {
+        normalizedData.status = normalizedData.status.toUpperCase() as TaskStatus;
+      }
+      return apiClient.put<Task>(`/tasks/${id}`, normalizedData);
+    },
     onSuccess: (task) => {
       queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
@@ -185,7 +191,6 @@ export function useUpdateTask() {
 }
 
 // Update task status (optimistic update for drag & drop)
-
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
 
@@ -226,6 +231,7 @@ export function useUpdateTaskStatus() {
     },
   });
 }
+
 // Delete task
 export function useDeleteTask() {
   const queryClient = useQueryClient();

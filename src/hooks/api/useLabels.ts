@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api-client';
 import { queryKeys } from '../../lib/query-client';
 
-// Types
 export interface Label {
   id: string;
   name: string;
@@ -19,7 +18,7 @@ export interface CreateLabelData {
 // Get labels for a project
 export function useLabels(projectId: string) {
   return useQuery({
-    queryKey: queryKeys.labels.list(projectId),
+    queryKey: queryKeys.labels?.list?.(projectId) || ['labels', projectId],
     queryFn: () => apiClient.get<Label[]>(`/projects/${projectId}/labels`),
     enabled: !!projectId,
   });
@@ -34,7 +33,7 @@ export function useCreateLabel() {
       apiClient.post<Label>(`/projects/${projectId}/labels`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.labels.list(variables.projectId)
+        queryKey: queryKeys.labels?.list?.(variables.projectId) || ['labels', variables.projectId]
       });
     },
   });
@@ -48,7 +47,7 @@ export function useUpdateLabel() {
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateLabelData> }) =>
       apiClient.put<Label>(`/labels/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.labels.all });
+      queryClient.invalidateQueries({ queryKey: ['labels'] });
     },
   });
 }
@@ -60,9 +59,34 @@ export function useDeleteLabel() {
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/labels/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.labels.all });
-      // Also invalidate tasks as they might reference this label
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: ['labels'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+// Add label to task
+export function useAddLabelToTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, labelId }: { taskId: string; labelId: string }) =>
+      apiClient.post(`/tasks/${taskId}/labels`, { labelId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+// Remove label from task
+export function useRemoveLabelFromTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, labelId }: { taskId: string; labelId: string }) =>
+      apiClient.delete(`/tasks/${taskId}/labels/${labelId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }

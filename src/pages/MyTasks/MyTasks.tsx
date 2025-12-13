@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Plus, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import TaskCard from '../../components/tasks/TaskCard';
 import TaskDetailModal from '../../components/tasks/TaskDetailModal';
@@ -127,36 +128,49 @@ const MyTasks: React.FC = () => {
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            <Plus className="w-4 h-4" />
             <span>Create Task</span>
           </button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <ClipboardList className="w-4 h-4 text-gray-400" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400">To Do</p>
-            <p className="text-2xl font-bold text-blue-500 mt-1">{stats.todo}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <ClipboardList className="w-4 h-4 text-blue-400" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">To Do</p>
+            </div>
+            <p className="text-2xl font-bold text-blue-500">{stats.todo}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400">In Progress</p>
-            <p className="text-2xl font-bold text-yellow-500 mt-1">{stats.inProgress}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-yellow-400" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">In Progress</p>
+            </div>
+            <p className="text-2xl font-bold text-yellow-500">{stats.inProgress}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Done</p>
-            <p className="text-2xl font-bold text-green-500 mt-1">{stats.done}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="w-4 h-4 text-green-400" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Done</p>
+            </div>
+            <p className="text-2xl font-bold text-green-500">{stats.done}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
-            <p className="text-2xl font-bold text-red-500 mt-1">{stats.overdue}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-red-400" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
+            </div>
+            <p className="text-2xl font-bold text-red-500">{stats.overdue}</p>
           </div>
         </div>
 
@@ -210,9 +224,9 @@ const MyTasks: React.FC = () => {
 
           {filteredTasks.length === 0 && (
             <div className="text-center py-16">
-              <svg className="w-20 h-20 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
+              <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                 {showCompleted ? 'No tasks found' : 'All caught up!'}
               </h3>

@@ -79,11 +79,11 @@ export interface Project {
   description?: string;
   icon?: string;
   color: string;
-  lead: User;
+  lead?: User;
   members: User[];
   sprints: Sprint[];
-  backlog: Task[];
-  createdAt: Date;
+  backlog?: Task[];
+  createdAt?: Date;
 }
 
 export interface Space {
@@ -98,8 +98,11 @@ export interface Workspace {
   id: string;
   name: string;
   logo?: string;
+  icon?: string;
   spaces: Space[];
   members: User[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Status configuration for Kanban columns
