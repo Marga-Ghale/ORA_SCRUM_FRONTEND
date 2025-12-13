@@ -1,6 +1,6 @@
 // src/components/header/NotificationDropdown.tsx
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Dropdown } from '../ui/dropdown/Dropdown';
 import {
@@ -16,8 +16,8 @@ import {
   getNotificationLink,
   groupNotificationsByDate,
   Notification,
-  NotificationType,
 } from '../../hooks/api/useNotifications';
+import { useWebSocket } from '../../hooks/api/useWebsocket';
 
 // ============================================
 // Notification Item Component
@@ -51,19 +51,16 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      {/* Unread indicator */}
       {!notification.read && (
         <span className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500" />
       )}
 
-      {/* Icon */}
       <span
         className={`flex items-center justify-center w-10 h-10 rounded-full ${config.bgColor} text-lg flex-shrink-0`}
       >
         {config.icon}
       </span>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 dark:text-white/90 line-clamp-1">
           {notification.title}
@@ -82,7 +79,6 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         </div>
       </div>
 
-      {/* Actions */}
       <div
         className={`flex items-start gap-1 transition-opacity ${
           showActions ? 'opacity-100' : 'opacity-0'
@@ -167,12 +163,7 @@ const NotificationGroup: React.FC<NotificationGroupProps> = ({
 const EmptyState: React.FC = () => (
   <div className="flex flex-col items-center justify-center py-12 text-center">
     <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-      <svg
-        className="w-8 h-8 text-gray-400"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
+      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -216,13 +207,7 @@ type FilterType = 'all' | 'unread' | 'tasks' | 'sprints' | 'invitations';
 interface FilterTabsProps {
   activeFilter: FilterType;
   onChange: (filter: FilterType) => void;
-  counts: {
-    all: number;
-    unread: number;
-    tasks: number;
-    sprints: number;
-    invitations: number;
-  };
+  counts: Record<FilterType, number>;
 }
 
 const FilterTabs: React.FC<FilterTabsProps> = ({ activeFilter, onChange, counts }) => {
@@ -278,8 +263,8 @@ export default function NotificationDropdown() {
   const previousUnreadCount = useRef<number>(0);
 
   // API hooks
-  const { data: notifications = [], isLoading } = useNotifications({ enabled: isOpen });
-  const { data: countData } = useNotificationCount();
+  const { data: notifications = [], isLoading, refetch } = useNotifications({ enabled: true });
+  const { data: countData, refetch: refetchCount } = useNotificationCount();
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
   const clearAll = useClearAllNotifications();
@@ -287,10 +272,30 @@ export default function NotificationDropdown() {
   const { playSound } = useNotificationSound();
   const { showNotification: showBrowserNotification, hasPermission } = useBrowserNotifications();
 
+  // WebSocket for real-time updates
+  const { isConnected } = useWebSocket({
+    onMessage: (message) => {
+      if (message.type === 'notification') {
+        // Refetch notifications when we receive a WebSocket notification
+        refetch();
+        refetchCount();
+        
+        // Play sound and show browser notification
+        playSound();
+        if (hasPermission()) {
+          const data = message.data as { title?: string; message?: string };
+          showBrowserNotification(data.title || 'New Notification', {
+            body: data.message || 'You have a new notification',
+          });
+        }
+      }
+    },
+  });
+
   const unreadCount = countData?.unread || 0;
   const hasUnread = unreadCount > 0;
 
-  // Play sound and show browser notification for new notifications
+  // Play sound for new notifications (polling fallback)
   useEffect(() => {
     if (unreadCount > previousUnreadCount.current && previousUnreadCount.current > 0) {
       playSound();
@@ -325,8 +330,7 @@ export default function NotificationDropdown() {
     }
   };
 
-  // Calculate filter counts
-  const filterCounts = {
+  const filterCounts: Record<FilterType, number> = {
     all: notifications.length,
     unread: notifications.filter((n) => !n.read).length,
     tasks: notifications.filter((n) =>
@@ -347,12 +351,9 @@ export default function NotificationDropdown() {
   const closeDropdown = () => setIsOpen(false);
 
   const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read if not already
     if (!notification.read) {
       await markAsRead.mutateAsync(notification.id);
     }
-
-    // Navigate to relevant page
     const link = getNotificationLink(notification);
     navigate(link);
     closeDropdown();
@@ -384,12 +385,20 @@ export default function NotificationDropdown() {
         onClick={toggleDropdown}
         aria-label={`Notifications${hasUnread ? ` (${unreadCount} unread)` : ''}`}
       >
-        {/* Notification badge */}
         {hasUnread && (
           <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
+        
+        {/* WebSocket connection indicator */}
+        <span
+          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${
+            isConnected ? 'bg-green-500' : 'bg-gray-400'
+          }`}
+          title={isConnected ? 'Real-time updates active' : 'Polling for updates'}
+        />
+        
         <svg
           className="fill-current"
           width="20"
@@ -446,7 +455,6 @@ export default function NotificationDropdown() {
             </div>
           </div>
 
-          {/* Filter Tabs */}
           <FilterTabs
             activeFilter={activeFilter}
             onChange={setActiveFilter}

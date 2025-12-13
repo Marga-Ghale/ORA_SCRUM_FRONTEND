@@ -490,29 +490,30 @@ export function useClearAllNotifications() {
 
 export function useNotificationSound() {
   const playSound = () => {
-    try {
-      // Create a simple notification sound using Web Audio API
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
-      // Audio not supported or blocked
-      console.log('Notification sound not available');
-    }
-  };
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a soft, pleasant ding
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Use a softer, higher frequency for a gentle "ding"
+    oscillator.frequency.value = 587.33; // D5 note
+    oscillator.type = 'sine';
+    
+    // Start very quiet and fade out quickly
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime); // Much quieter (was 0.3)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch (error) {
+    console.log('Could not play notification sound:', error);
+  }
+};
 
   return { playSound };
 }
