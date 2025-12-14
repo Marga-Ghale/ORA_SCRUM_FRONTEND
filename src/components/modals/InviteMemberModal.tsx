@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 // src/components/modals/InviteMemberModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
@@ -11,7 +12,11 @@ import { useProject } from '../../context/ProjectContext';
 interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
+  type: 'workspace' | 'project';  // Add this
+  targetId: string;
+  targetName: string;
 }
+
 
 type InviteRole = 'admin' | 'member' | 'guest';
 

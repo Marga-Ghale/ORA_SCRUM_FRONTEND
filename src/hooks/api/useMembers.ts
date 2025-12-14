@@ -25,6 +25,9 @@ export interface Member {
   user: MemberUser;
 }
 
+
+
+
 export interface WorkspaceMember extends Member {
   workspaceId: string;
 }
@@ -78,14 +81,7 @@ export interface SearchUserResult {
 // Workspace Members
 // ============================================
 
-export function useWorkspaceMembers(workspaceId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.workspaces.members(workspaceId!),
-    queryFn: () => apiClient.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`),
-    enabled: !!workspaceId,
-    staleTime: 30 * 1000,
-  });
-}
+
 
 export function useAddWorkspaceMember(workspaceId: string) {
   const queryClient = useQueryClient();
@@ -474,4 +470,26 @@ export function useAvailableMembers(workspaceId: string | undefined, projectId: 
     isLoading: isLoadingWorkspace || isLoadingProject,
     error: workspaceError || projectError,
   };
+}
+
+// ============================================
+// Hooks
+// ============================================
+
+/**
+ * Get all members of a workspace
+ */
+export function useWorkspaceMembers(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.workspaces.members(workspaceId || ''),
+    queryFn: async () => {
+      if (!workspaceId) return [];
+      const data = await apiClient.get<WorkspaceMember[]>(
+        `/workspaces/${workspaceId}/members`
+      );
+      return data || [];  // ← Remove .data
+    },
+    enabled: !!workspaceId,
+    staleTime: 60 * 1000,
+  });
 }

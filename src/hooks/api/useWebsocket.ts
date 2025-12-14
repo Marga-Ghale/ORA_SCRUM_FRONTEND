@@ -21,7 +21,18 @@ export type WebSocketEventType =
   | 'user_offline'
   | 'ping'
   | 'pong'
-  | 'ack';
+  | 'ack'
+  // Chat events
+  | 'chat_message'
+  | 'chat_message_updated'
+  | 'chat_message_deleted'
+  | 'chat_channel_created'
+  | 'chat_channel_updated'
+  | 'chat_channel_deleted'
+  | 'chat_member_added'
+  | 'chat_member_removed'
+  | 'chat_reaction_added'
+  | 'chat_reaction_removed';
 
 export interface WebSocketMessage {
   type: WebSocketEventType;
@@ -154,6 +165,74 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               wsRef.current.send(JSON.stringify({ action: 'pong' }));
             }
             break;
+            // Inside the switch (message.type) block:
+            
+
+            // Add to the switch (message.type) block in handleMessage:
+
+case 'chat_message':
+  // New message received
+  if (messageData.channelId) {
+    const channelId = messageData.channelId as string;
+    // Invalidate all message queries for this channel (partial match)
+    queryClient.invalidateQueries({
+      queryKey: ['chat', 'messages', channelId],
+    });
+    // Update unread counts
+    queryClient.invalidateQueries({ 
+      queryKey: queryKeys.chat.unreadCounts() 
+    });
+    // Update channels list (for last message preview)
+    queryClient.invalidateQueries({ 
+      queryKey: queryKeys.chat.channels() 
+    });
+  }
+  break;
+
+case 'chat_message_updated':
+  if (messageData.channelId) {
+    queryClient.invalidateQueries({
+      queryKey: ['chat', 'messages', messageData.channelId as string],
+    });
+  }
+  break;
+
+case 'chat_message_deleted':
+  if (messageData.channelId) {
+    queryClient.invalidateQueries({
+      queryKey: ['chat', 'messages', messageData.channelId as string],
+    });
+  }
+  break;
+
+case 'chat_channel_created':
+case 'chat_channel_updated':
+case 'chat_channel_deleted':
+  queryClient.invalidateQueries({ 
+    queryKey: queryKeys.chat.channels() 
+  });
+  break;
+
+case 'chat_member_added':
+case 'chat_member_removed':
+  if (messageData.channelId) {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.chat.members(messageData.channelId as string),
+    });
+    queryClient.invalidateQueries({ 
+      queryKey: queryKeys.chat.channels() 
+    });
+  }
+  break;
+
+case 'chat_reaction_added':
+case 'chat_reaction_removed':
+  if (messageData.channelId) {
+    queryClient.invalidateQueries({
+      queryKey: ['chat', 'messages', messageData.channelId as string],
+    });
+  }
+  break;
 
           case 'pong':
           case 'ack':

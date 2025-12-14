@@ -14,7 +14,6 @@ import {
   Folder,
   Hash,
   MoreHorizontal,
-  Inbox,
   BarChart3,
   FileText,
   Zap,

@@ -1,11 +1,42 @@
-
+// src/pages/chat/MessageComponent.tsx
 // ============================================
-// Message Component
+// Message Component - WhatsApp/iMessage Style
+// Own messages on RIGHT, received on LEFT
 // ============================================
 
-import { useMemo, useState } from "react";
-import { ChatMessage, COMMON_REACTIONS, formatMessageTime } from "../../hooks/api/useChat";
-import { Edit2, MessageSquare, MoreHorizontal, Reply, Smile, Trash2 } from "lucide-react";
+import { useMemo, useState } from 'react';
+import {
+  ChatMessage,
+  ChatReaction,
+  COMMON_REACTIONS,
+  formatMessageTime,
+} from '../../hooks/api/useChat';
+import {
+  CheckCheck,
+  Edit2,
+  MessageSquare,
+  MoreHorizontal,
+  Reply,
+  Smile,
+  Trash2,
+} from 'lucide-react';
+
+// Helper functions to handle both uppercase and lowercase field names
+const getUserName = (user: ChatMessage['user']): string => {
+  if (!user) return 'Unknown User';
+  return (user as any).Name || (user as any).name || 'Unknown User';
+};
+
+const getUserAvatar = (user: ChatMessage['user']): string | null => {
+  if (!user) return null;
+  return (user as any).Avatar || (user as any).avatar || null;
+};
+
+interface GroupedReaction {
+  emoji: string;
+  count: number;
+  userIds: string[];
+}
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -31,16 +62,18 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const [showActions, setShowActions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
 
-  const userName = message.user?.name || 'Unknown';
+  const userName = getUserName(message.user);
+  const userAvatar = getUserAvatar(message.user);
   const userInitial = userName[0]?.toUpperCase() || '?';
   const time = formatMessageTime(message.createdAt);
 
   // Group reactions by emoji
-  const groupedReactions = useMemo(() => {
+  const groupedReactions = useMemo((): GroupedReaction[] => {
     if (!message.reactions?.length) return [];
 
-    const groups: Record<string, { emoji: string; count: number; userIds: string[] }> = {};
-    message.reactions.forEach((r) => {
+    const groups: { [key: string]: GroupedReaction } = {};
+    
+    message.reactions.forEach((r: ChatReaction) => {
       if (!groups[r.emoji]) {
         groups[r.emoji] = { emoji: r.emoji, count: 0, userIds: [] };
       }
@@ -53,51 +86,90 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
   return (
     <div
-      className={`group relative flex gap-3 px-4 py-1 hover:bg-[#1a1d21]/50 transition-colors ${
+      className={`group relative flex gap-3 px-4 py-1 transition-colors ${
         showAvatar ? 'mt-4' : 'mt-0.5'
-      }`}
+      } ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         setShowActions(false);
         setShowReactions(false);
       }}
     >
-      {/* Avatar */}
-      <div className="w-9 flex-shrink-0">
-        {showAvatar && (
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-medium text-white">
-            {message.user?.avatar ? (
-              <img
-                src={message.user.avatar}
-                alt={userName}
-                className="w-full h-full rounded-lg object-cover"
-              />
-            ) : (
-              userInitial
-            )}
-          </div>
-        )}
-      </div>
+      {/* Avatar - Only show for received messages */}
+      {!isOwn && (
+        <div className="w-9 flex-shrink-0">
+          {showAvatar && (
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-medium text-white">
+              {userAvatar ? (
+                <img
+                  src={userAvatar}
+                  alt={userName}
+                  className="w-full h-full rounded-lg object-cover"
+                />
+              ) : (
+                userInitial
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {showAvatar && (
-          <div className="flex items-baseline gap-2 mb-0.5">
+      {/* Message Content */}
+      <div
+        className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}
+      >
+        {/* Username & Time - Only for received messages with avatar */}
+        {showAvatar && !isOwn && (
+          <div className="flex items-baseline gap-2 mb-1">
             <span className="text-sm font-semibold text-white">{userName}</span>
             <span className="text-xs text-[#6b7280]">{time}</span>
-            {message.isEdited && (
-              <span className="text-xs text-[#6b7280] italic">(edited)</span>
-            )}
           </div>
         )}
 
-        <div className="text-sm text-[#e5e7eb] whitespace-pre-wrap break-words">
-          {message.content}
+        {/* Message Bubble */}
+        <div
+          className={`relative px-4 py-2.5 rounded-2xl ${
+            isOwn
+              ? 'bg-brand-500 text-white rounded-br-md'
+              : 'bg-[#25282c] text-[#e5e7eb] rounded-bl-md'
+          }`}
+        >
+          <p className="text-sm whitespace-pre-wrap break-words">
+            {message.content}
+          </p>
+
+          {/* Time & Status for own messages */}
+          <div
+            className={`flex items-center gap-1 mt-1 ${
+              isOwn ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            <span
+              className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-[#6b7280]'}`}
+            >
+              {time}
+            </span>
+            {message.isEdited && (
+              <span
+                className={`text-[10px] italic ${isOwn ? 'text-white/70' : 'text-[#6b7280]'}`}
+              >
+                (edited)
+              </span>
+            )}
+            {/* Read receipt for own messages */}
+            {isOwn && (
+              <CheckCheck
+                className={`w-3.5 h-3.5 ${message.isEdited ? 'text-white/50' : 'text-white/70'}`}
+              />
+            )}
+          </div>
         </div>
 
         {/* Reactions */}
         {groupedReactions.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1.5">
+          <div
+            className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}
+          >
             {groupedReactions.map((reaction) => {
               const hasReacted = reaction.userIds.includes(currentUserId);
               return (
@@ -122,7 +194,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {message.replyCount && message.replyCount > 0 && (
           <button
             onClick={() => onReply(message)}
-            className="flex items-center gap-1.5 mt-1.5 text-xs text-brand-400 hover:text-brand-300 transition-colors"
+            className={`flex items-center gap-1.5 mt-1 text-xs text-brand-400 hover:text-brand-300 transition-colors ${
+              isOwn ? 'self-end' : 'self-start'
+            }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
             <span>
@@ -132,9 +206,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         )}
       </div>
 
-      {/* Action Bar */}
+      {/* Spacer for own messages (to replace avatar space) */}
+      {isOwn && <div className="w-9 flex-shrink-0" />}
+
+      {/* Action Bar - Position based on message side */}
       {showActions && (
-        <div className="absolute -top-3 right-4 flex items-center bg-[#25282c] border border-[#3a3e43] rounded-lg shadow-lg overflow-hidden">
+        <div
+          className={`absolute -top-3 flex items-center bg-[#25282c] border border-[#3a3e43] rounded-lg shadow-lg overflow-hidden z-10 ${
+            isOwn ? 'left-4' : 'right-4'
+          }`}
+        >
           {/* Emoji picker trigger */}
           <div className="relative">
             <button
@@ -147,7 +228,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
             {/* Quick reactions */}
             {showReactions && (
-              <div className="absolute top-full right-0 mt-1 flex items-center gap-0.5 p-1 bg-[#25282c] border border-[#3a3e43] rounded-lg shadow-xl z-10">
+              <div
+                className={`absolute top-full mt-1 flex items-center gap-0.5 p-1 bg-[#25282c] border border-[#3a3e43] rounded-lg shadow-xl z-10 ${
+                  isOwn ? 'left-0' : 'right-0'
+                }`}
+              >
                 {COMMON_REACTIONS.slice(0, 6).map((emoji) => (
                   <button
                     key={emoji}

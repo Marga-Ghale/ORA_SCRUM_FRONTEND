@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/chat/CreateDMModal.tsx
 import React, { useState, useMemo } from 'react';
-import { X, Search, MessageSquare, Check } from 'lucide-react';
+import { X, Search, MessageSquare, Check, AlertCircle } from 'lucide-react';
 import { useCreateDirectChannel } from '../../hooks/api/useChat';
 import { useWorkspaceMembers } from '../../hooks/api/useMembers';
 import { useProject } from '../../context/ProjectContext';
@@ -20,11 +20,12 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
 }) => {
   const { currentWorkspace } = useProject();
   const { user: currentUser } = useAuth();
-  const { data: members = [] } = useWorkspaceMembers(currentWorkspace?.id);
+  const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers(currentWorkspace?.id);
   const createDM = useCreateDirectChannel();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Filter out current user and filter by search
   const filteredMembers = useMemo(() => {
@@ -42,6 +43,7 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
 
   const handleSubmit = async () => {
     if (!selectedUserId || !currentWorkspace) return;
+    setError(null);
 
     try {
       const channel = await createDM.mutateAsync({
@@ -51,14 +53,15 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
 
       onSuccess?.(channel.id);
       handleClose();
-    } catch (error) {
-      // Error handled by mutation
+    } catch (err: any) {
+      setError(err?.message || 'Failed to start conversation');
     }
   };
 
   const handleClose = () => {
     setSearchQuery('');
     setSelectedUserId(null);
+    setError(null);
     onClose();
   };
 
@@ -95,6 +98,14 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
           </button>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="mx-4 mt-4 flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+
         {/* Search */}
         <div className="p-4 border-b border-[#2a2e33]">
           <div className="relative">
@@ -112,7 +123,19 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
 
         {/* Members List */}
         <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-          {filteredMembers.length === 0 ? (
+          {membersLoading ? (
+            <div className="p-4 space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center gap-3 animate-pulse">
+                  <div className="w-10 h-10 rounded-full bg-[#2a2e33]" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-[#2a2e33] rounded w-1/3" />
+                    <div className="h-3 bg-[#2a2e33] rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredMembers.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-sm text-[#6b7280]">
                 {searchQuery ? 'No members found' : 'No other members in workspace'}
@@ -149,7 +172,7 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
                           userInitial
                         )}
                       </div>
-                      {/* Online indicator */}
+                      {/* Online indicator - mock for now */}
                       <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#1a1d21] rounded-full" />
                     </div>
 

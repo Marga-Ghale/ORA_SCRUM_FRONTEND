@@ -15,7 +15,6 @@ import {
   LogOut,
   X,
   MessageSquare,
- 
 } from 'lucide-react';
 import { ChatChannel, getChannelDisplayName } from '../../hooks/api/useChat';
 
@@ -88,7 +87,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 
     const query = searchQuery.toLowerCase();
     const filterChannel = (channel: ChatChannel) => {
-      const name = getChannelDisplayName(channel).toLowerCase();
+      const name = (getChannelDisplayName(channel) || '').toLowerCase();
       return name.includes(query);
     };
 
@@ -138,7 +137,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     const isActive = channel.id === activeChannelId;
     const unread = unreadCounts[channel.id] || 0;
     const isHovered = hoveredChannel === channel.id;
-    const displayName = getChannelDisplayName(channel);
+    const displayName = getChannelDisplayName(channel) || 'Unknown';
     const isStarred = starredChannels.has(channel.id);
     const isDM = channel.type === 'direct';
 
@@ -168,7 +167,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
-                displayName[0]?.toUpperCase()
+                (displayName?.[0] || '?').toUpperCase()
               )}
             </div>
             {/* Online status */}

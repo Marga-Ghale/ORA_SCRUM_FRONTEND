@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/chat/CreateChannelModal.tsx
 import React, { useState } from 'react';
-import { X, Hash, Lock, Globe, Users, Folder, Briefcase } from 'lucide-react';
+import { X, Hash, Lock, Globe, Users, Folder, Briefcase, AlertCircle } from 'lucide-react';
 import { useCreateChannel } from '../../hooks/api/useChat';
 import { useProject } from '../../context/ProjectContext';
 
@@ -22,29 +23,43 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   const createChannel = useCreateChannel();
 
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [channelType, setChannelType] = useState<ChannelType>('team');
   const [isPrivate, setIsPrivate] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   // Get all projects from spaces
-  const allProjects = allSpaces.flatMap((space) =>
-    space.projects.map((project) => ({
+  const allProjects = allSpaces?.flatMap((space) =>
+    space.projects?.map((project) => ({
       ...project,
       spaceName: space.name,
-    }))
-  );
+    })) || []
+  ) || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    if (!name.trim() || !currentWorkspace) return;
+    if (!name.trim() || !currentWorkspace) {
+      setError('Please enter a channel name');
+      return;
+    }
 
     // For team channels, use workspace ID as targetId
-    const targetId =
-      channelType === 'team' ? currentWorkspace.id : selectedTargetId;
-
-    if (!targetId) return;
+    // For project/space channels, generate a unique targetId by combining with name
+    let targetId: string;
+    
+    if (channelType === 'team') {
+      // For team channels, make targetId unique by including the channel name
+      targetId = `${currentWorkspace.id}_${name.trim().toLowerCase().replace(/\s+/g, '-')}`;
+    } else {
+      if (!selectedTargetId) {
+        setError(`Please select a ${channelType}`);
+        return;
+      }
+      // For project/space channels, include name to allow multiple channels
+      targetId = `${selectedTargetId}_${name.trim().toLowerCase().replace(/\s+/g, '-')}`;
+    }
 
     try {
       const channel = await createChannel.mutateAsync({
@@ -57,17 +72,22 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
       onSuccess?.(channel.id);
       handleClose();
-    } catch (error) {
-      // Error handled by mutation
+    } catch (err: any) {
+      // Handle duplicate channel error
+      if (err?.message?.includes('duplicate') || err?.message?.includes('unique')) {
+        setError('A channel with this name already exists. Please choose a different name.');
+      } else {
+        setError(err?.message || 'Failed to create channel. Please try again.');
+      }
     }
   };
 
   const handleClose = () => {
     setName('');
-    setDescription('');
     setChannelType('team');
     setIsPrivate(false);
     setSelectedTargetId('');
+    setError(null);
     onClose();
   };
 
@@ -106,6 +126,14 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Error Message */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+
           {/* Channel Type Selection */}
           <div>
             <label className="block text-sm font-medium text-[#9ca3af] mb-2">
@@ -113,18 +141,19 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { type: 'team' as ChannelType, icon: Users, label: 'Team' },
-                { type: 'project' as ChannelType, icon: Briefcase, label: 'Project' },
-                { type: 'space' as ChannelType, icon: Folder, label: 'Space' },
-              ].map(({ type, icon: Icon, label }) => (
+                { type: 'team' as ChannelType, icon: Users, label: 'Team', desc: 'General workspace channel' },
+                { type: 'project' as ChannelType, icon: Briefcase, label: 'Project', desc: 'Project-specific channel' },
+                { type: 'space' as ChannelType, icon: Folder, label: 'Space', desc: 'Space-wide channel' },
+              ].map(({ type, icon: Icon, label, desc }) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => {
                     setChannelType(type);
                     setSelectedTargetId('');
+                    setError(null);
                   }}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-colors ${
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors ${
                     channelType === type
                       ? 'bg-brand-500/20 border-brand-500/50 text-brand-400'
                       : 'bg-[#25282c] border-[#2a2e33] text-[#9ca3af] hover:border-[#3a3e43]'
@@ -145,9 +174,11 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
               </label>
               <select
                 value={selectedTargetId}
-                onChange={(e) => setSelectedTargetId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedTargetId(e.target.value);
+                  setError(null);
+                }}
                 className="w-full px-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white text-sm focus:outline-none focus:border-brand-500/50"
-                required
               >
                 <option value="">
                   Select a {channelType === 'project' ? 'project' : 'space'}
@@ -158,7 +189,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                         {project.spaceName} / {project.name}
                       </option>
                     ))
-                  : allSpaces.map((space) => (
+                  : allSpaces?.map((space) => (
                       <option key={space.id} value={space.id}>
                         {space.name}
                       </option>
@@ -177,8 +208,11 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                placeholder="e.g. general, announcements"
+                onChange={(e) => {
+                  setName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'));
+                  setError(null);
+                }}
+                placeholder="e.g. general, announcements, dev-team"
                 className="w-full pl-9 pr-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white placeholder-[#6b7280] text-sm focus:outline-none focus:border-brand-500/50"
                 required
                 maxLength={50}
@@ -187,21 +221,6 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             <p className="mt-1 text-xs text-[#6b7280]">
               Lowercase letters, numbers, and hyphens only
             </p>
-          </div>
-
-          {/* Description (Optional) */}
-          <div>
-            <label className="block text-sm font-medium text-[#9ca3af] mb-2">
-              Description <span className="text-[#6b7280]">(optional)</span>
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What's this channel about?"
-              rows={2}
-              className="w-full px-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white placeholder-[#6b7280] text-sm focus:outline-none focus:border-brand-500/50 resize-none"
-              maxLength={200}
-            />
           </div>
 
           {/* Privacy Toggle */}
@@ -249,11 +268,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={
-                !name.trim() ||
-                (channelType !== 'team' && !selectedTargetId) ||
-                createChannel.isPending
-              }
+              disabled={!name.trim() || createChannel.isPending}
               className="flex-1 px-4 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-500/50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
             >
               {createChannel.isPending ? 'Creating...' : 'Create Channel'}
