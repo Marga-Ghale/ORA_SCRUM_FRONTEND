@@ -526,7 +526,7 @@ export default function NotificationDropdown() {
         {notifications.length > 0 && (
           <div className="flex-shrink-0 flex items-center gap-2 p-3 border-t border-gray-100 dark:border-gray-700">
             <Link
-              to="/notifcations"
+              to="/notifications"
               onClick={closeDropdown}
               className="flex-1 px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
             >

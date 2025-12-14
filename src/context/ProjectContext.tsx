@@ -21,6 +21,8 @@ interface ApiSpace {
   id: string;
   name: string;
   description?: string;
+  icon?: string;
+  color?: string;
   workspaceId: string;
   createdAt: string;
   updatedAt: string;
@@ -242,8 +244,8 @@ const mapApiProject = (project: ApiProject): Project => ({
 const mapApiSpace = (space: ApiSpace, projects: Project[] = []): Space => ({
   id: space.id,
   name: space.name,
-  icon: '📁',
-  color: '#6366f1',
+  icon: space.icon || '📁',
+  color: space.color || '#6366f1',
   projects: projects,
 });
 
@@ -483,9 +485,11 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       console.log('[ProjectContext] Creating space:', spaceData.name);
       
       // Create space via API
-      const newApiSpace = await apiClient.post<ApiSpace>(`/workspaces/${currentWorkspace.id}/spaces`, {
-        name: spaceData.name,
-      });
+     const newApiSpace = await apiClient.post<ApiSpace>(`/workspaces/${currentWorkspace.id}/spaces`, {
+  name: spaceData.name,
+  icon: spaceData.icon,
+  color: spaceData.color,
+});
       
       const newSpace: Space = {
         id: newApiSpace.id,
