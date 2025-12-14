@@ -7,12 +7,14 @@ import {
   List, 
   Table,
   X,
+  UserPlus,
 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
 import KanbanBoard from '../../components/tasks/KanbanBoard';
 import TaskListView from '../../components/tasks/TaskListView';
 import TaskDetailModal from '../../components/tasks/TaskDetailModal';
+import AddProjectMemberModal from '../../components/modals/AddProjectMemberModal';
 import PageMeta from '../../components/common/PageMeta';
 import { useProjectUsers } from '../../hooks/useUser';
 
@@ -20,6 +22,7 @@ const ProjectBoard: React.FC = () => {
   const {
     tasks,
     currentProject,
+    currentWorkspace,
     currentSprint,
     viewMode,
     setViewMode,
@@ -34,6 +37,7 @@ const ProjectBoard: React.FC = () => {
   const users = projectUsers || [];
 
   const [showFilters, setShowFilters] = useState(false);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
   // Get tasks for current sprint or all tasks
   const displayTasks = currentSprint
@@ -90,6 +94,15 @@ const ProjectBoard: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Add Member Button */}
+            <button
+              onClick={() => setIsAddMemberModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Member</span>
+            </button>
+
             {/* Add Task Button */}
             <button
               onClick={() => {
@@ -180,6 +193,7 @@ const ProjectBoard: React.FC = () => {
                 ))}
                 {remainingUserCount > 0 && (
                   <button 
+                    onClick={() => setIsAddMemberModalOpen(true)}
                     className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800 bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-medium text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                     title={`${remainingUserCount} more team members`}
                   >
@@ -356,6 +370,15 @@ const ProjectBoard: React.FC = () => {
 
       {/* Task Detail Modal */}
       <TaskDetailModal />
+
+      {/* Add Member Modal */}
+      <AddProjectMemberModal
+        isOpen={isAddMemberModalOpen}
+        onClose={() => setIsAddMemberModalOpen(false)}
+        workspaceId={currentWorkspace?.id || ''}
+        projectId={currentProject?.id || ''}
+        projectName={currentProject?.name}
+      />
     </>
   );
 };

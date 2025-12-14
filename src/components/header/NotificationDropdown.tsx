@@ -8,7 +8,7 @@ import {
   useNotificationCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
-  useClearAllNotifications,
+  useDeleteAllNotifications,
   useDeleteNotification,
   useNotificationSound,
   useBrowserNotifications,
@@ -16,6 +16,7 @@ import {
   getNotificationLink,
   groupNotificationsByDate,
   Notification,
+  NotificationType,
 } from '../../hooks/api/useNotifications';
 import { useWebSocket } from '../../hooks/api/useWebsocket';
 
@@ -51,16 +52,19 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
+      {/* Unread indicator */}
       {!notification.read && (
         <span className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500" />
       )}
 
+      {/* Icon */}
       <span
         className={`flex items-center justify-center w-10 h-10 rounded-full ${config.bgColor} text-lg flex-shrink-0`}
       >
         {config.icon}
       </span>
 
+      {/* Content */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 dark:text-white/90 line-clamp-1">
           {notification.title}
@@ -79,6 +83,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         </div>
       </div>
 
+      {/* Actions */}
       <div
         className={`flex items-start gap-1 transition-opacity ${
           showActions ? 'opacity-100' : 'opacity-0'
@@ -210,6 +215,28 @@ interface FilterTabsProps {
   counts: Record<FilterType, number>;
 }
 
+const TASK_NOTIFICATION_TYPES: NotificationType[] = [
+  'TASK_ASSIGNED',
+  'TASK_UPDATED',
+  'TASK_COMMENTED',
+  'TASK_STATUS_CHANGED',
+  'TASK_DUE_SOON',
+  'TASK_OVERDUE',
+  'TASK_CREATED',
+  'TASK_DELETED',
+];
+
+const SPRINT_NOTIFICATION_TYPES: NotificationType[] = [
+  'SPRINT_STARTED',
+  'SPRINT_COMPLETED',
+  'SPRINT_ENDING',
+];
+
+const INVITATION_NOTIFICATION_TYPES: NotificationType[] = [
+  'PROJECT_INVITATION',
+  'WORKSPACE_INVITATION',
+];
+
 const FilterTabs: React.FC<FilterTabsProps> = ({ activeFilter, onChange, counts }) => {
   const tabs: { id: FilterType; label: string }[] = [
     { id: 'all', label: 'All' },
@@ -263,11 +290,11 @@ export default function NotificationDropdown() {
   const previousUnreadCount = useRef<number>(0);
 
   // API hooks
-  const { data: notifications = [], isLoading, refetch } = useNotifications({ enabled: true });
+  const { data: notifications = [], isLoading, refetch } = useNotifications();
   const { data: countData, refetch: refetchCount } = useNotificationCount();
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
-  const clearAll = useClearAllNotifications();
+  const clearAll = useDeleteAllNotifications();
   const deleteNotification = useDeleteNotification();
   const { playSound } = useNotificationSound();
   const { showNotification: showBrowserNotification, hasPermission } = useBrowserNotifications();
@@ -279,7 +306,7 @@ export default function NotificationDropdown() {
         // Refetch notifications when we receive a WebSocket notification
         refetch();
         refetchCount();
-        
+
         // Play sound and show browser notification
         playSound();
         if (hasPermission()) {
@@ -308,45 +335,35 @@ export default function NotificationDropdown() {
     previousUnreadCount.current = unreadCount;
   }, [unreadCount, playSound, showBrowserNotification, hasPermission]);
 
-  // Filter notifications
+  // Filter notifications based on active filter
   const getFilteredNotifications = (): Notification[] => {
     switch (activeFilter) {
       case 'unread':
         return notifications.filter((n) => !n.read);
       case 'tasks':
-        return notifications.filter((n) =>
-          ['TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMMENTED', 'TASK_STATUS_CHANGED', 'TASK_DUE_SOON', 'TASK_OVERDUE', 'TASK_CREATED', 'TASK_DELETED'].includes(n.type)
-        );
+        return notifications.filter((n) => TASK_NOTIFICATION_TYPES.includes(n.type));
       case 'sprints':
-        return notifications.filter((n) =>
-          ['SPRINT_STARTED', 'SPRINT_COMPLETED', 'SPRINT_ENDING'].includes(n.type)
-        );
+        return notifications.filter((n) => SPRINT_NOTIFICATION_TYPES.includes(n.type));
       case 'invitations':
-        return notifications.filter((n) =>
-          ['PROJECT_INVITATION', 'WORKSPACE_INVITATION'].includes(n.type)
-        );
+        return notifications.filter((n) => INVITATION_NOTIFICATION_TYPES.includes(n.type));
       default:
         return notifications;
     }
   };
 
+  // Calculate filter counts
   const filterCounts: Record<FilterType, number> = {
     all: notifications.length,
     unread: notifications.filter((n) => !n.read).length,
-    tasks: notifications.filter((n) =>
-      ['TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMMENTED', 'TASK_STATUS_CHANGED', 'TASK_DUE_SOON', 'TASK_OVERDUE', 'TASK_CREATED', 'TASK_DELETED'].includes(n.type)
-    ).length,
-    sprints: notifications.filter((n) =>
-      ['SPRINT_STARTED', 'SPRINT_COMPLETED', 'SPRINT_ENDING'].includes(n.type)
-    ).length,
-    invitations: notifications.filter((n) =>
-      ['PROJECT_INVITATION', 'WORKSPACE_INVITATION'].includes(n.type)
-    ).length,
+    tasks: notifications.filter((n) => TASK_NOTIFICATION_TYPES.includes(n.type)).length,
+    sprints: notifications.filter((n) => SPRINT_NOTIFICATION_TYPES.includes(n.type)).length,
+    invitations: notifications.filter((n) => INVITATION_NOTIFICATION_TYPES.includes(n.type)).length,
   };
 
   const filteredNotifications = getFilteredNotifications();
   const groupedNotifications = groupNotificationsByDate(filteredNotifications);
 
+  // Handlers
   const toggleDropdown = () => setIsOpen(!isOpen);
   const closeDropdown = () => setIsOpen(false);
 
@@ -385,12 +402,13 @@ export default function NotificationDropdown() {
         onClick={toggleDropdown}
         aria-label={`Notifications${hasUnread ? ` (${unreadCount} unread)` : ''}`}
       >
+        {/* Unread badge */}
         {hasUnread && (
           <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
-        
+
         {/* WebSocket connection indicator */}
         <span
           className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${
@@ -398,7 +416,8 @@ export default function NotificationDropdown() {
           }`}
           title={isConnected ? 'Real-time updates active' : 'Polling for updates'}
         />
-        
+
+        {/* Bell icon */}
         <svg
           className="fill-current"
           width="20"
@@ -449,17 +468,18 @@ export default function NotificationDropdown() {
                 className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
           </div>
 
-          <FilterTabs
-            activeFilter={activeFilter}
-            onChange={setActiveFilter}
-            counts={filterCounts}
-          />
+          <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} counts={filterCounts} />
         </div>
 
         {/* Content */}
@@ -472,28 +492,28 @@ export default function NotificationDropdown() {
             <div className="p-2">
               <NotificationGroup
                 title="Today"
-                notifications={groupedNotifications.today}
+                notifications={groupedNotifications['Today'] || []}
                 onRead={handleMarkAsRead}
                 onDelete={handleDelete}
                 onClick={handleNotificationClick}
               />
               <NotificationGroup
                 title="Yesterday"
-                notifications={groupedNotifications.yesterday}
+                notifications={groupedNotifications['Yesterday'] || []}
                 onRead={handleMarkAsRead}
                 onDelete={handleDelete}
                 onClick={handleNotificationClick}
               />
               <NotificationGroup
                 title="This Week"
-                notifications={groupedNotifications.thisWeek}
+                notifications={groupedNotifications['This Week'] || []}
                 onRead={handleMarkAsRead}
                 onDelete={handleDelete}
                 onClick={handleNotificationClick}
               />
               <NotificationGroup
-                title="Older"
-                notifications={groupedNotifications.older}
+                title="Earlier"
+                notifications={groupedNotifications['Earlier'] || []}
                 onRead={handleMarkAsRead}
                 onDelete={handleDelete}
                 onClick={handleNotificationClick}
@@ -506,7 +526,7 @@ export default function NotificationDropdown() {
         {notifications.length > 0 && (
           <div className="flex-shrink-0 flex items-center gap-2 p-3 border-t border-gray-100 dark:border-gray-700">
             <Link
-              to="/notifications"
+              to="/notifcations"
               onClick={closeDropdown}
               className="flex-1 px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
             >

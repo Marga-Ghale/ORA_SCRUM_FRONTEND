@@ -1,7 +1,9 @@
 // src/hooks/api/useMembers.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { apiClient } from '../../lib/api-client';
 import { queryKeys } from '../../lib/query-client';
+import { useMemo } from 'react';
 
 // ============================================
 // Types
@@ -18,7 +20,7 @@ export interface MemberUser {
 export interface Member {
   id: string;
   userId: string;
-  role: 'owner' | 'admin' | 'member' | 'guest';
+  role: 'owner' | 'admin' | 'member' | 'guest' | 'lead' | 'viewer';
   joinedAt: string;
   user: MemberUser;
 }
@@ -33,22 +35,22 @@ export interface ProjectMember extends Member {
 
 export interface AddMemberData {
   email: string;
-  role?: 'admin' | 'member' | 'guest';
+  role?: string; // Changed to string to accept any role
 }
 
 export interface AddMemberByIdData {
   userId: string;
-  role?: 'admin' | 'member' | 'guest';
+  role?: string; // Changed to string to accept any role (lead, member, viewer, etc.)
 }
 
 export interface UpdateMemberRoleData {
-  role: 'admin' | 'member' | 'guest';
+  role: string;
 }
 
 export interface Invitation {
   id: string;
   email: string;
-  role: 'admin' | 'member' | 'guest';
+  role: string;
   status: 'pending' | 'accepted' | 'declined' | 'expired';
   expiresAt: string;
   createdAt: string;
@@ -61,7 +63,7 @@ export interface Invitation {
 
 export interface InviteMemberData {
   email: string;
-  role?: 'admin' | 'member' | 'guest';
+  role?: string;
   message?: string;
 }
 
@@ -92,8 +94,12 @@ export function useAddWorkspaceMember(workspaceId: string) {
     mutationFn: (data: AddMemberData) =>
       apiClient.post<WorkspaceMember>(`/workspaces/${workspaceId}/members`, data),
     onSuccess: () => {
+      toast.success('Member added to workspace');
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.members(workspaceId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.detail(workspaceId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add member');
     },
   });
 }
@@ -105,8 +111,12 @@ export function useAddWorkspaceMemberById(workspaceId: string) {
     mutationFn: (data: AddMemberByIdData) =>
       apiClient.post<WorkspaceMember>(`/workspaces/${workspaceId}/members/add`, data),
     onSuccess: () => {
+      toast.success('Member added to workspace');
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.members(workspaceId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.detail(workspaceId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add member');
     },
   });
 }
@@ -118,7 +128,11 @@ export function useUpdateWorkspaceMemberRole(workspaceId: string) {
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
       apiClient.put(`/workspaces/${workspaceId}/members/${userId}`, { role }),
     onSuccess: () => {
+      toast.success('Member role updated');
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.members(workspaceId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update role');
     },
   });
 }
@@ -130,8 +144,12 @@ export function useRemoveWorkspaceMember(workspaceId: string) {
     mutationFn: (userId: string) =>
       apiClient.delete(`/workspaces/${workspaceId}/members/${userId}`),
     onSuccess: () => {
+      toast.success('Member removed from workspace');
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.members(workspaceId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.detail(workspaceId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to remove member');
     },
   });
 }
@@ -156,8 +174,12 @@ export function useAddProjectMember(projectId: string) {
     mutationFn: (data: AddMemberData) =>
       apiClient.post<ProjectMember>(`/projects/${projectId}/members`, data),
     onSuccess: () => {
+      toast.success('Member added to project');
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add member');
     },
   });
 }
@@ -169,8 +191,12 @@ export function useAddProjectMemberById(projectId: string) {
     mutationFn: (data: AddMemberByIdData) =>
       apiClient.post<ProjectMember>(`/projects/${projectId}/members/add`, data),
     onSuccess: () => {
+      toast.success('Member added to project');
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add member');
     },
   });
 }
@@ -182,7 +208,11 @@ export function useUpdateProjectMemberRole(projectId: string) {
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
       apiClient.put(`/projects/${projectId}/members/${userId}`, { role }),
     onSuccess: () => {
+      toast.success('Member role updated');
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update role');
     },
   });
 }
@@ -194,8 +224,12 @@ export function useRemoveProjectMember(projectId: string) {
     mutationFn: (userId: string) =>
       apiClient.delete(`/projects/${projectId}/members/${userId}`),
     onSuccess: () => {
+      toast.success('Member removed from project');
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to remove member');
     },
   });
 }
@@ -211,8 +245,12 @@ export function useInviteToWorkspace(workspaceId: string) {
   return useMutation({
     mutationFn: (data: InviteMemberData) =>
       apiClient.post<Invitation>(`/workspaces/${workspaceId}/invitations`, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      toast.success(`Invitation sent to ${variables.email}`);
       queryClient.invalidateQueries({ queryKey: queryKeys.invitations.workspace(workspaceId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send invitation');
     },
   });
 }
@@ -224,8 +262,12 @@ export function useInviteToProject(projectId: string) {
   return useMutation({
     mutationFn: (data: InviteMemberData) =>
       apiClient.post<Invitation>(`/projects/${projectId}/invitations`, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      toast.success(`Invitation sent to ${variables.email}`);
       queryClient.invalidateQueries({ queryKey: queryKeys.invitations.project(projectId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send invitation');
     },
   });
 }
@@ -264,12 +306,16 @@ export function useAcceptInvitation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (invitationId: string) =>
-      apiClient.post(`/invitations/${invitationId}/accept`),
+    mutationFn: (token: string) =>
+      apiClient.post(`/invitations/accept/${token}`),
     onSuccess: () => {
+      toast.success('Invitation accepted!');
       queryClient.invalidateQueries({ queryKey: queryKeys.invitations.pending() });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to accept invitation');
     },
   });
 }
@@ -280,9 +326,13 @@ export function useDeclineInvitation() {
 
   return useMutation({
     mutationFn: (invitationId: string) =>
-      apiClient.post(`/invitations/${invitationId}/decline`),
+      apiClient.delete(`/invitations/${invitationId}`),
     onSuccess: () => {
+      toast.success('Invitation declined');
       queryClient.invalidateQueries({ queryKey: queryKeys.invitations.pending() });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to decline invitation');
     },
   });
 }
@@ -299,12 +349,16 @@ export function useCancelInvitation() {
     }) =>
       apiClient.delete(`/invitations/${invitationId}`).then(() => ({ workspaceId, projectId })),
     onSuccess: ({ workspaceId, projectId }) => {
+      toast.success('Invitation cancelled');
       if (workspaceId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.invitations.workspace(workspaceId) });
       }
       if (projectId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.invitations.project(projectId) });
       }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to cancel invitation');
     },
   });
 }
@@ -313,7 +367,13 @@ export function useCancelInvitation() {
 export function useResendInvitation() {
   return useMutation({
     mutationFn: (invitationId: string) =>
-      apiClient.post(`/invitations/${invitationId}/resend`),
+      apiClient.post(`/invitations/resend/${invitationId}`),
+    onSuccess: () => {
+      toast.success('Invitation resent');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to resend invitation');
+    },
   });
 }
 
@@ -365,4 +425,53 @@ export function useSearchProjectMembers(projectId: string | undefined, query: st
     enabled: !!projectId,
     staleTime: 30 * 1000,
   });
+}
+
+// ============================================
+// Available Members (for adding to projects)
+// ============================================
+
+export function useAvailableMembers(workspaceId: string | undefined, projectId: string | undefined) {
+  // Get all workspace members
+  const { 
+    data: workspaceMembers = [], 
+    isLoading: isLoadingWorkspace,
+    error: workspaceError,
+  } = useWorkspaceMembers(workspaceId);
+
+  // Get current project members
+  const { 
+    data: projectMembers = [], 
+    isLoading: isLoadingProject,
+    error: projectError,
+  } = useProjectMembers(projectId);
+
+  // Filter out users already in project
+  const availableMembers = useMemo(() => {
+    if (!workspaceMembers.length) return [];
+    
+    const projectMemberIds = new Set(projectMembers.map(m => m.userId));
+    return workspaceMembers.filter(m => !projectMemberIds.has(m.userId));
+  }, [workspaceMembers, projectMembers]);
+
+  // Debug logging
+  console.log('useAvailableMembers:', {
+    workspaceId,
+    projectId,
+    workspaceMembers: workspaceMembers.length,
+    projectMembers: projectMembers.length,
+    availableMembers: availableMembers.length,
+    isLoadingWorkspace,
+    isLoadingProject,
+    workspaceError,
+    projectError,
+  });
+
+  return { 
+    availableMembers, 
+    projectMembers, 
+    workspaceMembers,
+    isLoading: isLoadingWorkspace || isLoadingProject,
+    error: workspaceError || projectError,
+  };
 }

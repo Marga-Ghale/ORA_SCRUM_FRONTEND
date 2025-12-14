@@ -87,7 +87,7 @@ export {
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
   useDeleteNotification,
-  useClearAllNotifications,
+  useDeleteAllNotifications
 } from './useNotifications';
 
 // Types

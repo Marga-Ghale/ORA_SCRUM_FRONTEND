@@ -1,41 +1,89 @@
 // src/components/ProjectSidebar.tsx
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { 
+  Home, 
+  CheckSquare, 
+  Search, 
+  Plus, 
+  ChevronRight,
+  ChevronDown,
+  Settings,
+  Users,
+  LogOut,
+  Folder,
+  Hash,
+  MoreHorizontal,
+  Inbox,
+  BarChart3,
+  FileText,
+  Zap,
+  MessageSquare,
+  BellElectricIcon,
+} from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
+import { useNotificationCount } from '../hooks/api/useNotifications';
+import { useUnreadCounts } from '../hooks/api/useChat';
 
 const ProjectSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const {
     currentWorkspace,
     currentSpace,
-    currentProject,
-    allSpaces, // Use allSpaces instead of currentWorkspace.spaces
+    allSpaces,
     setCurrentSpace,
     setCurrentProject,
     setIsCreateSpaceModalOpen,
     setIsCreateProjectModalOpen,
     isInitializing,
   } = useProject();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
-  const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set([currentSpace?.id || '']));
+  const navigate = useNavigate();
+  
+  // Fetch notification count (for Inbox)
+  const { data: notificationCount } = useNotificationCount();
+  
+  // Fetch chat unread counts (for Chat)
+  const { data: chatUnreadCounts } = useUnreadCounts();
 
-  const isActive = (path: string) => location.pathname === path;
+  const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set());
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [hoveredSpace, setHoveredSpace] = useState<string | null>(null);
+
   const showFull = isExpanded || isHovered || isMobileOpen;
+  
+  // Check if path is active
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
+  
+  const isProjectActive = (projectId: string) => location.pathname.includes(`/project/${projectId}`);
 
-  // Get initials helper
+  // Calculate total chat unread count
+  const totalChatUnread = chatUnreadCounts 
+    ? Object.values(chatUnreadCounts).reduce((sum, count) => sum + count, 0) 
+    : 0;
+
+  // Unread notification count
+  const unreadNotifications = notificationCount?.unread || 0;
+
+  // Auto-expand current space
+  useEffect(() => {
+    if (currentSpace) {
+      setExpandedSpaces(prev => new Set([...prev, currentSpace.id]));
+    }
+  }, [currentSpace]);
+
   const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const toggleSpace = (spaceId: string) => {
+  const toggleSpace = (spaceId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setExpandedSpaces(prev => {
       const next = new Set(prev);
       if (next.has(spaceId)) {
@@ -47,39 +95,24 @@ const ProjectSidebar: React.FC = () => {
     });
   };
 
-  const mainNavItems = [
-    { icon: '🏠', label: 'Home', path: '/' },
-    { icon: '📥', label: 'My Tasks', path: '/my-tasks' },
-  ];
+  const handleLogout = () => {
+    logout();
+    navigate('/signin');
+  };
 
-  const bottomNavItems = [
-    { icon: '👥', label: 'Team', path: '/team' },
-    { icon: '⚙️', label: 'Settings', path: '/settings' },
-  ];
-
-  // Loading skeleton
+  // Loading state
   if (isInitializing) {
     return (
-      <aside
-        className={`fixed mt-16 flex flex-col lg:mt-0 top-0 left-0 bg-gray-900 text-white h-screen transition-all duration-300 ease-in-out z-50
-          ${showFull ? 'w-[260px]' : 'w-[60px]'}
-          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0`}
-      >
-        <div className="p-4 border-b border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-700 animate-pulse" />
-            {showFull && (
-              <div className="flex-1">
-                <div className="h-4 bg-gray-700 rounded animate-pulse mb-1 w-24" />
-                <div className="h-3 bg-gray-700 rounded animate-pulse w-16" />
-              </div>
-            )}
+      <aside className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 bg-[#1a1d21] border-r border-[#2a2e33] transition-all duration-200 ${showFull ? 'w-[260px]' : 'w-[60px]'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <div className="p-3 animate-pulse">
+          <div className="flex items-center gap-3 p-2">
+            <div className="w-8 h-8 rounded-lg bg-[#2a2e33]" />
+            {showFull && <div className="h-4 bg-[#2a2e33] rounded flex-1" />}
           </div>
         </div>
-        <div className="p-4 space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-8 bg-gray-800 rounded-lg animate-pulse" />
+        <div className="px-2 space-y-1">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="h-8 bg-[#2a2e33] rounded-md animate-pulse" />
           ))}
         </div>
       </aside>
@@ -87,238 +120,344 @@ const ProjectSidebar: React.FC = () => {
   }
 
   return (
-    <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 left-0 bg-gray-900 text-white h-screen transition-all duration-300 ease-in-out z-50
-        ${showFull ? 'w-[260px]' : 'w-[60px]'}
-        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0`}
-      onMouseEnter={() => !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Workspace Header */}
-      <div className={`p-4 border-b border-gray-800 ${!showFull ? 'px-3' : ''}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            {currentWorkspace?.name?.[0]?.toUpperCase() || 'W'}
-          </div>
-          {showFull && (
-            <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-sm truncate">
-                {currentWorkspace?.name || 'No Workspace'}
-              </h2>
-              <p className="text-xs text-gray-400 truncate">Workspace</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Quick Search */}
-      {showFull && (
-        <div className="px-3 py-3">
-          <button className="w-full flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm text-gray-400 transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <span>Search...</span>
-            <span className="ml-auto text-xs text-gray-500">⌘K</span>
-          </button>
-        </div>
+    <>
+      {/* Mobile overlay */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={toggleMobileSidebar}
+        />
       )}
 
-      {/* Main Navigation */}
-      <nav className="px-2 py-2">
-        {mainNavItems.map(item => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-1
-              ${isActive(item.path)
-                ? 'bg-brand-500/20 text-brand-400'
-                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }
-              ${!showFull ? 'justify-center' : ''}
-            `}
-            title={!showFull ? item.label : undefined}
-          >
-            <span className="text-base">{item.icon}</span>
-            {showFull && <span>{item.label}</span>}
-          </Link>
-        ))}
-      </nav>
-
-      {/* Spaces Section */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-2">
-        {showFull && (
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Spaces ({allSpaces.length})
-            </span>
-            <button
-              onClick={() => setIsCreateSpaceModalOpen(true)}
-              className="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors"
-              title="Add Space"
+      <aside 
+        className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 flex flex-col
+          bg-[#1a1d21] border-r border-[#2a2e33] transition-all duration-200
+          ${showFull ? 'w-[260px]' : 'w-[60px]'}
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0`}
+        onMouseEnter={() => !isExpanded && setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Workspace Header */}
+        <div className="p-2 border-b border-[#2a2e33]">
+          <button className={`w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-[#2a2e33] transition-colors ${!showFull ? 'justify-center' : ''}`}>
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)' }}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
-        )}
+              {currentWorkspace?.name?.[0]?.toUpperCase() || 'W'}
+            </div>
+            {showFull && (
+              <>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-medium text-white truncate">
+                    {currentWorkspace?.name || 'Workspace'}
+                  </p>
+                </div>
+                <ChevronDown className="w-4 h-4 text-[#6b7280]" />
+              </>
+            )}
+          </button>
+        </div>
 
-        {/* Render ALL spaces */}
-        {allSpaces.length > 0 ? (
-          allSpaces.map(space => (
-            <div key={space.id} className="mb-1">
-              {/* Space Header */}
-              <button
-                onClick={() => {
-                  toggleSpace(space.id);
-                  setCurrentSpace(space);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
-                  ${currentSpace?.id === space.id ? 'bg-gray-800' : 'hover:bg-gray-800'}
-                  ${!showFull ? 'justify-center' : ''}
-                `}
-                title={!showFull ? space.name : undefined}
+        {/* Search */}
+        <div className={`p-2 ${!showFull ? 'px-1.5' : ''}`}>
+          {showFull ? (
+            <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md bg-[#25282c] hover:bg-[#2a2e33] text-[#6b7280] text-sm transition-colors">
+              <Search className="w-4 h-4" />
+              <span>Search</span>
+              <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-[#1a1d21] text-[#6b7280]">⌘K</kbd>
+            </button>
+          ) : (
+            <button className="w-full p-2 rounded-md hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors flex justify-center">
+              <Search className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Main Navigation */}
+        <nav className="px-2 py-1 border-b border-[#2a2e33]">
+          {[
+            { icon: Home, label: 'Home', path: '/', badge: undefined },
+            { 
+              icon: BellElectricIcon, 
+              label: 'Notifications', 
+              path: '/notifications', 
+              badge: unreadNotifications > 0 ? unreadNotifications : undefined 
+            },
+            { 
+              icon: MessageSquare, 
+              label: 'Chat', 
+              path: '/chat', 
+              badge: totalChatUnread > 0 ? totalChatUnread : undefined 
+            },
+            { icon: CheckSquare, label: 'My Tasks', path: '/my-tasks', badge: undefined },
+            { icon: FileText, label: 'Docs', path: '/docs', badge: undefined },
+            { icon: BarChart3, label: 'Dashboards', path: '/dashboards', badge: undefined },
+          ].map(item => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5 group
+                  ${active ? 'bg-[#7c3aed]/20 text-[#a78bfa]' : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}
+                  ${!showFull ? 'justify-center px-2' : ''}`}
+                title={!showFull ? item.label : undefined}
               >
-                <span
-                  className="w-6 h-6 rounded flex items-center justify-center text-xs flex-shrink-0"
-                  style={{ backgroundColor: `${space.color}30`, color: space.color }}
-                >
-                  {space.icon || space.name[0]}
-                </span>
+                <div className="relative">
+                  <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-[#a78bfa]' : ''}`} />
+                  {/* Badge dot for collapsed sidebar */}
+                  {!showFull && item.badge && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </div>
                 {showFull && (
                   <>
-                    <span className="flex-1 text-left text-gray-200 truncate">{space.name}</span>
-                    <svg
-                      className={`w-4 h-4 text-gray-500 transition-transform ${expandedSpaces.has(space.id) ? 'rotate-90' : ''}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge && item.badge > 0 && (
+                      <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-red-500 text-white min-w-[20px] text-center">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
                   </>
                 )}
-              </button>
+              </Link>
+            );
+          })}
+        </nav>
 
-              {/* Projects under this space */}
-              {showFull && expandedSpaces.has(space.id) && (
-                <div className="ml-4 pl-3 border-l border-gray-800 mt-1">
-                  {space.projects.length > 0 ? (
-                    space.projects.map(project => (
-                      <Link
-                        key={project.id}
-                        to={`/project/${project.id}/board`}
-                        onClick={() => {
-                          setCurrentSpace(space);
-                          setCurrentProject(project);
-                        }}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5
-                          ${currentProject?.id === project.id
-                            ? 'bg-brand-500/20 text-brand-400'
-                            : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                          }
-                        `}
-                      >
-                        <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: project.color }}
-                        />
-                        <span className="truncate">{project.name}</span>
-                        <span className="ml-auto text-xs opacity-60">{project.key}</span>
-                      </Link>
-                    ))
-                  ) : (
-                    <p className="text-xs text-gray-500 px-3 py-2">No projects yet</p>
-                  )}
-                  <button
-                    onClick={() => {
-                      setCurrentSpace(space);
-                      setIsCreateProjectModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors w-full"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Add project</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="px-3 py-4 text-center text-gray-500 text-sm">
-            <p>No spaces yet</p>
-            {showFull && (
+        {/* Spaces Section */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+          {/* Section Header */}
+          <div className={`sticky top-0 bg-[#1a1d21] z-10 px-2 py-2 ${!showFull ? 'px-1.5' : ''}`}>
+            {showFull ? (
+              <div className="flex items-center justify-between px-2.5">
+                <span className="text-xs font-medium text-[#6b7280] uppercase tracking-wide">Spaces</span>
+                <button
+                  onClick={() => setIsCreateSpaceModalOpen(true)}
+                  className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
               <button
                 onClick={() => setIsCreateSpaceModalOpen(true)}
-                className="mt-2 text-brand-400 hover:text-brand-300"
+                className="w-full p-2 rounded-md hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors flex justify-center"
+                title="Add Space"
               >
-                Create your first space
+                <Plus className="w-5 h-5" />
               </button>
             )}
           </div>
-        )}
 
-        {/* Add Space Button */}
-        {showFull && allSpaces.length > 0 && (
+          {/* Spaces List */}
+          <div className="px-2 pb-2">
+            {allSpaces.length > 0 ? (
+              allSpaces.map(space => {
+                const isSpaceExpanded = expandedSpaces.has(space.id);
+                const isHovered = hoveredSpace === space.id;
+                
+                return (
+                  <div key={space.id} className="mb-0.5">
+                    {/* Space Item */}
+                    <div
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors group
+                        ${currentSpace?.id === space.id ? 'bg-[#25282c]' : 'hover:bg-[#25282c]'}
+                        ${!showFull ? 'justify-center' : ''}`}
+                      onClick={() => {
+                        setCurrentSpace(space);
+                        if (showFull) toggleSpace(space.id);
+                      }}
+                      onMouseEnter={() => setHoveredSpace(space.id)}
+                      onMouseLeave={() => setHoveredSpace(null)}
+                    >
+                      {/* Expand Arrow */}
+                      {showFull && (
+                        <button
+                          onClick={(e) => toggleSpace(space.id, e)}
+                          className="p-0.5 rounded hover:bg-[#2a2e33] text-[#6b7280]"
+                        >
+                          <ChevronRight 
+                            className={`w-3.5 h-3.5 transition-transform duration-200 ${isSpaceExpanded ? 'rotate-90' : ''}`} 
+                          />
+                        </button>
+                      )}
+                      
+                      {/* Space Icon */}
+                      <div
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0"
+                        style={{ 
+                          backgroundColor: `${space.color || '#7c3aed'}20`,
+                          color: space.color || '#7c3aed'
+                        }}
+                      >
+                        {space.icon || <Folder className="w-3.5 h-3.5" />}
+                      </div>
+                      
+                      {showFull && (
+                        <>
+                          <span className="flex-1 text-sm text-[#e5e7eb] truncate">
+                            {space.name}
+                          </span>
+                          
+                          {/* Actions on hover */}
+                          <div className={`flex items-center gap-0.5 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCurrentSpace(space);
+                                setIsCreateProjectModalOpen(true);
+                              }}
+                              className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white"
+                              title="Add project"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white"
+                              title="More options"
+                            >
+                              <MoreHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Projects */}
+                    {showFull && isSpaceExpanded && (
+                      <div className="ml-5 pl-3 border-l border-[#2a2e33] mt-0.5">
+                        {space.projects.length > 0 ? (
+                          space.projects.map(project => (
+                            <Link
+                              key={project.id}
+                              to={`/project/${project.id}/board`}
+                              onClick={() => {
+                                setCurrentSpace(space);
+                                setCurrentProject(project);
+                              }}
+                              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group
+                                ${isProjectActive(project.id) 
+                                  ? 'bg-[#7c3aed]/15 text-[#a78bfa]' 
+                                  : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}`}
+                            >
+                              <Hash className="w-3.5 h-3.5 flex-shrink-0" style={{ color: project.color || space.color }} />
+                              <span className="truncate flex-1">{project.name}</span>
+                              <span className={`text-[10px] font-mono text-[#6b7280] opacity-0 group-hover:opacity-100 ${isProjectActive(project.id) ? 'opacity-100' : ''}`}>
+                                {project.key}
+                              </span>
+                            </Link>
+                          ))
+                        ) : (
+                          <p className="px-2 py-1.5 text-xs text-[#6b7280] italic">No projects</p>
+                        )}
+                        
+                        {/* Add Project */}
+                        <button
+                          onClick={() => {
+                            setCurrentSpace(space);
+                            setIsCreateProjectModalOpen(true);
+                          }}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-[#6b7280] hover:text-white hover:bg-[#25282c] transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Project</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="px-2 py-6 text-center">
+                <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center mx-auto mb-2">
+                  <Zap className="w-5 h-5 text-[#6b7280]" />
+                </div>
+                {showFull && (
+                  <>
+                    <p className="text-sm text-[#6b7280] mb-2">No spaces yet</p>
+                    <button
+                      onClick={() => setIsCreateSpaceModalOpen(true)}
+                      className="text-sm text-[#7c3aed] hover:text-[#a78bfa] font-medium transition-colors"
+                    >
+                      Create a space
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="border-t border-[#2a2e33] p-2">
+          {[
+            { icon: Users, label: 'Team', path: '/team' },
+            { icon: Settings, label: 'Settings', path: '/settings' },
+          ].map(item => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5
+                  ${active ? 'bg-[#25282c] text-white' : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}
+                  ${!showFull ? 'justify-center px-2' : ''}`}
+                title={!showFull ? item.label : undefined}
+              >
+                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+                {showFull && <span>{item.label}</span>}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* User Profile */}
+        <div className="border-t border-[#2a2e33] p-2 relative">
           <button
-            onClick={() => setIsCreateSpaceModalOpen(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors mt-2"
+            onClick={() => showFull && setShowUserMenu(!showUserMenu)}
+            className={`w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-[#25282c] transition-colors
+              ${!showFull ? 'justify-center' : ''}`}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add Space</span>
-          </button>
-        )}
-      </div>
-
-      {/* Bottom Navigation */}
-      <div className="border-t border-gray-800 px-2 py-3">
-        {bottomNavItems.map(item => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-1
-              ${isActive(item.path)
-                ? 'bg-brand-500/20 text-brand-400'
-                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }
-              ${!showFull ? 'justify-center' : ''}
-            `}
-            title={!showFull ? item.label : undefined}
-          >
-            <span className="text-base">{item.icon}</span>
-            {showFull && <span>{item.label}</span>}
-          </Link>
-        ))}
-      </div>
-
-      {/* User Section */}
-      {showFull && (
-        <div className="p-3 border-t border-gray-800">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors">
-            <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-xs font-medium text-white">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover rounded-full" />
+                <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
               ) : (
                 getInitials(user?.name || 'U')
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-gray-400 truncate">{user?.email || ''}</p>
+            {showFull && (
+              <>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
+                  <p className="text-xs text-[#6b7280] truncate">{user?.email || ''}</p>
+                </div>
+                <ChevronRight className={`w-4 h-4 text-[#6b7280] transition-transform ${showUserMenu ? 'rotate-90' : ''}`} />
+              </>
+            )}
+          </button>
+
+          {/* User Menu */}
+          {showUserMenu && showFull && (
+            <div className="absolute bottom-full left-2 right-2 mb-2 bg-[#25282c] border border-[#2a2e33] rounded-lg shadow-xl overflow-hidden">
+              <div className="p-1.5">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign out</span>
+                </button>
+              </div>
             </div>
-            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-            </svg>
-          </div>
+          )}
         </div>
-      )}
-    </aside>
+      </aside>
+    </>
   );
 };
 

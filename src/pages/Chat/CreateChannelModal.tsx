@@ -1,0 +1,266 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// src/pages/chat/CreateChannelModal.tsx
+import React, { useState } from 'react';
+import { X, Hash, Lock, Globe, Users, Folder, Briefcase } from 'lucide-react';
+import { useCreateChannel } from '../../hooks/api/useChat';
+import { useProject } from '../../context/ProjectContext';
+
+interface CreateChannelModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: (channelId: string) => void;
+}
+
+type ChannelType = 'team' | 'project' | 'space';
+
+export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+}) => {
+  const { currentWorkspace, allSpaces } = useProject();
+  const createChannel = useCreateChannel();
+
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [channelType, setChannelType] = useState<ChannelType>('team');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [selectedTargetId, setSelectedTargetId] = useState('');
+
+  // Get all projects from spaces
+  const allProjects = allSpaces.flatMap((space) =>
+    space.projects.map((project) => ({
+      ...project,
+      spaceName: space.name,
+    }))
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!name.trim() || !currentWorkspace) return;
+
+    // For team channels, use workspace ID as targetId
+    const targetId =
+      channelType === 'team' ? currentWorkspace.id : selectedTargetId;
+
+    if (!targetId) return;
+
+    try {
+      const channel = await createChannel.mutateAsync({
+        name: name.trim(),
+        type: channelType,
+        targetId,
+        workspaceId: currentWorkspace.id,
+        isPrivate,
+      });
+
+      onSuccess?.(channel.id);
+      handleClose();
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleClose = () => {
+    setName('');
+    setDescription('');
+    setChannelType('team');
+    setIsPrivate(false);
+    setSelectedTargetId('');
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+
+      {/* Modal */}
+      <div className="relative w-full max-w-lg bg-[#1a1d21] border border-[#2a2e33] rounded-2xl shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-[#2a2e33]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-500/20 flex items-center justify-center">
+              <Hash className="w-5 h-5 text-brand-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Create Channel</h2>
+              <p className="text-xs text-[#6b7280]">
+                Channels are for team conversations
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleClose}
+            className="p-2 hover:bg-[#2a2e33] rounded-lg text-[#6b7280] hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Channel Type Selection */}
+          <div>
+            <label className="block text-sm font-medium text-[#9ca3af] mb-2">
+              Channel Type
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { type: 'team' as ChannelType, icon: Users, label: 'Team' },
+                { type: 'project' as ChannelType, icon: Briefcase, label: 'Project' },
+                { type: 'space' as ChannelType, icon: Folder, label: 'Space' },
+              ].map(({ type, icon: Icon, label }) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    setChannelType(type);
+                    setSelectedTargetId('');
+                  }}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-colors ${
+                    channelType === type
+                      ? 'bg-brand-500/20 border-brand-500/50 text-brand-400'
+                      : 'bg-[#25282c] border-[#2a2e33] text-[#9ca3af] hover:border-[#3a3e43]'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-xs font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Target Selection (for project/space channels) */}
+          {channelType !== 'team' && (
+            <div>
+              <label className="block text-sm font-medium text-[#9ca3af] mb-2">
+                Select {channelType === 'project' ? 'Project' : 'Space'}
+              </label>
+              <select
+                value={selectedTargetId}
+                onChange={(e) => setSelectedTargetId(e.target.value)}
+                className="w-full px-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white text-sm focus:outline-none focus:border-brand-500/50"
+                required
+              >
+                <option value="">
+                  Select a {channelType === 'project' ? 'project' : 'space'}
+                </option>
+                {channelType === 'project'
+                  ? allProjects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.spaceName} / {project.name}
+                      </option>
+                    ))
+                  : allSpaces.map((space) => (
+                      <option key={space.id} value={space.id}>
+                        {space.name}
+                      </option>
+                    ))}
+              </select>
+            </div>
+          )}
+
+          {/* Channel Name */}
+          <div>
+            <label className="block text-sm font-medium text-[#9ca3af] mb-2">
+              Channel Name
+            </label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280]" />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                placeholder="e.g. general, announcements"
+                className="w-full pl-9 pr-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white placeholder-[#6b7280] text-sm focus:outline-none focus:border-brand-500/50"
+                required
+                maxLength={50}
+              />
+            </div>
+            <p className="mt-1 text-xs text-[#6b7280]">
+              Lowercase letters, numbers, and hyphens only
+            </p>
+          </div>
+
+          {/* Description (Optional) */}
+          <div>
+            <label className="block text-sm font-medium text-[#9ca3af] mb-2">
+              Description <span className="text-[#6b7280]">(optional)</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What's this channel about?"
+              rows={2}
+              className="w-full px-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white placeholder-[#6b7280] text-sm focus:outline-none focus:border-brand-500/50 resize-none"
+              maxLength={200}
+            />
+          </div>
+
+          {/* Privacy Toggle */}
+          <div className="flex items-center justify-between p-3 bg-[#25282c] rounded-xl">
+            <div className="flex items-center gap-3">
+              {isPrivate ? (
+                <Lock className="w-5 h-5 text-[#9ca3af]" />
+              ) : (
+                <Globe className="w-5 h-5 text-[#9ca3af]" />
+              )}
+              <div>
+                <p className="text-sm font-medium text-white">
+                  {isPrivate ? 'Private Channel' : 'Public Channel'}
+                </p>
+                <p className="text-xs text-[#6b7280]">
+                  {isPrivate
+                    ? 'Only invited members can see this channel'
+                    : 'Anyone in the workspace can join'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPrivate(!isPrivate)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                isPrivate ? 'bg-brand-500' : 'bg-[#3a3e43]'
+              }`}
+            >
+              <span
+                className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                  isPrivate ? 'left-6' : 'left-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex-1 px-4 py-2.5 bg-[#25282c] hover:bg-[#2a2e33] text-white rounded-lg font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={
+                !name.trim() ||
+                (channelType !== 'team' && !selectedTargetId) ||
+                createChannel.isPending
+              }
+              className="flex-1 px-4 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-500/50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+            >
+              {createChannel.isPending ? 'Creating...' : 'Create Channel'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};

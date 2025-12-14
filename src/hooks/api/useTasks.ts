@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// src/hooks/api/useTasks.ts
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { apiClient } from '../../lib/api-client';
 import { queryKeys } from '../../lib/query-client';
 import { TaskStatus, Priority as TaskPriority, TaskType } from '../../types/project';
@@ -73,6 +76,10 @@ export interface CreateTaskData {
   dueDate?: string;
   labels?: string[];
 }
+
+// ============================================
+// Query Hooks
+// ============================================
 
 // Get tasks for a project
 export function useTasks(projectId: string, filters?: TaskFilters) {
@@ -154,6 +161,10 @@ export function useTaskComments(taskId: string) {
   });
 }
 
+// ============================================
+// Mutation Hooks with Toast
+// ============================================
+
 // Create task
 export function useCreateTask() {
   const queryClient = useQueryClient();
@@ -161,11 +172,21 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: ({ projectId, data }: { projectId: string; data: CreateTaskData }) =>
       apiClient.post<Task>(`/projects/${projectId}/tasks`, data),
-    onSuccess: (task) => {
+    onMutate: () => {
+      return { toastId: toast.loading('Creating task...') };
+    },
+    onSuccess: (task, _, context) => {
+      toast.dismiss(context?.toastId);
+      toast.success(`Task ${task.key} created successfully`);
+      
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
       if (task.sprintId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.tasks.bySprint(task.sprintId) });
       }
+    },
+    onError: (error: Error, _, context) => {
+      toast.dismiss(context?.toastId);
+      toast.error(error.message || 'Failed to create task');
     },
   });
 }
@@ -184,8 +205,12 @@ export function useUpdateTask() {
       return apiClient.put<Task>(`/tasks/${id}`, normalizedData);
     },
     onSuccess: (task) => {
+      toast.success('Task updated');
       queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update task');
     },
   });
 }
@@ -217,7 +242,11 @@ export function useUpdateTaskStatus() {
 
       return { previousTask };
     },
-    onError: (_, variables, context) => {
+    onSuccess: (task) => {
+      // Show subtle success for status changes (no toast for drag & drop to avoid spam)
+      // Only show if you want: toast.success(`Moved to ${task.status}`);
+    },
+    onError: (error: Error, variables, context) => {
       // Rollback on error
       if (context?.previousTask) {
         queryClient.setQueryData(
@@ -225,6 +254,7 @@ export function useUpdateTaskStatus() {
           context.previousTask
         );
       }
+      toast.error('Failed to update task status');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
@@ -238,8 +268,17 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/tasks/${id}`),
-    onSuccess: () => {
+    onMutate: () => {
+      return { toastId: toast.loading('Deleting task...') };
+    },
+    onSuccess: (_, __, context) => {
+      toast.dismiss(context?.toastId);
+      toast.success('Task deleted');
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+    onError: (error: Error, _, context) => {
+      toast.dismiss(context?.toastId);
+      toast.error(error.message || 'Failed to delete task');
     },
   });
 }
@@ -252,9 +291,13 @@ export function useAddComment() {
     mutationFn: ({ taskId, content }: { taskId: string; content: string }) =>
       apiClient.post<Comment>(`/tasks/${taskId}/comments`, { content }),
     onSuccess: (_, variables) => {
+      toast.success('Comment added');
       queryClient.invalidateQueries({
         queryKey: queryKeys.tasks.comments(variables.taskId)
       });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add comment');
     },
   });
 }
@@ -265,11 +308,15 @@ export function useDeleteComment() {
 
   return useMutation({
     mutationFn: ({ taskId, commentId }: { taskId: string; commentId: string }) =>
-      apiClient.delete(`/tasks/${taskId}/comments/${commentId}`),
+      apiClient.delete(`/comments/${commentId}`),
     onSuccess: (_, variables) => {
+      toast.success('Comment deleted');
       queryClient.invalidateQueries({
         queryKey: queryKeys.tasks.comments(variables.taskId)
       });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete comment');
     },
   });
 }
@@ -282,7 +329,11 @@ export function useBulkUpdateTasks() {
     mutationFn: (tasks: Array<{ id: string; order?: number; status?: TaskStatus; sprintId?: string | null }>) =>
       apiClient.put('/tasks/bulk', { tasks }),
     onSuccess: () => {
+      // No toast for bulk updates (usually drag & drop reordering)
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update tasks');
     },
   });
 }
@@ -295,9 +346,94 @@ export function useMoveTaskToSprint() {
     mutationFn: ({ taskId, sprintId }: { taskId: string; sprintId: string | null }) =>
       apiClient.patch<Task>(`/tasks/${taskId}`, { sprintId }),
     onSuccess: (task) => {
+      const message = task.sprintId 
+        ? `Task moved to sprint` 
+        : 'Task moved to backlog';
+      toast.success(message);
+      
       queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.all });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to move task');
+    },
+  });
+}
+
+// ============================================
+// Additional Hooks with Toast
+// ============================================
+
+// Assign task to user
+export function useAssignTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, assigneeId }: { taskId: string; assigneeId: string | null }) =>
+      apiClient.patch<Task>(`/tasks/${taskId}`, { assigneeId }),
+    onSuccess: (task) => {
+      const message = task.assigneeId 
+        ? `Task assigned to ${task.assignee?.name || 'user'}` 
+        : 'Task unassigned';
+      toast.success(message);
+      
+      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to assign task');
+    },
+  });
+}
+
+// Update task priority
+export function useUpdateTaskPriority() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, priority }: { taskId: string; priority: TaskPriority }) =>
+      apiClient.patch<Task>(`/tasks/${taskId}`, { priority: priority.toUpperCase() }),
+    onSuccess: (task) => {
+      toast.success(`Priority set to ${task.priority.toLowerCase()}`);
+      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update priority');
+    },
+  });
+}
+
+// Duplicate task
+export function useDuplicateTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ task, projectId }: { task: Task; projectId: string }) => {
+      const duplicateData: CreateTaskData = {
+        title: `${task.title} (copy)`,
+        description: task.description,
+        status: 'backlog' as TaskStatus,
+        priority: task.priority,
+        type: task.type,
+        sprintId: task.sprintId,
+        storyPoints: task.storyPoints,
+        labels: task.labels,
+      };
+      return apiClient.post<Task>(`/projects/${projectId}/tasks`, duplicateData);
+    },
+    onMutate: () => {
+      return { toastId: toast.loading('Duplicating task...') };
+    },
+    onSuccess: (newTask, _, context) => {
+      toast.dismiss(context?.toastId);
+      toast.success(`Task duplicated as ${newTask.key}`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+    },
+    onError: (error: Error, _, context) => {
+      toast.dismiss(context?.toastId);
+      toast.error(error.message || 'Failed to duplicate task');
     },
   });
 }

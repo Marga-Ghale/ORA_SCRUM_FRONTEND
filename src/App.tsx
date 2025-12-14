@@ -22,6 +22,9 @@ import UserProfiles from "./pages/UserProfiles";
 import { AuthProvider } from "./components/UserProfile/AuthContext";
 import ProtectedRoute from "./components/Protected/ProtectedRoute";
 import GuestRoute from "./components/Protected/GuestRoute";
+import ToastProvider from "./components/common/ToastProvider";
+import ChatPage from "./pages/Chat/ChatPage";
+import NotificationPage from "./pages/Notification/NotificationPage";
 
 if (process.env.NODE_ENV === "development") {
   setupLocatorUI();
@@ -31,6 +34,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+      <ToastProvider />
         <Router>
           <ScrollToTop />
           <Routes>
@@ -45,7 +49,12 @@ export default function App() {
               {/* Main Pages */}
               <Route index path="/" element={<ProjectDashboard />} />
               <Route path="/dashboard" element={<ProjectDashboard />} />
-              <Route path="/my-tasks" element={<MyTasks />} />
+               <Route path="/notifications" element={<NotificationPage />} />
+
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/chat/:channelId" element={<ChatPage />} />
+
+             <Route path="/my-tasks" element={<MyTasks />} />
 
               {/* Project Board Views */}
               <Route path="/project/:projectId/board" element={<ProjectBoard />} />
