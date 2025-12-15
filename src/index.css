@@ -341,12 +341,22 @@ layer(base);
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
+  .dark *,
+  .dark ::after,
+  .dark ::before,
+  .dark ::backdrop,
+  .dark ::file-selector-button {
+    border-color: var(--color-gray-800, currentColor);
+  }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
   body {
-    @apply relative font-normal font-outfit z-1 bg-gray-50;
+    @apply relative font-normal font-outfit z-1 bg-gray-50 text-gray-900 antialiased;
+  }
+  .dark body {
+    @apply bg-gray-950 text-gray-100;
   }
 }
 
@@ -429,15 +439,78 @@ layer(base);
   }
 
   &::-webkit-scrollbar-track {
-    @apply rounded-full;
+    @apply rounded-full bg-transparent;
   }
 
   &::-webkit-scrollbar-thumb {
-    @apply bg-gray-200 rounded-full dark:bg-gray-700;
+    @apply bg-gray-300 rounded-full dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600;
   }
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #344054;
+  background-color: #374151;
+}
+
+/* Professional Card Styles */
+@utility pro-card {
+  @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm;
+}
+
+@utility pro-card-hover {
+  @apply pro-card hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-200;
+}
+
+/* Professional Stats Card */
+@utility stats-card {
+  @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 transition-all duration-200;
+}
+
+@utility stats-card:hover {
+  @apply shadow-md border-gray-300 dark:border-gray-700;
+}
+
+/* Kanban Column */
+@utility kanban-column {
+  @apply bg-gray-100 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-800/50;
+}
+
+/* Professional Input */
+@utility pro-input {
+  @apply w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg
+    focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500
+    placeholder:text-gray-400 dark:placeholder:text-gray-500
+    text-gray-900 dark:text-gray-100 transition-all;
+}
+
+/* Professional Select */
+@utility pro-select {
+  @apply pro-input appearance-none cursor-pointer pr-10;
+}
+
+/* Professional Button Primary */
+@utility btn-primary {
+  @apply px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm;
+}
+
+/* Professional Button Secondary */
+@utility btn-secondary {
+  @apply px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700
+    text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600
+    rounded-lg text-sm font-medium transition-colors;
+}
+
+/* Professional Badge */
+@utility pro-badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium;
+}
+
+/* Subtle text */
+@utility text-subtle {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+/* Muted text */
+@utility text-muted {
+  @apply text-gray-400 dark:text-gray-500;
 }
 
 @layer utilities {

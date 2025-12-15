@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Task, PRIORITY_CONFIG, TASK_TYPE_CONFIG, Priority, TaskType } from '../../types/project';
 import { useProject } from '../../context/ProjectContext';
+import { MoreHorizontal, Edit3, Link2, Trash2, MessageSquare, CheckSquare } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
@@ -18,7 +19,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
   // Safely get config - handle both uppercase and lowercase
   const priorityKey = (task.priority?.toLowerCase() || 'medium') as Priority;
   const typeKey = (task.type?.toLowerCase() || 'task') as TaskType;
-  
+
   const priorityConfig = PRIORITY_CONFIG[priorityKey] || PRIORITY_CONFIG.medium;
   const typeConfig = TASK_TYPE_CONFIG[typeKey] || TASK_TYPE_CONFIG.task;
 
@@ -40,15 +41,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
     const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      return { text: `${Math.abs(diffDays)}d overdue`, color: "text-error-500" };
+      return { text: `${Math.abs(diffDays)}d overdue`, color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-500/10" };
     } else if (diffDays === 0) {
-      return { text: "Today", color: "text-warning-500" };
+      return { text: "Today", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" };
     } else if (diffDays === 1) {
-      return { text: "Tomorrow", color: "text-warning-500" };
+      return { text: "Tomorrow", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" };
     } else if (diffDays <= 7) {
-      return { text: `${diffDays}d`, color: "text-gray-500" };
+      return { text: `${diffDays}d`, color: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-700" };
     }
-    return { text: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), color: "text-gray-500" };
+    return { text: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), color: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-700" };
   };
 
   const dueInfo = formatDate(task.dueDate);
@@ -57,18 +58,17 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
     <div
       onClick={() => openTaskModal(task)}
       className={`
-        group relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700
-        hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer transition-all duration-200
-        ${isDragging ? "shadow-lg ring-2 ring-brand-500 opacity-90" : "hover:shadow-md"}
-        ${compact ? "p-3" : "p-4"}
+        group relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700/80
+        hover:border-gray-300 dark:hover:border-gray-600 cursor-pointer transition-all duration-150
+        ${isDragging ? "shadow-lg ring-2 ring-brand-500/50 rotate-2" : "hover:shadow-sm"}
+        ${compact ? "p-3" : "p-3.5"}
       `}
     >
-
-      {/* --- Top Row --- */}
+      {/* Top Row - Type, Key, Priority */}
       <div className="flex items-center gap-2 mb-2">
         <span
-          className="flex items-center justify-center w-5 h-5 rounded text-xs"
-          style={{ backgroundColor: `${typeConfig.color}20`, color: typeConfig.color }}
+          className="flex items-center justify-center w-5 h-5 rounded text-[10px] font-medium"
+          style={{ backgroundColor: `${typeConfig.color}15`, color: typeConfig.color }}
         >
           {typeConfig.icon}
         </span>
@@ -79,87 +79,89 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
 
         <div className="flex-1" />
 
-        <span
-          className="w-2 h-2 rounded-full"
-          style={{ backgroundColor: priorityConfig.color }}
-        />
+        {/* Priority indicator */}
+        <div className="flex items-center gap-1">
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: priorityConfig.color }}
+            title={priorityConfig.name}
+          />
+        </div>
       </div>
 
       {/* Title */}
-      <h4 className={`font-medium text-gray-900 dark:text-white ${compact ? "text-sm" : "text-sm"} line-clamp-2 mb-3`}>
+      <h4 className={`font-medium text-gray-900 dark:text-gray-100 ${compact ? "text-[13px]" : "text-sm"} line-clamp-2 mb-2.5 leading-snug`}>
         {task.title}
       </h4>
 
       {/* Labels */}
       {task.labels && task.labels.length > 0 && !compact && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {task.labels.slice(0, 3).map(label => (
+        <div className="flex flex-wrap gap-1 mb-2.5">
+          {task.labels.slice(0, 2).map(label => (
             <span
               key={label.id}
-              className="px-2 py-0.5 rounded text-xs font-medium"
-              style={{ backgroundColor: `${label.color}20`, color: label.color }}
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{ backgroundColor: `${label.color}15`, color: label.color }}
             >
               {label.name}
             </span>
           ))}
-          {task.labels.length > 3 && (
-            <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500">
-              +{task.labels.length - 3}
+          {task.labels.length > 2 && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+              +{task.labels.length - 2}
             </span>
           )}
         </div>
       )}
 
-      {/* --- Bottom Row --- */}
-      <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100 dark:border-gray-700">
+      {/* Bottom Row */}
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/50">
         <div className="flex items-center gap-2">
+          {/* Story Points */}
           {task.storyPoints && (
-            <span className="flex items-center justify-center w-6 h-6 rounded bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300">
+            <span className="flex items-center justify-center px-1.5 h-5 rounded bg-gray-100 dark:bg-gray-700/80 text-[10px] font-semibold text-gray-600 dark:text-gray-300">
               {task.storyPoints}
             </span>
           )}
 
+          {/* Due Date */}
           {dueInfo && (
-            <span className={`text-xs font-medium ${dueInfo.color}`}>
+            <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${dueInfo.bg} ${dueInfo.color}`}>
               {dueInfo.text}
             </span>
           )}
 
+          {/* Subtasks */}
           {task.subtasks && task.subtasks.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-gray-500">
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-              </svg>
-              {task.subtasks.filter(s => s.status === "done").length}/{task.subtasks.length}
+            <span className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+              <CheckSquare className="w-3 h-3" />
+              <span className="font-medium">{task.subtasks.filter(s => s.status === "done").length}/{task.subtasks.length}</span>
             </span>
           )}
 
+          {/* Comments */}
           {task.comments && task.comments.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-gray-500">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              {task.comments.length}
+            <span className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+              <MessageSquare className="w-3 h-3" />
+              <span className="font-medium">{task.comments.length}</span>
             </span>
           )}
         </div>
 
         {/* Assignee */}
         {task.assignee ? (
-          <div className="w-7 h-7 rounded-full overflow-hidden ring-2 ring-white dark:ring-gray-800">
+          <div className="w-6 h-6 rounded-full overflow-hidden ring-2 ring-white dark:ring-gray-800 flex-shrink-0">
             {task.assignee.avatar ? (
               <img src={task.assignee.avatar} alt={task.assignee.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-brand-500 flex items-center justify-center text-xs font-bold text-white">
+              <div className="w-full h-full bg-brand-500 flex items-center justify-center text-[10px] font-bold text-white">
                 {task.assignee.name?.charAt(0)?.toUpperCase() || '?'}
               </div>
             )}
           </div>
         ) : (
-          <div className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
-            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <div className="w-6 h-6 rounded-full border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3 h-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
@@ -167,7 +169,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
         )}
       </div>
 
-      {/* --- Hover Menu Button (⋮) --- */}
+      {/* Hover Menu Button */}
       <div
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
         onClick={(e) => e.stopPropagation()}
@@ -175,37 +177,38 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
       >
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-1 rounded-md bg-white dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
         >
-          <svg className="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-              d="M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-          </svg>
+          <MoreHorizontal className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
         </button>
 
         {/* Quick Action Menu */}
         {menuOpen && (
-          <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-
+          <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1 animate-in fade-in slide-in-from-top-1 duration-150">
             <button
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2.5 transition-colors"
               onClick={() => { openTaskModal(task); setMenuOpen(false); }}
             >
-              ✏️ Edit Task
+              <Edit3 className="w-3.5 h-3.5 text-gray-400" />
+              Edit Task
             </button>
 
             <button
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2.5 transition-colors"
               onClick={() => { navigator.clipboard.writeText(window.location.href + `?task=${task.id}`); setMenuOpen(false); }}
             >
-              🔗 Copy Link
+              <Link2 className="w-3.5 h-3.5 text-gray-400" />
+              Copy Link
             </button>
 
+            <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
+
             <button
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2.5 transition-colors"
               onClick={() => { deleteTask(task.id); setMenuOpen(false); }}
             >
-              🗑️ Delete Task
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Task
             </button>
           </div>
         )}
