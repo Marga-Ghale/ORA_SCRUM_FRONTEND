@@ -40,7 +40,7 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:latest
           build-args: |
-            VITE_API_URL=https://scrum-api.oratechnologies.io
+            VITE_API_URL=https://scrum-api.oratechnologies.io/api
 
   deploy:
     name: Deploy to Server
