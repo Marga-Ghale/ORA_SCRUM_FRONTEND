@@ -10,7 +10,7 @@ COPY . .
 ARG VITE_API_URL=https://scrum-api.oratechnologies.io
 ENV VITE_API_URL=$VITE_API_URL
 
-RUN npm run build || npx vite build --skipLibCheck
+RUN npm run build
 
 FROM nginx:alpine
 
