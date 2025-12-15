@@ -155,7 +155,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return groups;
   }, [messages]);
 
-  const displayName = getChannelDisplayName(channel, currentUserId);
+const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown User';
   const memberCount = channel.type !== 'direct' ? '12 members' : undefined; // Replace with actual count
 
   return (
@@ -165,26 +165,26 @@ export const ChatView: React.FC<ChatViewProps> = ({
         <div className="flex items-center gap-3">
           {/* Channel/User Avatar */}
           {channel.type === 'direct' ? (
-            <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-semibold text-white">
-                {channel.otherUser?.avatar ? (
-                  <img
-                    src={channel.otherUser.avatar}
-                    alt={displayName}
-                    className="w-full h-full rounded-xl object-cover"
-                  />
-                ) : (
-                  displayName[0]?.toUpperCase()
-                )}
-              </div>
-              {/* Online status */}
-              <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 text-green-500 fill-green-500 stroke-[#0d0f11] stroke-2" />
-            </div>
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center">
-              <Hash className="w-5 h-5 text-[#9ca3af]" />
-            </div>
-          )}
+  <div className="relative">
+    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-semibold text-white">
+      {channel.otherUser?.avatar ? (
+        <img
+          src={channel.otherUser.avatar}
+          alt={displayName || 'User'}
+          className="w-full h-full rounded-xl object-cover"
+        />
+      ) : (
+        (displayName && displayName.length > 0 ? displayName[0].toUpperCase() : '?')
+      )}
+    </div>
+    {/* Online status */}
+    <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 text-green-500 fill-green-500 stroke-[#0d0f11] stroke-2" />
+  </div>
+) : (
+  <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center">
+    <Hash className="w-5 h-5 text-[#9ca3af]" />
+  </div>
+)}
 
           {/* Channel Info */}
           <div>

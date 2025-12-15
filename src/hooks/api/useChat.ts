@@ -892,11 +892,12 @@ export function groupMessagesByDate(
  */
 export function getChannelDisplayName(channel: ChatChannel, _currentUserId?: string): string {
   if (channel.type === 'direct' && channel.otherUser) {
-    return channel.otherUser.name;
+    // Backend returns capitalized "Name" field
+    const otherUser = channel.otherUser as any;
+    return otherUser.Name || otherUser.name || 'Unknown User';
   }
-  return channel.name;
+  return channel.name || 'Unknown Channel';
 }
-
 /**
  * Get channel icon
  */

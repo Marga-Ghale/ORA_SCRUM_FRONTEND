@@ -22,21 +22,24 @@ interface ChannelListProps {
   channels: ChatChannel[];
   activeChannelId?: string;
   unreadCounts: Record<string, number>;
+  currentUserId: string; 
   onSelectChannel: (channel: ChatChannel) => void;
   onCreateChannel: () => void;
   onCreateDM: () => void;
   isLoading?: boolean;
 }
 
+
 export const ChannelList: React.FC<ChannelListProps> = ({
   channels,
   activeChannelId,
   unreadCounts,
+  currentUserId, 
   onSelectChannel,
   onCreateChannel,
   onCreateDM,
   isLoading = false,
-}) => {
+})  => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['channels', 'direct', 'starred'])
@@ -87,8 +90,8 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 
     const query = searchQuery.toLowerCase();
     const filterChannel = (channel: ChatChannel) => {
-      const name = (getChannelDisplayName(channel) || '').toLowerCase();
-      return name.includes(query);
+    const name = (getChannelDisplayName(channel, currentUserId) || '').toLowerCase();
+    return name.includes(query);
     };
 
     return {
@@ -96,7 +99,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
       projectChannels: categorizedChannels.projectChannels.filter(filterChannel),
       directMessages: categorizedChannels.directMessages.filter(filterChannel),
     };
-  }, [categorizedChannels, searchQuery]);
+  }, [categorizedChannels, searchQuery, currentUserId]); // ✅ ADD currentUserId to deps
 
   // Calculate total unread counts
   const totalUnread = useMemo(() => {
@@ -130,16 +133,29 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   };
 
   // Channel Item Component
-  const ChannelItem: React.FC<{
-    channel: ChatChannel;
-    showType?: boolean;
-  }> = ({ channel, showType = false }) => {
-    const isActive = channel.id === activeChannelId;
-    const unread = unreadCounts[channel.id] || 0;
-    const isHovered = hoveredChannel === channel.id;
-    const displayName = getChannelDisplayName(channel) || 'Unknown';
-    const isStarred = starredChannels.has(channel.id);
-    const isDM = channel.type === 'direct';
+const ChannelItem: React.FC<{
+  channel: ChatChannel;
+  showType?: boolean;
+}> = ({ channel, showType = false }) => {
+  const isActive = channel.id === activeChannelId;
+  const unread = unreadCounts[channel.id] || 0;
+  const isHovered = hoveredChannel === channel.id;
+  
+  // 🔍 DEBUG: Check channel data
+  if (channel.type === 'direct') {
+    console.log('Direct channel:', {
+      id: channel.id,
+      name: channel.name,
+      type: channel.type,
+      otherUser: channel.otherUser,
+      hasOtherUser: !!channel.otherUser,
+    });
+  }
+  
+  const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown';
+  console.log(displayName);
+  const isStarred = starredChannels.has(channel.id);
+  const isDM = channel.type === 'direct';
 
     return (
       <button
