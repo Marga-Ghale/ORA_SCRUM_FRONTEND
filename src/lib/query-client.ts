@@ -18,8 +18,8 @@ export const queryKeys = {
   tasks: {
     all: ['tasks'] as const,
     lists: () => [...queryKeys.tasks.all, 'list'] as const,
-    list: (projectId: string, filters?: Record<string, unknown>) => 
-      [...queryKeys.tasks.lists(), projectId, filters] as const,
+   list: (projectId: string, filters?: object) => 
+  [...queryKeys.tasks.lists(), projectId, filters] as const,
     backlog: (projectId: string) => [...queryKeys.tasks.all, 'backlog', projectId] as const,
     bySprint: (sprintId: string) => [...queryKeys.tasks.all, 'sprint', sprintId] as const,
     detail: (id: string) => [...queryKeys.tasks.all, 'detail', id] as const,
