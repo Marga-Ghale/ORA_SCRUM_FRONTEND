@@ -461,11 +461,7 @@ layer(base);
 
 /* Professional Stats Card */
 @utility stats-card {
-  @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 transition-all duration-200;
-}
-
-@utility stats-card:hover {
-  @apply shadow-md border-gray-300 dark:border-gray-700;
+  @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 transition-all duration-200 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700;
 }
 
 /* Kanban Column */
