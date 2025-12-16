@@ -1,18 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { TaskStatus, Priority, TaskType, STATUS_COLUMNS, PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
+import {
+  TaskStatus,
+  Priority,
+  TaskType,
+  STATUS_COLUMNS,
+  PRIORITY_CONFIG,
+  TASK_TYPE_CONFIG,
+} from '../../types/project';
 import { useProject } from '../../context/ProjectContext';
-import { useAddComment, useCreateLabel, useDeleteComment, useDeleteTask, useLabels, useTaskComments, useUpdateTask } from '../../hooks/api';
+import {
+  useAddComment,
+  useCreateLabel,
+  useDeleteComment,
+  useDeleteTask,
+  useLabels,
+  useTaskComments,
+  useUpdateTask,
+} from '../../hooks/api';
 import { useProjectUsers } from '../../hooks/useUser';
 import { useAddLabelToTask, useRemoveLabelFromTask } from '../../hooks/api/useLabels';
 
-
 const TaskDetailModal: React.FC = () => {
-  const {
-    selectedTask,
-    isTaskModalOpen,
-    closeTaskModal,
-    currentProject,
-  } = useProject();
+  const { selectedTask, isTaskModalOpen, closeTaskModal, currentProject } = useProject();
 
   // Fetch dynamic data from API
   const { data: comments, refetch: refetchComments } = useTaskComments(selectedTask?.id || '');
@@ -61,7 +70,9 @@ const TaskDetailModal: React.FC = () => {
         type: selectedTask.type,
         assigneeId: selectedTask.assignee?.id || '',
         storyPoints: selectedTask.storyPoints,
-        dueDate: selectedTask.dueDate ? new Date(selectedTask.dueDate).toISOString().split('T')[0] : '',
+        dueDate: selectedTask.dueDate
+          ? new Date(selectedTask.dueDate).toISOString().split('T')[0]
+          : '',
       });
       setHasChanges(false);
     }
@@ -123,9 +134,9 @@ const TaskDetailModal: React.FC = () => {
   const labels = projectLabels || [];
 
   // Update form field and mark as changed
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const updateField = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
 
@@ -145,9 +156,9 @@ const TaskDetailModal: React.FC = () => {
           assigneeId: formData.assigneeId || undefined,
           storyPoints: formData.storyPoints,
           dueDate: formData.dueDate || undefined,
-        }
+        },
       });
-      
+
       setHasChanges(false);
       closeTaskModal();
     } catch (error) {
@@ -159,7 +170,7 @@ const TaskDetailModal: React.FC = () => {
   // Handle delete
   const handleDelete = async () => {
     if (!selectedTask) return;
-    
+
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
         await deleteTaskMutation.mutateAsync(selectedTask.id);
@@ -183,7 +194,9 @@ const TaskDetailModal: React.FC = () => {
           type: selectedTask.type,
           assigneeId: selectedTask.assignee?.id || '',
           storyPoints: selectedTask.storyPoints,
-          dueDate: selectedTask.dueDate ? new Date(selectedTask.dueDate).toISOString().split('T')[0] : '',
+          dueDate: selectedTask.dueDate
+            ? new Date(selectedTask.dueDate).toISOString().split('T')[0]
+            : '',
         });
         setHasChanges(false);
       }
@@ -211,7 +224,7 @@ const TaskDetailModal: React.FC = () => {
   // Delete comment
   const handleDeleteComment = async (commentId: string) => {
     if (!selectedTask) return;
-    
+
     if (window.confirm('Are you sure you want to delete this comment?')) {
       try {
         await deleteCommentMutation.mutateAsync({
@@ -282,7 +295,7 @@ const TaskDetailModal: React.FC = () => {
   };
 
   const typeConfig = TASK_TYPE_CONFIG[formData.type];
-  const statusConfig = STATUS_COLUMNS.find(s => s.id === formData.status);
+  const statusConfig = STATUS_COLUMNS.find((s) => s.id === formData.status);
   const isSaving = updateTaskMutation.isPending;
   const isDeleting = deleteTaskMutation.isPending;
 
@@ -335,13 +348,34 @@ const TaskDetailModal: React.FC = () => {
                 title="Delete"
               >
                 {isDeleting ? (
-                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin h-5 w-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                 ) : (
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
                   </svg>
                 )}
               </button>
@@ -350,7 +384,9 @@ const TaskDetailModal: React.FC = () => {
               <button
                 onClick={() => {
                   if (hasChanges) {
-                    if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
+                    if (
+                      window.confirm('You have unsaved changes. Are you sure you want to close?')
+                    ) {
                       closeTaskModal();
                     }
                   } else {
@@ -360,7 +396,12 @@ const TaskDetailModal: React.FC = () => {
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -391,7 +432,7 @@ const TaskDetailModal: React.FC = () => {
                     color: statusConfig?.color,
                   }}
                 >
-                  {STATUS_COLUMNS.map(status => (
+                  {STATUS_COLUMNS.map((status) => (
                     <option key={status.id} value={status.id}>
                       {status.name}
                     </option>
@@ -441,7 +482,7 @@ const TaskDetailModal: React.FC = () => {
               {/* Tabs */}
               <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
                 <div className="flex gap-4 border-b border-gray-200 dark:border-gray-700">
-                  {(['comments', 'activity'] as const).map(tab => (
+                  {(['comments', 'activity'] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -500,7 +541,7 @@ const TaskDetailModal: React.FC = () => {
                         <p className="text-center text-gray-400 mt-6">No comments yet</p>
                       ) : (
                         <div className="space-y-4">
-                          {comments.map(comment => (
+                          {comments.map((comment) => (
                             <div key={comment.id} className="flex gap-3">
                               <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                                 {comment.user?.avatar ? (
@@ -579,8 +620,10 @@ const TaskDetailModal: React.FC = () => {
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
                 >
                   <option value="">Unassigned</option>
-                  {users.map(user => (
-                    <option key={user.id} value={user.id}>{user.name}</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -612,18 +655,20 @@ const TaskDetailModal: React.FC = () => {
                   Labels
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  {taskLabels.map(label => (
+                  {taskLabels.map((label) => (
                     <span
                       key={typeof label === 'object' ? label.id : label}
                       className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 group"
                       style={{
                         backgroundColor: typeof label === 'object' ? `${label.color}20` : '#e5e7eb',
-                        color: typeof label === 'object' ? label.color : '#6b7280'
+                        color: typeof label === 'object' ? label.color : '#6b7280',
                       }}
                     >
                       {typeof label === 'object' ? label.name : label}
                       <button
-                        onClick={() => handleRemoveLabel(typeof label === 'object' ? label.id : label)}
+                        onClick={() =>
+                          handleRemoveLabel(typeof label === 'object' ? label.id : label)
+                        }
                         className="opacity-0 group-hover:opacity-100 hover:text-error-600"
                       >
                         ×
@@ -685,7 +730,7 @@ const TaskDetailModal: React.FC = () => {
                     ) : (
                       <>
                         <div className="max-h-48 overflow-y-auto">
-                          {labels.map(label => (
+                          {labels.map((label) => (
                             <button
                               key={label.id}
                               onClick={() => handleAddLabel(label.id)}
@@ -719,7 +764,9 @@ const TaskDetailModal: React.FC = () => {
                 <input
                   type="number"
                   value={formData.storyPoints || ''}
-                  onChange={(e) => updateField('storyPoints', parseInt(e.target.value) || undefined)}
+                  onChange={(e) =>
+                    updateField('storyPoints', parseInt(e.target.value) || undefined)
+                  }
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
                   placeholder="Estimate"
                   min="0"
@@ -786,9 +833,25 @@ const TaskDetailModal: React.FC = () => {
                 className="px-4 py-2 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {isSaving && (
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                 )}
                 {isSaving ? 'Saving...' : 'Save Changes'}

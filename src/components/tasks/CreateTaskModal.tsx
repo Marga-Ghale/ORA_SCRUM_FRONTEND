@@ -3,7 +3,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { TaskStatus, Priority, TaskType, STATUS_COLUMNS, PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
+import {
+  TaskStatus,
+  Priority,
+  TaskType,
+  STATUS_COLUMNS,
+  PRIORITY_CONFIG,
+  TASK_TYPE_CONFIG,
+} from '../../types/project';
 import { useProject } from '../../context/ProjectContext';
 import { useCreateTask, CreateTaskData } from '../../hooks/api/useTasks';
 
@@ -13,10 +20,14 @@ interface CreateTaskModalProps {
   initialStatus?: TaskStatus;
 }
 
-const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, initialStatus = 'todo' }) => {
+const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
+  isOpen,
+  onClose,
+  initialStatus = 'todo',
+}) => {
   const { currentProject, users, labels } = useProject();
   const createTaskMutation = useCreateTask();
-  
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>(initialStatus);
@@ -27,7 +38,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, init
   const [storyPoints, setStoryPoints] = useState<string>('');
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [error, setError] = useState<string>('');
-  
+
   const titleInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -44,11 +55,11 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, init
       setStoryPoints('');
       setDueDate(null);
       setError('');
-      
+
       setTimeout(() => {
         titleInputRef.current?.focus();
       }, 100);
-      
+
       document.body.style.overflow = 'hidden';
     }
     return () => {
@@ -73,113 +84,137 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, init
     }
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!title.trim()) {
-    setError('Title is required');
-    return;
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError('Title is required');
+      return;
+    }
 
-  if (!currentProject?.id) {
-    setError('No project selected. Please select a project first.');
-    return;
-  }
+    if (!currentProject?.id) {
+      setError('No project selected. Please select a project first.');
+      return;
+    }
 
-  // Check if it's a valid project ID (UUID format)
-  if (currentProject.id.startsWith('project-') || !currentProject.id.includes('-')) {
-    setError('Invalid project. Please wait for workspace initialization.');
-    return;
-  }
+    // Check if it's a valid project ID (UUID format)
+    if (currentProject.id.startsWith('project-') || !currentProject.id.includes('-')) {
+      setError('Invalid project. Please wait for workspace initialization.');
+      return;
+    }
 
-  // Map frontend values to backend format (uppercase)
-  const statusMap: Record<TaskStatus, string> = {
-    'backlog': 'BACKLOG',
-    'todo': 'TODO',
-    'in_progress': 'IN_PROGRESS',
-    'in_review': 'IN_REVIEW',
-    'done': 'DONE',
-    cancelled: ''
+    // Map frontend values to backend format (uppercase)
+    const statusMap: Record<TaskStatus, string> = {
+      backlog: 'BACKLOG',
+      todo: 'TODO',
+      in_progress: 'IN_PROGRESS',
+      in_review: 'IN_REVIEW',
+      done: 'DONE',
+      cancelled: '',
+    };
+
+    const priorityMap: Record<Priority, string> = {
+      lowest: 'LOWEST',
+      low: 'LOW',
+      medium: 'MEDIUM',
+      high: 'HIGH',
+      highest: 'HIGHEST',
+    };
+
+    const typeMap: Record<TaskType, string> = {
+      epic: 'EPIC',
+      story: 'STORY',
+      task: 'TASK',
+      bug: 'BUG',
+      subtask: 'SUBTASK',
+    };
+
+    const taskData: CreateTaskData = {
+      title: title.trim(),
+      description: description.trim() || undefined,
+      status: statusMap[status] as CreateTaskData['status'],
+      priority: priorityMap[priority] as CreateTaskData['priority'],
+      type: typeMap[type] as CreateTaskData['type'],
+      assigneeId: assigneeId || undefined,
+      storyPoints: storyPoints ? parseInt(storyPoints) : undefined,
+      dueDate: dueDate ? dueDate.toISOString() : undefined,
+      labels: selectedLabels,
+    };
+
+    try {
+      await createTaskMutation.mutateAsync({
+        projectId: currentProject.id,
+        data: taskData,
+      });
+      onClose();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to create task. Please try again.';
+      setError(errorMessage);
+    }
   };
-
-  const priorityMap: Record<Priority, string> = {
-    'lowest': 'LOWEST',
-    'low': 'LOW',
-    'medium': 'MEDIUM',
-    'high': 'HIGH',
-    'highest': 'HIGHEST',
-  };
-
-  const typeMap: Record<TaskType, string> = {
-    'epic': 'EPIC',
-    'story': 'STORY',
-    'task': 'TASK',
-    'bug': 'BUG',
-    'subtask': 'SUBTASK',
-  };
-
-  const taskData: CreateTaskData = {
-    title: title.trim(),
-    description: description.trim() || undefined,
-    status: statusMap[status] as CreateTaskData['status'],
-    priority: priorityMap[priority] as CreateTaskData['priority'],
-    type: typeMap[type] as CreateTaskData['type'],
-    assigneeId: assigneeId || undefined,
-    storyPoints: storyPoints ? parseInt(storyPoints) : undefined,
-    dueDate: dueDate ? dueDate.toISOString() : undefined,
-    labels: selectedLabels,
-  };
-
-  try {
-    await createTaskMutation.mutateAsync({
-      projectId: currentProject.id,
-      data: taskData,
-    });
-    onClose();
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to create task. Please try again.';
-    setError(errorMessage);
-  }
-};
 
   // Custom date picker input
-  const CustomDateInput = React.forwardRef<HTMLButtonElement, { value?: string; onClick?: () => void }>(
-    ({ value, onClick }, ref) => (
-      <button
-        type="button"
-        ref={ref}
-        onClick={onClick}
-        className="w-full px-3 py-2.5 text-sm text-left bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all flex items-center justify-between group hover:border-gray-300 dark:hover:border-gray-600"
-      >
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-400 group-hover:text-brand-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className={value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}>
-            {value || 'Select due date'}
-          </span>
-        </div>
-        {value && (
-          <span 
-            onClick={(e) => {
-              e.stopPropagation();
-              setDueDate(null);
-            }}
-            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+  const CustomDateInput = React.forwardRef<
+    HTMLButtonElement,
+    { value?: string; onClick?: () => void }
+  >(({ value, onClick }, ref) => (
+    <button
+      type="button"
+      ref={ref}
+      onClick={onClick}
+      className="w-full px-3 py-2.5 text-sm text-left bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all flex items-center justify-between group hover:border-gray-300 dark:hover:border-gray-600"
+    >
+      <div className="flex items-center gap-2">
+        <svg
+          className="w-4 h-4 text-gray-400 group-hover:text-brand-500 transition-colors"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        <span
+          className={value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}
+        >
+          {value || 'Select due date'}
+        </span>
+      </div>
+      {value && (
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            setDueDate(null);
+          }}
+          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+        >
+          <svg
+            className="w-3 h-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <svg className="w-3 h-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </span>
-        )}
-      </button>
-    )
-  );
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </span>
+      )}
+    </button>
+  ));
   CustomDateInput.displayName = 'CustomDateInput';
 
   if (!isOpen) return null;
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 flex items-center justify-center p-4"
       style={{ zIndex: 999999 }}
       onClick={handleBackdropClick}
@@ -197,15 +232,27 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create New Task</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Create New Task
+              </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                {currentProject?.name || 'Select a project'} 
+                {currentProject?.name || 'Select a project'}
                 <span className="text-gray-300 dark:text-gray-600">•</span>
                 <span className="font-mono text-brand-500">{currentProject?.key || 'N/A'}</span>
               </p>
@@ -216,7 +263,12 @@ const handleSubmit = async (e: React.FormEvent) => {
             className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -225,8 +277,18 @@ const handleSubmit = async (e: React.FormEvent) => {
         {error && (
           <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-xl flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/50 flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5 text-red-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
             <div>
@@ -272,11 +334,23 @@ const handleSubmit = async (e: React.FormEvent) => {
                     className="w-full px-3 py-2.5 text-sm font-medium bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl appearance-none cursor-pointer focus:ring-2 focus:ring-brand-500 focus:border-brand-500 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
                   >
                     {Object.entries(TASK_TYPE_CONFIG).map(([key, config]) => (
-                      <option key={key} value={key}>{config.icon} {config.name}</option>
+                      <option key={key} value={key}>
+                        {config.icon} {config.name}
+                      </option>
                     ))}
                   </select>
-                  <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
@@ -287,21 +361,33 @@ const handleSubmit = async (e: React.FormEvent) => {
                   Status
                 </label>
                 <div className="relative">
-                  <div 
+                  <div
                     className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: STATUS_COLUMNS.find(s => s.id === status)?.color }}
+                    style={{ backgroundColor: STATUS_COLUMNS.find((s) => s.id === status)?.color }}
                   />
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as TaskStatus)}
                     className="w-full pl-8 pr-8 py-2.5 text-sm font-medium bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl appearance-none cursor-pointer focus:ring-2 focus:ring-brand-500 focus:border-brand-500 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
                   >
-                    {STATUS_COLUMNS.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
+                    {STATUS_COLUMNS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
                     ))}
                   </select>
-                  <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
@@ -318,11 +404,23 @@ const handleSubmit = async (e: React.FormEvent) => {
                     className="w-full px-3 py-2.5 text-sm font-medium bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl appearance-none cursor-pointer focus:ring-2 focus:ring-brand-500 focus:border-brand-500 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
                   >
                     {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
-                      <option key={key} value={key}>{config.icon} {config.name}</option>
+                      <option key={key} value={key}>
+                        {config.icon} {config.name}
+                      </option>
                     ))}
                   </select>
-                  <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
@@ -353,11 +451,21 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <div className="absolute left-3 top-1/2 -translate-y-1/2">
                     {assigneeId ? (
                       <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center text-[10px] font-bold text-white">
-                        {users.find(u => u.id === assigneeId)?.name?.charAt(0) || '?'}
+                        {users.find((u) => u.id === assigneeId)?.name?.charAt(0) || '?'}
                       </div>
                     ) : (
-                      <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <svg
+                        className="w-5 h-5 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
                       </svg>
                     )}
                   </div>
@@ -367,12 +475,24 @@ const handleSubmit = async (e: React.FormEvent) => {
                     className="w-full pl-10 pr-8 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl appearance-none cursor-pointer focus:ring-2 focus:ring-brand-500 focus:border-brand-500 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
                   >
                     <option value="">Unassigned</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
                     ))}
                   </select>
-                  <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
@@ -384,8 +504,18 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </label>
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
+                      />
                     </svg>
                   </div>
                   <input
@@ -435,14 +565,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                   Labels
                 </label>
                 <div className="flex flex-wrap gap-1.5 p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl min-h-[42px] hover:border-gray-300 dark:hover:border-gray-600 transition-all">
-                  {labels.slice(0, 5).map(label => (
+                  {labels.slice(0, 5).map((label) => (
                     <button
                       key={label.id}
                       type="button"
                       onClick={() => {
-                        setSelectedLabels(prev =>
+                        setSelectedLabels((prev) =>
                           prev.includes(label.id)
-                            ? prev.filter(id => id !== label.id)
+                            ? prev.filter((id) => id !== label.id)
                             : [...prev, label.id]
                         );
                       }}
@@ -461,8 +591,18 @@ const handleSubmit = async (e: React.FormEvent) => {
                   ))}
                   {labels.length === 0 && (
                     <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                        />
                       </svg>
                       No labels
                     </span>
@@ -477,10 +617,19 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
           <div className="flex items-center gap-2 text-xs text-gray-400">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             <span>
-              Press <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px] font-mono font-bold">ESC</kbd> to cancel
+              Press{' '}
+              <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px] font-mono font-bold">
+                ESC
+              </kbd>{' '}
+              to cancel
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -499,15 +648,31 @@ const handleSubmit = async (e: React.FormEvent) => {
               {createTaskMutation.isPending ? (
                 <>
                   <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                   <span>Creating...</span>
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span>Create Task</span>
                 </>

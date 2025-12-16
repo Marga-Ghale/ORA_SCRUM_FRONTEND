@@ -19,11 +19,7 @@ import {
   Star,
 } from 'lucide-react';
 import { MessageInput } from './MessageInputComponent';
-import {
-  ChatChannel,
-  ChatMessage,
-  getChannelDisplayName,
-} from '../../hooks/api/useChat';
+import { ChatChannel, ChatMessage, getChannelDisplayName } from '../../hooks/api/useChat';
 import { MessageItem } from './MessageComponent';
 
 interface ChatViewProps {
@@ -140,8 +136,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       // Show avatar if different user or more than 5 minutes gap
       const showAvatar =
-        message.userId !== lastUserId ||
-        messageTime - lastMessageTime > 5 * 60 * 1000;
+        message.userId !== lastUserId || messageTime - lastMessageTime > 5 * 60 * 1000;
 
       groups[groups.length - 1].messages.push({
         message,
@@ -155,7 +150,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return groups;
   }, [messages]);
 
-const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown User';
+  const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown User';
   const memberCount = channel.type !== 'direct' ? '12 members' : undefined; // Replace with actual count
 
   return (
@@ -165,39 +160,35 @@ const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown Us
         <div className="flex items-center gap-3">
           {/* Channel/User Avatar */}
           {channel.type === 'direct' ? (
-  <div className="relative">
-    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-semibold text-white">
-      {channel.otherUser?.avatar ? (
-        <img
-          src={channel.otherUser.avatar}
-          alt={displayName || 'User'}
-          className="w-full h-full rounded-xl object-cover"
-        />
-      ) : (
-        (displayName && displayName.length > 0 ? displayName[0].toUpperCase() : '?')
-      )}
-    </div>
-    {/* Online status */}
-    <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 text-green-500 fill-green-500 stroke-[#0d0f11] stroke-2" />
-  </div>
-) : (
-  <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center">
-    <Hash className="w-5 h-5 text-[#9ca3af]" />
-  </div>
-)}
+            <div className="relative">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-semibold text-white">
+                {channel.otherUser?.avatar ? (
+                  <img
+                    src={channel.otherUser.avatar}
+                    alt={displayName || 'User'}
+                    className="w-full h-full rounded-xl object-cover"
+                  />
+                ) : displayName && displayName.length > 0 ? (
+                  displayName[0].toUpperCase()
+                ) : (
+                  '?'
+                )}
+              </div>
+              {/* Online status */}
+              <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 text-green-500 fill-green-500 stroke-[#0d0f11] stroke-2" />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center">
+              <Hash className="w-5 h-5 text-[#9ca3af]" />
+            </div>
+          )}
 
           {/* Channel Info */}
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold text-white">
-                {displayName}
-              </h2>
-              {channel.isPrivate && (
-                <Lock className="w-3.5 h-3.5 text-[#6b7280]" />
-              )}
-              {isStarred && (
-                <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-              )}
+              <h2 className="text-base font-semibold text-white">{displayName}</h2>
+              {channel.isPrivate && <Lock className="w-3.5 h-3.5 text-[#6b7280]" />}
+              {isStarred && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
             </div>
             <p className="text-xs text-[#6b7280]">
               {channel.type === 'direct'
@@ -276,10 +267,7 @@ const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown Us
             {/* Dropdown Menu */}
             {showChannelMenu && (
               <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowChannelMenu(false)}
-                />
+                <div className="fixed inset-0 z-40" onClick={() => setShowChannelMenu(false)} />
                 <div className="absolute right-0 top-full mt-1 w-56 bg-[#25282c] border border-[#3a3e43] rounded-xl shadow-xl z-50 py-1 overflow-hidden">
                   <button
                     onClick={() => {
@@ -289,9 +277,7 @@ const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown Us
                     className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#e5e7eb] hover:bg-[#3a3e43] transition-colors"
                   >
                     <Star
-                      className={`w-4 h-4 ${
-                        isStarred ? 'text-yellow-500 fill-yellow-500' : ''
-                      }`}
+                      className={`w-4 h-4 ${isStarred ? 'text-yellow-500 fill-yellow-500' : ''}`}
                     />
                     <span>{isStarred ? 'Remove from starred' : 'Add to starred'}</span>
                   </button>
@@ -346,10 +332,7 @@ const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown Us
       )}
 
       {/* Messages Area */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto custom-scrollbar"
-      >
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
         {isLoading ? (
           // Loading Skeleton
           <div className="p-4 space-y-4">
@@ -426,13 +409,9 @@ const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown Us
           <div className="flex-1 min-w-0">
             <span className="text-sm text-[#9ca3af]">
               Replying to{' '}
-              <span className="text-white font-medium">
-                {replyingTo.user?.name || 'Unknown'}
-              </span>
+              <span className="text-white font-medium">{replyingTo.user?.name || 'Unknown'}</span>
             </span>
-            <p className="text-xs text-[#6b7280] truncate">
-              {replyingTo.content}
-            </p>
+            <p className="text-xs text-[#6b7280] truncate">{replyingTo.content}</p>
           </div>
           <button
             onClick={() => setReplyingTo(null)}

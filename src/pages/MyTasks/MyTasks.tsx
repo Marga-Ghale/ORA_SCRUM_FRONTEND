@@ -16,36 +16,42 @@ const MyTasks: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Get user's tasks
-  const myTasks = tasks.filter(task => task.assignee?.id === user?.id);
-  const filteredTasks = showCompleted ? myTasks : myTasks.filter(t => t.status !== 'done');
+  const myTasks = tasks.filter((task) => task.assignee?.id === user?.id);
+  const filteredTasks = showCompleted ? myTasks : myTasks.filter((t) => t.status !== 'done');
 
   // Stats
   const stats = {
     total: myTasks.length,
-    todo: myTasks.filter(t => t.status === 'todo').length,
-    inProgress: myTasks.filter(t => ['in_progress', 'in_review'].includes(t.status)).length,
-    done: myTasks.filter(t => t.status === 'done').length,
-    overdue: myTasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done').length,
+    todo: myTasks.filter((t) => t.status === 'todo').length,
+    inProgress: myTasks.filter((t) => ['in_progress', 'in_review'].includes(t.status)).length,
+    done: myTasks.filter((t) => t.status === 'done').length,
+    overdue: myTasks.filter(
+      (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
+    ).length,
   };
 
   // Group tasks
   const groupedTasks = () => {
     if (groupBy === 'status') {
-      return STATUS_COLUMNS.map(status => ({
+      return STATUS_COLUMNS.map((status) => ({
         id: status.id,
         title: status.name,
         color: status.color,
-        tasks: filteredTasks.filter(t => t.status === status.id).sort((a, b) => a.order - b.order),
-      })).filter(g => g.tasks.length > 0);
+        tasks: filteredTasks
+          .filter((t) => t.status === status.id)
+          .sort((a, b) => a.order - b.order),
+      })).filter((g) => g.tasks.length > 0);
     }
 
     if (groupBy === 'priority') {
-      return Object.entries(PRIORITY_CONFIG).map(([key, config]) => ({
-        id: key,
-        title: config.name,
-        color: config.color,
-        tasks: filteredTasks.filter(t => t.priority === key).sort((a, b) => a.order - b.order),
-      })).filter(g => g.tasks.length > 0);
+      return Object.entries(PRIORITY_CONFIG)
+        .map(([key, config]) => ({
+          id: key,
+          title: config.name,
+          color: config.color,
+          tasks: filteredTasks.filter((t) => t.priority === key).sort((a, b) => a.order - b.order),
+        }))
+        .filter((g) => g.tasks.length > 0);
     }
 
     // Group by due date
@@ -61,13 +67,13 @@ const MyTasks: React.FC = () => {
         id: 'overdue',
         title: 'Overdue',
         color: '#EF4444',
-        tasks: filteredTasks.filter(t => t.dueDate && new Date(t.dueDate) < today),
+        tasks: filteredTasks.filter((t) => t.dueDate && new Date(t.dueDate) < today),
       },
       {
         id: 'today',
         title: 'Today',
         color: '#F59E0B',
-        tasks: filteredTasks.filter(t => {
+        tasks: filteredTasks.filter((t) => {
           if (!t.dueDate) return false;
           const due = new Date(t.dueDate);
           due.setHours(0, 0, 0, 0);
@@ -78,7 +84,7 @@ const MyTasks: React.FC = () => {
         id: 'tomorrow',
         title: 'Tomorrow',
         color: '#3B82F6',
-        tasks: filteredTasks.filter(t => {
+        tasks: filteredTasks.filter((t) => {
           if (!t.dueDate) return false;
           const due = new Date(t.dueDate);
           due.setHours(0, 0, 0, 0);
@@ -89,7 +95,7 @@ const MyTasks: React.FC = () => {
         id: 'thisWeek',
         title: 'This Week',
         color: '#10B981',
-        tasks: filteredTasks.filter(t => {
+        tasks: filteredTasks.filter((t) => {
           if (!t.dueDate) return false;
           const due = new Date(t.dueDate);
           return due > tomorrow && due <= nextWeek;
@@ -99,7 +105,7 @@ const MyTasks: React.FC = () => {
         id: 'later',
         title: 'Later',
         color: '#6B7280',
-        tasks: filteredTasks.filter(t => {
+        tasks: filteredTasks.filter((t) => {
           if (!t.dueDate) return false;
           return new Date(t.dueDate) > nextWeek;
         }),
@@ -108,9 +114,9 @@ const MyTasks: React.FC = () => {
         id: 'noDue',
         title: 'No Due Date',
         color: '#9CA3AF',
-        tasks: filteredTasks.filter(t => !t.dueDate),
+        tasks: filteredTasks.filter((t) => !t.dueDate),
       },
-    ].filter(g => g.tasks.length > 0);
+    ].filter((g) => g.tasks.length > 0);
   };
 
   return (
@@ -179,7 +185,7 @@ const MyTasks: React.FC = () => {
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500 dark:text-gray-400">Group by:</span>
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              {(['status', 'priority', 'dueDate'] as const).map(option => (
+              {(['status', 'priority', 'dueDate'] as const).map((option) => (
                 <button
                   key={option}
                   onClick={() => setGroupBy(option)}
@@ -189,7 +195,9 @@ const MyTasks: React.FC = () => {
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
                   }`}
                 >
-                  {option === 'dueDate' ? 'Due Date' : option.charAt(0).toUpperCase() + option.slice(1)}
+                  {option === 'dueDate'
+                    ? 'Due Date'
+                    : option.charAt(0).toUpperCase() + option.slice(1)}
                 </button>
               ))}
             </div>
@@ -207,7 +215,7 @@ const MyTasks: React.FC = () => {
 
         {/* Task Groups */}
         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6">
-          {groupedTasks().map(group => (
+          {groupedTasks().map((group) => (
             <div key={group.id}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: group.color }} />
@@ -215,7 +223,7 @@ const MyTasks: React.FC = () => {
                 <span className="text-sm text-gray-400">({group.tasks.length})</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {group.tasks.map(task => (
+                {group.tasks.map((task) => (
                   <TaskCard key={task.id} task={task} />
                 ))}
               </div>
@@ -231,7 +239,9 @@ const MyTasks: React.FC = () => {
                 {showCompleted ? 'No tasks found' : 'All caught up!'}
               </h3>
               <p className="text-gray-500 dark:text-gray-400">
-                {showCompleted ? "You don't have any tasks assigned yet." : "You've completed all your tasks."}
+                {showCompleted
+                  ? "You don't have any tasks assigned yet."
+                  : "You've completed all your tasks."}
               </p>
             </div>
           )}
@@ -240,10 +250,7 @@ const MyTasks: React.FC = () => {
 
       {/* Modals */}
       <TaskDetailModal />
-      <CreateTaskModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-      />
+      <CreateTaskModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
     </>
   );
 };

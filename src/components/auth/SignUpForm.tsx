@@ -1,25 +1,24 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
-import Label from "../form/Label";
-import Input from "../form/input/InputField";
-import Checkbox from "../form/input/Checkbox";
-import { useRegister } from "../../hooks/api/useAuth";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from '../../icons';
+import Label from '../form/Label';
+import Input from '../form/input/InputField';
+import Checkbox from '../form/input/Checkbox';
+import { useRegister } from '../../hooks/api/useAuth';
 
 export default function SignUpForm() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
   });
 
   const { mutate: register, isPending } = useRegister();
@@ -27,73 +26,73 @@ export default function SignUpForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setError("");
+    setError('');
   };
 
   const validateForm = () => {
     // Name validation
     if (!formData.firstName.trim()) {
-      setError("First name is required");
+      setError('First name is required');
       return false;
     }
 
     if (!formData.lastName.trim()) {
-      setError("Last name is required");
+      setError('Last name is required');
       return false;
     }
 
     // Email validation
     if (!formData.email.trim()) {
-      setError("Email is required");
+      setError('Email is required');
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError("Please enter a valid email address");
+      setError('Please enter a valid email address');
       return false;
     }
 
     // Password validation
     if (!formData.password) {
-      setError("Password is required");
+      setError('Password is required');
       return false;
     }
 
     if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+      setError('Password must be at least 8 characters long');
       return false;
     }
 
     if (!/(?=.*[a-z])/.test(formData.password)) {
-      setError("Password must contain at least one lowercase letter");
+      setError('Password must contain at least one lowercase letter');
       return false;
     }
 
     if (!/(?=.*[A-Z])/.test(formData.password)) {
-      setError("Password must contain at least one uppercase letter");
+      setError('Password must contain at least one uppercase letter');
       return false;
     }
 
     if (!/(?=.*\d)/.test(formData.password)) {
-      setError("Password must contain at least one number");
+      setError('Password must contain at least one number');
       return false;
     }
 
     // Confirm password
     if (!formData.confirmPassword) {
-      setError("Please confirm your password");
+      setError('Please confirm your password');
       return false;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError('Passwords do not match');
       return false;
     }
 
     // Terms acceptance
     if (!isChecked) {
-      setError("You must accept the terms and conditions");
+      setError('You must accept the terms and conditions');
       return false;
     }
 
@@ -117,19 +116,22 @@ export default function SignUpForm() {
         onSuccess: () => {
           // Clear form
           setFormData({
-            firstName: "",
-            lastName: "",
-            email: "",
-            password: "",
-            confirmPassword: "",
+            firstName: '',
+            lastName: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
           });
           setIsChecked(false);
-          
+
           // Navigate to dashboard
-          navigate("/");
+          navigate('/');
         },
         onError: (err: any) => {
-          const errorMessage = err?.response?.data?.message || err?.message || "Registration failed. Please try again.";
+          const errorMessage =
+            err?.response?.data?.message ||
+            err?.message ||
+            'Registration failed. Please try again.';
           setError(errorMessage);
         },
       }
@@ -220,8 +222,16 @@ export default function SignUpForm() {
             {/* Error Message */}
             {error && (
               <div className="flex items-start gap-2 p-3 mb-4 text-sm text-red-600 bg-red-50 rounded-lg dark:bg-red-900/20 dark:text-red-400">
-                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="w-5 h-5 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <span>{error}</span>
               </div>
@@ -243,7 +253,6 @@ export default function SignUpForm() {
                       onChange={handleChange}
                       placeholder="John"
                       disabled={isPending}
-                    
                     />
                   </div>
                   <div className="sm:col-span-1">
@@ -258,7 +267,6 @@ export default function SignUpForm() {
                       onChange={handleChange}
                       placeholder="Doe"
                       disabled={isPending}
-                    
                     />
                   </div>
                 </div>
@@ -276,7 +284,6 @@ export default function SignUpForm() {
                     onChange={handleChange}
                     placeholder="john.doe@example.com"
                     disabled={isPending}
-                  
                   />
                 </div>
 
@@ -287,14 +294,13 @@ export default function SignUpForm() {
                   </Label>
                   <div className="relative">
                     <Input
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       id="password"
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="••••••••"
                       disabled={isPending}
-                    
                     />
                     <button
                       type="button"
@@ -321,14 +327,13 @@ export default function SignUpForm() {
                   </Label>
                   <div className="relative">
                     <Input
-                      type={showConfirmPassword ? "text" : "password"}
+                      type={showConfirmPassword ? 'text' : 'password'}
                       id="confirmPassword"
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       placeholder="••••••••"
                       disabled={isPending}
-                    
                     />
                     <button
                       type="button"
@@ -354,16 +359,16 @@ export default function SignUpForm() {
                     disabled={isPending}
                   />
                   <p className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                    By creating an account means you agree to the{" "}
-                    <Link 
-                      to="/terms" 
+                    By creating an account means you agree to the{' '}
+                    <Link
+                      to="/terms"
                       className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline"
                     >
                       Terms and Conditions
                     </Link>
-                    , and our{" "}
-                    <Link 
-                      to="/privacy" 
+                    , and our{' '}
+                    <Link
+                      to="/privacy"
                       className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline"
                     >
                       Privacy Policy
@@ -380,11 +385,7 @@ export default function SignUpForm() {
                   >
                     {isPending ? (
                       <>
-                        <svg
-                          className="w-4 h-4 mr-2 animate-spin"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
+                        <svg className="w-4 h-4 mr-2 animate-spin" viewBox="0 0 24 24" fill="none">
                           <circle
                             className="opacity-25"
                             cx="12"
@@ -402,7 +403,7 @@ export default function SignUpForm() {
                         Creating account...
                       </>
                     ) : (
-                      "Sign Up"
+                      'Sign Up'
                     )}
                   </button>
                 </div>
@@ -411,7 +412,7 @@ export default function SignUpForm() {
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Already have an account?{" "}
+                Already have an account?{' '}
                 <Link
                   to="/signin"
                   className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline"

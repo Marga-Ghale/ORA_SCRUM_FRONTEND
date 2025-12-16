@@ -12,7 +12,7 @@ class ApiClient {
 
   constructor(baseUrl: string) {
     this.loadTokensFromStorage();
-    
+
     this.axiosInstance = axios.create({
       baseURL: baseUrl,
       headers: {

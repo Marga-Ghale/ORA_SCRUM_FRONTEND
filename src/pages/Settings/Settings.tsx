@@ -36,14 +36,15 @@ const Settings: React.FC = () => {
           {/* Sidebar Navigation */}
           <div className="lg:w-56 flex-shrink-0">
             <nav className="space-y-1">
-              {tabs.map(tab => (
+              {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                    ${activeTab === tab.id
-                      ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    ${
+                      activeTab === tab.id
+                        ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }
                     ${tab.id === 'danger' ? 'text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20' : ''}
                   `}
@@ -60,7 +61,9 @@ const Settings: React.FC = () => {
             {/* General Settings */}
             {activeTab === 'general' && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">General Settings</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                  General Settings
+                </h2>
 
                 <div className="space-y-6">
                   {/* Project Icon */}
@@ -106,7 +109,9 @@ const Settings: React.FC = () => {
                       className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
                       maxLength={10}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Used as prefix for task keys (e.g., ORA-123)</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Used as prefix for task keys (e.g., ORA-123)
+                    </p>
                   </div>
 
                   {/* Description */}
@@ -129,8 +134,10 @@ const Settings: React.FC = () => {
                       Project Lead
                     </label>
                     <select className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                      {users.map(user => (
-                        <option key={user.id} value={user.id}>{user.name}</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -148,7 +155,9 @@ const Settings: React.FC = () => {
             {activeTab === 'members' && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Team Members</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Team Members
+                  </h2>
                   <button
                     onClick={() => setIsInviteMemberModalOpen(true)}
                     className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
@@ -158,17 +167,24 @@ const Settings: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {users.map(member => (
+                  {users.map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center justify-between p-4 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         {member.avatar ? (
-                          <img src={member.avatar} alt={member.name} className="w-10 h-10 rounded-full" />
+                          <img
+                            src={member.avatar}
+                            alt={member.name}
+                            className="w-10 h-10 rounded-full"
+                          />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-sm font-medium text-brand-600 dark:text-brand-400">
-                            {member.name.split(' ').map(n => n[0]).join('')}
+                            {member.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
                           </div>
                         )}
                         <div>
@@ -186,8 +202,18 @@ const Settings: React.FC = () => {
                           <option value="viewer">Viewer</option>
                         </select>
                         <button className="p-2 text-gray-400 hover:text-error-500 rounded-lg hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
                           </svg>
                         </button>
                       </div>
@@ -200,20 +226,48 @@ const Settings: React.FC = () => {
             {/* Notifications Settings */}
             {activeTab === 'notifications' && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Notification Preferences</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                  Notification Preferences
+                </h2>
 
                 <div className="space-y-6">
                   {[
-                    { id: 'task_assigned', label: 'Task assigned to me', desc: 'Get notified when a task is assigned to you' },
-                    { id: 'task_updated', label: 'Task updates', desc: 'Get notified when tasks you follow are updated' },
-                    { id: 'comments', label: 'New comments', desc: 'Get notified when someone comments on your tasks' },
-                    { id: 'mentions', label: 'Mentions', desc: 'Get notified when you are mentioned' },
-                    { id: 'sprint', label: 'Sprint updates', desc: 'Get notified about sprint starts and completions' },
-                    { id: 'daily_digest', label: 'Daily digest', desc: 'Receive a daily summary of project activity' },
-                  ].map(notification => (
+                    {
+                      id: 'task_assigned',
+                      label: 'Task assigned to me',
+                      desc: 'Get notified when a task is assigned to you',
+                    },
+                    {
+                      id: 'task_updated',
+                      label: 'Task updates',
+                      desc: 'Get notified when tasks you follow are updated',
+                    },
+                    {
+                      id: 'comments',
+                      label: 'New comments',
+                      desc: 'Get notified when someone comments on your tasks',
+                    },
+                    {
+                      id: 'mentions',
+                      label: 'Mentions',
+                      desc: 'Get notified when you are mentioned',
+                    },
+                    {
+                      id: 'sprint',
+                      label: 'Sprint updates',
+                      desc: 'Get notified about sprint starts and completions',
+                    },
+                    {
+                      id: 'daily_digest',
+                      label: 'Daily digest',
+                      desc: 'Receive a daily summary of project activity',
+                    },
+                  ].map((notification) => (
                     <div key={notification.id} className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{notification.label}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {notification.label}
+                        </p>
                         <p className="text-sm text-gray-500">{notification.desc}</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -235,16 +289,43 @@ const Settings: React.FC = () => {
             {/* Integrations Settings */}
             {activeTab === 'integrations' && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Integrations</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                  Integrations
+                </h2>
 
                 <div className="space-y-4">
                   {[
-                    { name: 'GitHub', icon: '🐙', desc: 'Connect with GitHub for code integration', connected: true },
-                    { name: 'Slack', icon: '💬', desc: 'Send notifications to Slack channels', connected: false },
-                    { name: 'Google Calendar', icon: '📅', desc: 'Sync due dates with your calendar', connected: true },
-                    { name: 'Figma', icon: '🎨', desc: 'Embed Figma designs in tasks', connected: false },
-                    { name: 'GitLab', icon: '🦊', desc: 'Connect with GitLab for code integration', connected: false },
-                  ].map(integration => (
+                    {
+                      name: 'GitHub',
+                      icon: '🐙',
+                      desc: 'Connect with GitHub for code integration',
+                      connected: true,
+                    },
+                    {
+                      name: 'Slack',
+                      icon: '💬',
+                      desc: 'Send notifications to Slack channels',
+                      connected: false,
+                    },
+                    {
+                      name: 'Google Calendar',
+                      icon: '📅',
+                      desc: 'Sync due dates with your calendar',
+                      connected: true,
+                    },
+                    {
+                      name: 'Figma',
+                      icon: '🎨',
+                      desc: 'Embed Figma designs in tasks',
+                      connected: false,
+                    },
+                    {
+                      name: 'GitLab',
+                      icon: '🦊',
+                      desc: 'Connect with GitLab for code integration',
+                      connected: false,
+                    },
+                  ].map((integration) => (
                     <div
                       key={integration.name}
                       className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700"
@@ -254,7 +335,9 @@ const Settings: React.FC = () => {
                           {integration.icon}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-white">{integration.name}</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {integration.name}
+                          </p>
                           <p className="text-sm text-gray-500">{integration.desc}</p>
                         </div>
                       </div>
@@ -276,14 +359,18 @@ const Settings: React.FC = () => {
             {/* Danger Zone */}
             {activeTab === 'danger' && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-error-200 dark:border-error-900 p-6">
-                <h2 className="text-lg font-semibold text-error-600 dark:text-error-400 mb-6">Danger Zone</h2>
+                <h2 className="text-lg font-semibold text-error-600 dark:text-error-400 mb-6">
+                  Danger Zone
+                </h2>
 
                 <div className="space-y-6">
                   <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">Archive Project</p>
-                        <p className="text-sm text-gray-500">Archive this project and hide it from the workspace</p>
+                        <p className="text-sm text-gray-500">
+                          Archive this project and hide it from the workspace
+                        </p>
                       </div>
                       <button className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         Archive
@@ -294,7 +381,9 @@ const Settings: React.FC = () => {
                   <div className="p-4 rounded-lg border border-error-200 dark:border-error-900 bg-error-50 dark:bg-error-900/20">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-error-600 dark:text-error-400">Delete Project</p>
+                        <p className="font-medium text-error-600 dark:text-error-400">
+                          Delete Project
+                        </p>
                         <p className="text-sm text-error-500 dark:text-error-400/80">
                           Permanently delete this project and all of its data
                         </p>

@@ -1,10 +1,8 @@
-
-
 // ============================================
 // Empty State Component
 // ============================================
 
-import { MessageSquare, Plus } from "lucide-react";
+import { MessageSquare, Plus } from 'lucide-react';
 
 export const EmptyChatState: React.FC<{ onCreateChannel: () => void }> = ({ onCreateChannel }) => (
   <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-[#0d0f11]">

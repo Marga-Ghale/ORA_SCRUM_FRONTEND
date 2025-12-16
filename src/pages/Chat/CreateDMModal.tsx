@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/chat/CreateDMModal.tsx
 import React, { useState, useMemo } from 'react';
 import { X, Search, MessageSquare, Check, AlertCircle } from 'lucide-react';
@@ -13,14 +12,12 @@ interface CreateDMModalProps {
   onSuccess?: (channelId: string) => void;
 }
 
-export const CreateDMModal: React.FC<CreateDMModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-}) => {
+export const CreateDMModal: React.FC<CreateDMModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { currentWorkspace } = useProject();
   const { user: currentUser } = useAuth();
-  const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers(currentWorkspace?.id);
+  const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers(
+    currentWorkspace?.id
+  );
   const createDM = useCreateDirectChannel();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,10 +67,7 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={handleClose}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Modal */}
       <div className="relative w-full max-w-md bg-[#1a1d21] border border-[#2a2e33] rounded-2xl shadow-2xl">
@@ -85,9 +79,7 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">New Message</h2>
-              <p className="text-xs text-[#6b7280]">
-                Start a direct conversation
-              </p>
+              <p className="text-xs text-[#6b7280]">Start a direct conversation</p>
             </div>
           </div>
           <button
@@ -154,9 +146,7 @@ export const CreateDMModal: React.FC<CreateDMModalProps> = ({
                     key={member.userId}
                     onClick={() => setSelectedUserId(member.userId)}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
-                      isSelected
-                        ? 'bg-brand-500/20'
-                        : 'hover:bg-[#25282c]'
+                      isSelected ? 'bg-brand-500/20' : 'hover:bg-[#25282c]'
                     }`}
                   >
                     {/* Avatar */}

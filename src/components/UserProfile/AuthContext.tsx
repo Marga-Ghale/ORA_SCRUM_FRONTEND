@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => apiClient.getAccessToken());
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!token);
-  
+
   const { data: user, isLoading, isError } = useCurrentUser();
   const { mutate: logoutMutation } = useLogout();
 

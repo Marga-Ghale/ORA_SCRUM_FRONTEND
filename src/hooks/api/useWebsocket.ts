@@ -92,20 +92,27 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
         const messageData = message.payload || message.data || {};
-        
+
         // Ignore certain message types from logging too much
-        if (message.type !== 'ping' && message.type !== 'pong' && message.type !== 'user_online' && message.type !== 'user_offline') {
+        if (
+          message.type !== 'ping' &&
+          message.type !== 'pong' &&
+          message.type !== 'user_online' &&
+          message.type !== 'user_offline'
+        ) {
           console.log('[WebSocket] Received:', message.type, messageData);
         }
 
         // Only set lastMessage for notification-related messages
-        if (message.type === 'notification' || 
-            message.type === 'task_assigned' || 
-            message.type === 'task_created' ||
-            message.type === 'task_updated' ||
-            message.type === 'sprint_started' ||
-            message.type === 'sprint_completed' ||
-            message.type === 'comment_added') {
+        if (
+          message.type === 'notification' ||
+          message.type === 'task_assigned' ||
+          message.type === 'task_created' ||
+          message.type === 'task_updated' ||
+          message.type === 'sprint_started' ||
+          message.type === 'sprint_completed' ||
+          message.type === 'comment_added'
+        ) {
           setLastMessage(message);
         }
 
@@ -165,74 +172,73 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               wsRef.current.send(JSON.stringify({ action: 'pong' }));
             }
             break;
-            // Inside the switch (message.type) block:
-            
+          // Inside the switch (message.type) block:
 
-            // Add to the switch (message.type) block in handleMessage:
+          // Add to the switch (message.type) block in handleMessage:
 
-case 'chat_message':
-  // New message received
-  if (messageData.channelId) {
-    const channelId = messageData.channelId as string;
-    // Invalidate all message queries for this channel (partial match)
-    queryClient.invalidateQueries({
-      queryKey: ['chat', 'messages', channelId],
-    });
-    // Update unread counts
-    queryClient.invalidateQueries({ 
-      queryKey: queryKeys.chat.unreadCounts() 
-    });
-    // Update channels list (for last message preview)
-    queryClient.invalidateQueries({ 
-      queryKey: queryKeys.chat.channels() 
-    });
-  }
-  break;
+          case 'chat_message':
+            // New message received
+            if (messageData.channelId) {
+              const channelId = messageData.channelId as string;
+              // Invalidate all message queries for this channel (partial match)
+              queryClient.invalidateQueries({
+                queryKey: ['chat', 'messages', channelId],
+              });
+              // Update unread counts
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.chat.unreadCounts(),
+              });
+              // Update channels list (for last message preview)
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.chat.channels(),
+              });
+            }
+            break;
 
-case 'chat_message_updated':
-  if (messageData.channelId) {
-    queryClient.invalidateQueries({
-      queryKey: ['chat', 'messages', messageData.channelId as string],
-    });
-  }
-  break;
+          case 'chat_message_updated':
+            if (messageData.channelId) {
+              queryClient.invalidateQueries({
+                queryKey: ['chat', 'messages', messageData.channelId as string],
+              });
+            }
+            break;
 
-case 'chat_message_deleted':
-  if (messageData.channelId) {
-    queryClient.invalidateQueries({
-      queryKey: ['chat', 'messages', messageData.channelId as string],
-    });
-  }
-  break;
+          case 'chat_message_deleted':
+            if (messageData.channelId) {
+              queryClient.invalidateQueries({
+                queryKey: ['chat', 'messages', messageData.channelId as string],
+              });
+            }
+            break;
 
-case 'chat_channel_created':
-case 'chat_channel_updated':
-case 'chat_channel_deleted':
-  queryClient.invalidateQueries({ 
-    queryKey: queryKeys.chat.channels() 
-  });
-  break;
+          case 'chat_channel_created':
+          case 'chat_channel_updated':
+          case 'chat_channel_deleted':
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.chat.channels(),
+            });
+            break;
 
-case 'chat_member_added':
-case 'chat_member_removed':
-  if (messageData.channelId) {
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.chat.members(messageData.channelId as string),
-    });
-    queryClient.invalidateQueries({ 
-      queryKey: queryKeys.chat.channels() 
-    });
-  }
-  break;
+          case 'chat_member_added':
+          case 'chat_member_removed':
+            if (messageData.channelId) {
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.chat.members(messageData.channelId as string),
+              });
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.chat.channels(),
+              });
+            }
+            break;
 
-case 'chat_reaction_added':
-case 'chat_reaction_removed':
-  if (messageData.channelId) {
-    queryClient.invalidateQueries({
-      queryKey: ['chat', 'messages', messageData.channelId as string],
-    });
-  }
-  break;
+          case 'chat_reaction_added':
+          case 'chat_reaction_removed':
+            if (messageData.channelId) {
+              queryClient.invalidateQueries({
+                queryKey: ['chat', 'messages', messageData.channelId as string],
+              });
+            }
+            break;
 
           case 'pong':
           case 'ack':
@@ -314,7 +320,7 @@ case 'chat_reaction_removed':
 
       wsRef.current.onopen = () => {
         if (!isMountedRef.current) return;
-        
+
         console.log('[WebSocket] ✅ Connected');
         setIsConnected(true);
         isConnectingRef.current = false;
@@ -326,7 +332,7 @@ case 'chat_reaction_removed':
 
       wsRef.current.onclose = (event) => {
         if (!isMountedRef.current) return;
-        
+
         console.log('[WebSocket] Disconnected:', event.code, event.reason);
         setIsConnected(false);
         isConnectingRef.current = false;
@@ -354,7 +360,7 @@ case 'chat_reaction_removed':
 
       wsRef.current.onerror = (error) => {
         if (!isMountedRef.current) return;
-        
+
         console.error('[WebSocket] Error occurred');
         isConnectingRef.current = false;
         onError?.(error);

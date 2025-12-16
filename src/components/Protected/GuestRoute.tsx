@@ -1,5 +1,5 @@
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../UserProfile/AuthContext";
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../UserProfile/AuthContext';
 
 interface GuestRouteProps {
   children: React.ReactNode;
@@ -10,7 +10,7 @@ export default function GuestRoute({ children }: GuestRouteProps) {
   const location = useLocation();
 
   // Get the page they were trying to visit before being redirected to login
-  const from = location.state?.from?.pathname || "/";
+  const from = location.state?.from?.pathname || '/';
 
   if (isLoading) {
     return (

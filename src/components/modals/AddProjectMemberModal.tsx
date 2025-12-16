@@ -36,11 +36,9 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
     }
   }, [isOpen, workspaceId, projectId, projectName]);
 
-  const { availableMembers, isLoading, error, workspaceMembers, projectMembers } = useAvailableMembers(
-    workspaceId || undefined, 
-    projectId || undefined
-  );
-  
+  const { availableMembers, isLoading, error, workspaceMembers, projectMembers } =
+    useAvailableMembers(workspaceId || undefined, projectId || undefined);
+
   const addMember = useAddProjectMemberById(projectId);
 
   // Debug: Log the members data
@@ -55,7 +53,7 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   }, [availableMembers, workspaceMembers, projectMembers, isLoading, error]);
 
   // Filter members by search query
-  const filteredMembers = availableMembers.filter(member => {
+  const filteredMembers = availableMembers.filter((member) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -65,7 +63,7 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   });
 
   const handleToggleMember = (userId: string) => {
-    setSelectedMembers(prev => {
+    setSelectedMembers((prev) => {
       const newMap = new Map(prev);
       if (newMap.has(userId)) {
         newMap.delete(userId);
@@ -77,7 +75,7 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   };
 
   const handleRoleChange = (userId: string, role: string) => {
-    setSelectedMembers(prev => {
+    setSelectedMembers((prev) => {
       const newMap = new Map(prev);
       newMap.set(userId, role);
       return newMap;
@@ -88,19 +86,19 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
     if (selectedMembers.size === 0) return;
 
     setIsSubmitting(true);
-    
+
     const toastId = toast.loading(`Adding ${selectedMembers.size} member(s)...`);
-    
+
     try {
       const promises = Array.from(selectedMembers.entries()).map(([userId, role]) =>
         addMember.mutateAsync({ userId, role })
       );
 
       await Promise.all(promises);
-      
+
       toast.dismiss(toastId);
       toast.success(`Added ${selectedMembers.size} member(s) to project`);
-      
+
       setSelectedMembers(new Map());
       setSearchQuery('');
       onClose();
@@ -127,10 +125,7 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 transition-opacity" 
-        onClick={handleClose}
-      />
+      <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={handleClose} />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
@@ -142,13 +137,9 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                 <UserPlus className="w-5 h-5 text-brand-600 dark:text-brand-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Add Members
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Add Members</h2>
                 {projectName && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    to {projectName}
-                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">to {projectName}</p>
                 )}
               </div>
             </div>
@@ -164,11 +155,10 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
           {hasMissingIds ? (
             <div className="p-8 text-center">
               <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 mb-2">
-                Unable to load members
-              </p>
+              <p className="text-gray-600 dark:text-gray-400 mb-2">Unable to load members</p>
               <p className="text-sm text-gray-500 dark:text-gray-500">
-                Missing {!workspaceId ? 'workspace' : ''} {!workspaceId && !projectId ? 'and' : ''} {!projectId ? 'project' : ''} ID
+                Missing {!workspaceId ? 'workspace' : ''} {!workspaceId && !projectId ? 'and' : ''}{' '}
+                {!projectId ? 'project' : ''} ID
               </p>
               <p className="text-xs text-gray-400 mt-2">
                 workspaceId: {workspaceId || 'null'}, projectId: {projectId || 'null'}
@@ -190,7 +180,8 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                 </div>
                 {/* Debug info */}
                 <p className="text-xs text-gray-400 mt-2">
-                  Workspace members: {workspaceMembers.length} | Project members: {projectMembers.length} | Available: {availableMembers.length}
+                  Workspace members: {workspaceMembers.length} | Project members:{' '}
+                  {projectMembers.length} | Available: {availableMembers.length}
                 </p>
               </div>
 
@@ -244,7 +235,11 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                               ) : (
                                 <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center">
                                   <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
-                                    {member.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                    {member.user.name
+                                      .split(' ')
+                                      .map((n) => n[0])
+                                      .join('')
+                                      .toUpperCase()}
                                   </span>
                                 </div>
                               )}
@@ -276,7 +271,7 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                                 onClick={(e) => e.stopPropagation()}
                                 className="px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
                               >
-                                {ROLE_OPTIONS.map(role => (
+                                {ROLE_OPTIONS.map((role) => (
                                   <option key={role.value} value={role.value}>
                                     {role.label}
                                   </option>
@@ -310,7 +305,9 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                     disabled={selectedMembers.size === 0 || isSubmitting}
                     className="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
                   >
-                    {isSubmitting ? 'Adding...' : `Add ${selectedMembers.size || ''} Member${selectedMembers.size !== 1 ? 's' : ''}`}
+                    {isSubmitting
+                      ? 'Adding...'
+                      : `Add ${selectedMembers.size || ''} Member${selectedMembers.size !== 1 ? 's' : ''}`}
                   </button>
                 </div>
               </div>

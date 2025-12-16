@@ -1,20 +1,20 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
-import Label from "../form/Label";
-import Input from "../form/input/InputField";
-import Checkbox from "../form/input/Checkbox";
-import { useLogin } from "../../hooks/api/useAuth";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from '../../icons';
+import Label from '../form/Label';
+import Input from '../form/input/InputField';
+import Checkbox from '../form/input/Checkbox';
+import { useLogin } from '../../hooks/api/useAuth';
 
 export default function SignInForm() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
   });
 
   const { mutate: login, isPending } = useLogin();
@@ -22,19 +22,19 @@ export default function SignInForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setError("");
+    setError('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.email.trim()) {
-      setError("Please enter your email");
+      setError('Please enter your email');
       return;
     }
 
     if (!formData.password) {
-      setError("Please enter your password");
+      setError('Please enter your password');
       return;
     }
 
@@ -45,10 +45,10 @@ export default function SignInForm() {
       },
       {
         onSuccess: () => {
-          navigate("/");
+          navigate('/');
         },
         onError: (err: any) => {
-          setError(err.message || "Invalid email or password");
+          setError(err.message || 'Invalid email or password');
         },
       }
     );
@@ -163,7 +163,7 @@ export default function SignInForm() {
                   </Label>
                   <div className="relative">
                     <Input
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       id="password"
                       name="password"
                       value={formData.password}
@@ -204,11 +204,7 @@ export default function SignInForm() {
                   >
                     {isPending ? (
                       <>
-                        <svg
-                          className="w-4 h-4 mr-2 animate-spin"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
+                        <svg className="w-4 h-4 mr-2 animate-spin" viewBox="0 0 24 24" fill="none">
                           <circle
                             className="opacity-25"
                             cx="12"
@@ -226,7 +222,7 @@ export default function SignInForm() {
                         Signing in...
                       </>
                     ) : (
-                      "Sign in"
+                      'Sign in'
                     )}
                   </button>
                 </div>
@@ -235,7 +231,7 @@ export default function SignInForm() {
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Don&apos;t have an account?{" "}
+                Don&apos;t have an account?{' '}
                 <Link
                   to="/signup"
                   className="text-brand-500 hover:text-brand-600 dark:text-brand-400"

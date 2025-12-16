@@ -48,7 +48,7 @@ export function useCreateSpace() {
       apiClient.post<Space>(`/workspaces/${workspaceId}/spaces`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.spaces.list(variables.workspaceId)
+        queryKey: queryKeys.spaces.list(variables.workspaceId),
       });
     },
   });

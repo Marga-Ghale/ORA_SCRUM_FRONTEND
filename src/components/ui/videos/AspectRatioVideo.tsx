@@ -6,8 +6,8 @@ type AspectRatioVideoProps = {
 
 const AspectRatioVideo: React.FC<AspectRatioVideoProps> = ({
   videoUrl,
-  aspectRatio = "video", // Default aspect ratio
-  title = "Embedded Video",
+  aspectRatio = 'video', // Default aspect ratio
+  title = 'Embedded Video',
 }) => {
   return (
     <div className={`aspect-${aspectRatio} overflow-hidden rounded-lg`}>

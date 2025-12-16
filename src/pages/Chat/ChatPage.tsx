@@ -33,7 +33,7 @@ const ChatPage: React.FC = () => {
   // Modal states
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateDM, setShowCreateDM] = useState(false);
-  
+
   // Panel states
   const [showThread, setShowThread] = useState(false);
   const [threadMessage, setThreadMessage] = useState<ChatMessage | null>(null);
@@ -96,9 +96,7 @@ const ChatPage: React.FC = () => {
     if (!channelId) return;
 
     const message = messages.find((m) => m.id === messageId);
-    const hasReacted = message?.reactions?.some(
-      (r) => r.emoji === emoji && r.userId === user?.id
-    );
+    const hasReacted = message?.reactions?.some((r) => r.emoji === emoji && r.userId === user?.id);
 
     if (hasReacted) {
       removeReaction.mutate({ messageId, emoji, channelId });

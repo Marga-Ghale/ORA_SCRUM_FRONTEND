@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { DropdownItem } from "../ui/dropdown/DropdownItem";
-import { Dropdown } from "../ui/dropdown/Dropdown";
-import { useAuth } from "../UserProfile/AuthContext";
+import { useState } from 'react';
+import { DropdownItem } from '../ui/dropdown/DropdownItem';
+import { Dropdown } from '../ui/dropdown/Dropdown';
+import { useAuth } from '../UserProfile/AuthContext';
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,7 +24,7 @@ export default function UserDropdown() {
   const getInitials = (name: string) => {
     return name
       .split(' ')
-      .map(n => n[0])
+      .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
@@ -49,7 +49,7 @@ export default function UserDropdown() {
         </span>
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
+            isOpen ? 'rotate-180' : ''
           }`}
           width="18"
           height="20"

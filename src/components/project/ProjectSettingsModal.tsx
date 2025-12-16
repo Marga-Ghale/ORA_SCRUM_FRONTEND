@@ -79,10 +79,22 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
   ];
 
   const PRESET_COLORS = [
-    '#EF4444', '#F97316', '#F59E0B', '#EAB308',
-    '#84CC16', '#22C55E', '#10B981', '#14B8A6',
-    '#06B6D4', '#0EA5E9', '#3B82F6', '#6366F1',
-    '#8B5CF6', '#A855F7', '#D946EF', '#EC4899',
+    '#EF4444',
+    '#F97316',
+    '#F59E0B',
+    '#EAB308',
+    '#84CC16',
+    '#22C55E',
+    '#10B981',
+    '#14B8A6',
+    '#06B6D4',
+    '#0EA5E9',
+    '#3B82F6',
+    '#6366F1',
+    '#8B5CF6',
+    '#A855F7',
+    '#D946EF',
+    '#EC4899',
   ];
 
   const modalContent = (
@@ -117,8 +129,8 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
                   activeTab === tab.id
                     ? 'bg-brand-500 text-white'
                     : tab.id === 'danger'
-                    ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -140,7 +152,12 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
               className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -202,7 +219,9 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
                         key={c}
                         onClick={() => setColor(c)}
                         className={`w-8 h-8 rounded-lg transition-all ${
-                          color === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-105'
+                          color === c
+                            ? 'ring-2 ring-offset-2 ring-gray-400 scale-110'
+                            : 'hover:scale-105'
                         }`}
                         style={{ backgroundColor: c }}
                       />
@@ -234,9 +253,7 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
             {/* Labels Tab */}
             {activeTab === 'labels' && (
               <div className="text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400">
-                  Label management coming soon
-                </p>
+                <p className="text-gray-500 dark:text-gray-400">Label management coming soon</p>
               </div>
             )}
 
@@ -248,8 +265,8 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
                     Delete Project
                   </h4>
                   <p className="text-sm text-red-600 dark:text-red-400 mb-4">
-                    Once you delete a project, there is no going back. This will permanently delete the
-                    project, all tasks, sprints, and associated data.
+                    Once you delete a project, there is no going back. This will permanently delete
+                    the project, all tasks, sprints, and associated data.
                   </p>
 
                   {!confirmDelete ? (
@@ -262,7 +279,8 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
                   ) : (
                     <div className="space-y-3">
                       <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Type <strong className="text-red-600">{currentProject.key}</strong> to confirm:
+                        Type <strong className="text-red-600">{currentProject.key}</strong> to
+                        confirm:
                       </p>
                       <input
                         type="text"

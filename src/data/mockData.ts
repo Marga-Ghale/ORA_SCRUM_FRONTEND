@@ -68,7 +68,8 @@ export const createMockTasks = (projectKey: string): Task[] => {
   const baseTasks: Partial<Task>[] = [
     {
       title: 'Set up authentication system',
-      description: 'Implement JWT-based authentication with refresh tokens. Include login, logout, and password reset functionality.',
+      description:
+        'Implement JWT-based authentication with refresh tokens. Include login, logout, and password reset functionality.',
       status: 'done',
       priority: 'high',
       type: 'story',
@@ -78,7 +79,8 @@ export const createMockTasks = (projectKey: string): Task[] => {
     },
     {
       title: 'Design dashboard wireframes',
-      description: 'Create wireframes for the main dashboard showing project overview, recent activity, and quick actions.',
+      description:
+        'Create wireframes for the main dashboard showing project overview, recent activity, and quick actions.',
       status: 'done',
       priority: 'high',
       type: 'task',
@@ -98,7 +100,8 @@ export const createMockTasks = (projectKey: string): Task[] => {
     },
     {
       title: 'Implement real-time notifications',
-      description: 'Add WebSocket support for real-time notifications when tasks are updated, assigned, or commented on.',
+      description:
+        'Add WebSocket support for real-time notifications when tasks are updated, assigned, or commented on.',
       status: 'in_progress',
       priority: 'medium',
       type: 'task',
@@ -108,7 +111,8 @@ export const createMockTasks = (projectKey: string): Task[] => {
     },
     {
       title: 'Fix task sorting bug',
-      description: 'Tasks are not maintaining their order after page refresh. Need to persist order in database.',
+      description:
+        'Tasks are not maintaining their order after page refresh. Need to persist order in database.',
       status: 'in_review',
       priority: 'high',
       type: 'bug',
@@ -148,7 +152,8 @@ export const createMockTasks = (projectKey: string): Task[] => {
     },
     {
       title: 'Performance optimization audit',
-      description: 'Analyze and optimize application performance, focusing on bundle size and load times.',
+      description:
+        'Analyze and optimize application performance, focusing on bundle size and load times.',
       status: 'backlog',
       priority: 'low',
       type: 'task',
@@ -218,32 +223,35 @@ export const createMockTasks = (projectKey: string): Task[] => {
     },
   ];
 
-  return baseTasks.map((task, index) => ({
-    id: generateTaskId(),
-    key: generateTaskKey(projectKey, index + 1),
-    title: task.title!,
-    description: task.description,
-    status: task.status!,
-    priority: task.priority!,
-    type: task.type!,
-    assignee: task.assignee,
-    reporter: mockUsers[0],
-    labels: task.labels || [],
-    storyPoints: task.storyPoints,
-    dueDate: new Date(Date.now() + Math.random() * 14 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
-    updatedAt: new Date(),
-    comments: [],
-    attachments: [],
-    subtasks: [],
-    order: index,
-  } as Task));
+  return baseTasks.map(
+    (task, index) =>
+      ({
+        id: generateTaskId(),
+        key: generateTaskKey(projectKey, index + 1),
+        title: task.title!,
+        description: task.description,
+        status: task.status!,
+        priority: task.priority!,
+        type: task.type!,
+        assignee: task.assignee,
+        reporter: mockUsers[0],
+        labels: task.labels || [],
+        storyPoints: task.storyPoints,
+        dueDate: new Date(Date.now() + Math.random() * 14 * 24 * 60 * 60 * 1000),
+        createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+        updatedAt: new Date(),
+        comments: [],
+        attachments: [],
+        subtasks: [],
+        order: index,
+      }) as Task
+  );
 };
 
 // Mock Sprint
 export const createMockSprints = (projectKey: string): Sprint[] => {
   const tasks = createMockTasks(projectKey);
-  const sprintTasks = tasks.filter(t => t.status !== 'backlog');
+  const sprintTasks = tasks.filter((t) => t.status !== 'backlog');
 
   return [
     {
@@ -253,7 +261,7 @@ export const createMockSprints = (projectKey: string): Sprint[] => {
       startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
       endDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       status: 'completed',
-      tasks: sprintTasks.filter(t => t.status === 'done').slice(0, 3),
+      tasks: sprintTasks.filter((t) => t.status === 'done').slice(0, 3),
     },
     {
       id: 'sprint-2',
@@ -262,7 +270,7 @@ export const createMockSprints = (projectKey: string): Sprint[] => {
       startDate: new Date(),
       endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       status: 'active',
-      tasks: sprintTasks.filter(t => ['in_progress', 'in_review', 'todo'].includes(t.status)),
+      tasks: sprintTasks.filter((t) => ['in_progress', 'in_review', 'todo'].includes(t.status)),
     },
     {
       id: 'sprint-3',
@@ -286,7 +294,7 @@ export const createMockProject = (): Project => ({
   lead: mockUsers[0],
   members: mockUsers,
   sprints: createMockSprints('ORA'),
-  backlog: createMockTasks('ORA').filter(t => t.status === 'backlog'),
+  backlog: createMockTasks('ORA').filter((t) => t.status === 'backlog'),
   createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
 });
 
@@ -355,10 +363,10 @@ export const getAllTasks = (): Task[] => createMockTasks('ORA');
 
 // Get tasks by status
 export const getTasksByStatus = (status: string): Task[] => {
-  return getAllTasks().filter(task => task.status === status);
+  return getAllTasks().filter((task) => task.status === status);
 };
 
 // Get current sprint
 export const getCurrentSprint = (): Sprint | undefined => {
-  return createMockSprints('ORA').find(s => s.status === 'active');
+  return createMockSprints('ORA').find((s) => s.status === 'active');
 };

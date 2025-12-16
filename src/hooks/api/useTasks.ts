@@ -96,7 +96,9 @@ export function useTasks(projectId: string, filters?: TaskFilters) {
       if (filters?.search) params.append('search', filters.search);
 
       const queryString = params.toString();
-      return apiClient.get<Task[]>(`/projects/${projectId}/tasks${queryString ? `?${queryString}` : ''}`);
+      return apiClient.get<Task[]>(
+        `/projects/${projectId}/tasks${queryString ? `?${queryString}` : ''}`
+      );
     },
     enabled: !!projectId,
   });
@@ -118,8 +120,7 @@ export function useTasksInfinite(projectId: string, filters?: TaskFilters) {
       );
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.hasMore ? allPages.length * 50 : undefined,
+    getNextPageParam: (lastPage, allPages) => (lastPage.hasMore ? allPages.length * 50 : undefined),
     enabled: !!projectId,
   });
 }
@@ -178,7 +179,7 @@ export function useCreateTask() {
     onSuccess: (task, _, context) => {
       toast.dismiss(context?.toastId);
       toast.success(`Task ${task.key} created successfully`);
-      
+
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
       if (task.sprintId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.tasks.bySprint(task.sprintId) });
@@ -249,10 +250,7 @@ export function useUpdateTaskStatus() {
     onError: (error: Error, variables, context) => {
       // Rollback on error
       if (context?.previousTask) {
-        queryClient.setQueryData(
-          queryKeys.tasks.detail(variables.id),
-          context.previousTask
-        );
+        queryClient.setQueryData(queryKeys.tasks.detail(variables.id), context.previousTask);
       }
       toast.error('Failed to update task status');
     },
@@ -293,7 +291,7 @@ export function useAddComment() {
     onSuccess: (_, variables) => {
       toast.success('Comment added');
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tasks.comments(variables.taskId)
+        queryKey: queryKeys.tasks.comments(variables.taskId),
       });
     },
     onError: (error: Error) => {
@@ -312,7 +310,7 @@ export function useDeleteComment() {
     onSuccess: (_, variables) => {
       toast.success('Comment deleted');
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tasks.comments(variables.taskId)
+        queryKey: queryKeys.tasks.comments(variables.taskId),
       });
     },
     onError: (error: Error) => {
@@ -326,8 +324,9 @@ export function useBulkUpdateTasks() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (tasks: Array<{ id: string; order?: number; status?: TaskStatus; sprintId?: string | null }>) =>
-      apiClient.put('/tasks/bulk', { tasks }),
+    mutationFn: (
+      tasks: Array<{ id: string; order?: number; status?: TaskStatus; sprintId?: string | null }>
+    ) => apiClient.put('/tasks/bulk', { tasks }),
     onSuccess: () => {
       // No toast for bulk updates (usually drag & drop reordering)
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
@@ -346,11 +345,9 @@ export function useMoveTaskToSprint() {
     mutationFn: ({ taskId, sprintId }: { taskId: string; sprintId: string | null }) =>
       apiClient.patch<Task>(`/tasks/${taskId}`, { sprintId }),
     onSuccess: (task) => {
-      const message = task.sprintId 
-        ? `Task moved to sprint` 
-        : 'Task moved to backlog';
+      const message = task.sprintId ? `Task moved to sprint` : 'Task moved to backlog';
       toast.success(message);
-      
+
       queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.all });
@@ -373,11 +370,11 @@ export function useAssignTask() {
     mutationFn: ({ taskId, assigneeId }: { taskId: string; assigneeId: string | null }) =>
       apiClient.patch<Task>(`/tasks/${taskId}`, { assigneeId }),
     onSuccess: (task) => {
-      const message = task.assigneeId 
-        ? `Task assigned to ${task.assignee?.name || 'user'}` 
+      const message = task.assigneeId
+        ? `Task assigned to ${task.assignee?.name || 'user'}`
         : 'Task unassigned';
       toast.success(message);
-      
+
       queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
     },

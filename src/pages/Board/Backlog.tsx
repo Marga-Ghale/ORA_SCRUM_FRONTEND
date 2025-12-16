@@ -80,10 +80,17 @@ const DraggableBacklogItem: React.FC<DraggableBacklogItemProps> = ({ task, onOpe
       {task.assignee ? (
         <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
           {task.assignee.avatar ? (
-            <img src={task.assignee.avatar} alt={task.assignee.name} className="w-full h-full object-cover" />
+            <img
+              src={task.assignee.avatar}
+              alt={task.assignee.name}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-xs font-medium text-brand-600 dark:text-brand-400">
-              {task.assignee.name.split(' ').map(n => n[0]).join('')}
+              {task.assignee.name
+                .split(' ')
+                .map((n) => n[0])
+                .join('')}
             </div>
           )}
         </div>
@@ -121,7 +128,8 @@ const SprintSection: React.FC<SprintSectionProps> = ({
   });
 
   const totalPoints = tasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
-  const statusColor = sprint.status === 'active' ? '#10B981' : sprint.status === 'completed' ? '#6B7280' : '#3B82F6';
+  const statusColor =
+    sprint.status === 'active' ? '#10B981' : sprint.status === 'completed' ? '#6B7280' : '#3B82F6';
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -131,7 +139,9 @@ const SprintSection: React.FC<SprintSectionProps> = ({
     <div
       ref={drop as unknown as React.Ref<HTMLDivElement>}
       className={`mb-4 rounded-xl border transition-colors ${
-        isOver ? 'border-brand-400 bg-brand-50/50 dark:bg-brand-900/10' : 'border-gray-200 dark:border-gray-700'
+        isOver
+          ? 'border-brand-400 bg-brand-50/50 dark:bg-brand-900/10'
+          : 'border-gray-200 dark:border-gray-700'
       }`}
     >
       {/* Sprint Header */}
@@ -148,14 +158,9 @@ const SprintSection: React.FC<SprintSectionProps> = ({
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: statusColor }}
-          />
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor }} />
           <h3 className="font-semibold text-gray-900 dark:text-white">{sprint.name}</h3>
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            ({tasks.length} issues)
-          </span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">({tasks.length} issues)</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -203,7 +208,7 @@ const SprintSection: React.FC<SprintSectionProps> = ({
               <p className="text-sm">Drag issues here to add them</p>
             </div>
           ) : (
-            tasks.map(task => (
+            tasks.map((task) => (
               <DraggableBacklogItem key={task.id} task={task} onOpenTask={onOpenTask} />
             ))
           )}
@@ -223,7 +228,9 @@ const BacklogContent: React.FC = () => {
     startSprint,
     completeSprint,
   } = useProject();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['sprint-2', 'backlog']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(['sprint-2', 'backlog'])
+  );
 
   // Mock sprints data
   const sprints: Sprint[] = [
@@ -248,7 +255,7 @@ const BacklogContent: React.FC = () => {
   ];
 
   const toggleSection = (id: string) => {
-    setExpandedSections(prev => {
+    setExpandedSections((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -259,8 +266,8 @@ const BacklogContent: React.FC = () => {
     });
   };
 
-  const backlogTasks = tasks.filter(t => t.status === 'backlog');
-  const sprintTasks = tasks.filter(t => t.status !== 'backlog');
+  const backlogTasks = tasks.filter((t) => t.status === 'backlog');
+  const sprintTasks = tasks.filter((t) => t.status !== 'backlog');
 
   return (
     <div className="flex flex-col h-full">
@@ -278,7 +285,12 @@ const BacklogContent: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-medium transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
             </svg>
             <span>Create Sprint</span>
           </button>
@@ -290,7 +302,12 @@ const BacklogContent: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             <span>Create Issue</span>
           </button>
@@ -305,11 +322,15 @@ const BacklogContent: React.FC = () => {
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
           <p className="text-sm text-gray-500 dark:text-gray-400">In Backlog</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{backlogTasks.length}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {backlogTasks.length}
+          </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
           <p className="text-sm text-gray-500 dark:text-gray-400">In Sprint</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{sprintTasks.length}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {sprintTasks.length}
+          </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
           <p className="text-sm text-gray-500 dark:text-gray-400">Story Points</p>
@@ -322,7 +343,7 @@ const BacklogContent: React.FC = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* Active/Upcoming Sprints */}
-        {sprints.map(sprint => (
+        {sprints.map((sprint) => (
           <SprintSection
             key={sprint.id}
             sprint={sprint}
@@ -335,9 +356,7 @@ const BacklogContent: React.FC = () => {
 
         {/* Backlog */}
         <div
-          className={`rounded-xl border transition-colors ${
-            'border-gray-200 dark:border-gray-700'
-          }`}
+          className={`rounded-xl border transition-colors ${'border-gray-200 dark:border-gray-700'}`}
         >
           <div
             onClick={() => toggleSection('backlog')}
@@ -350,7 +369,12 @@ const BacklogContent: React.FC = () => {
                 viewBox="0 0 24 24"
                 stroke="currentColor"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
               <span className="w-2 h-2 rounded-full bg-gray-400" />
               <h3 className="font-semibold text-gray-900 dark:text-white">Backlog</h3>
@@ -371,7 +395,7 @@ const BacklogContent: React.FC = () => {
                   <p className="text-sm">Create new issues to add to the backlog</p>
                 </div>
               ) : (
-                backlogTasks.map(task => (
+                backlogTasks.map((task) => (
                   <DraggableBacklogItem key={task.id} task={task} onOpenTask={openTaskModal} />
                 ))
               )}

@@ -1,5 +1,5 @@
 // src/hooks/api/useNotifications.ts
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../lib/api-client';

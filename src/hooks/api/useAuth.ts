@@ -59,8 +59,7 @@ export function useRegister() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: RegisterData) =>
-      apiClient.post<AuthResponse>('/auth/register', data),
+    mutationFn: (data: RegisterData) => apiClient.post<AuthResponse>('/auth/register', data),
     onSuccess: (data) => {
       apiClient.setTokens(data.accessToken, data.refreshToken);
       queryClient.setQueryData(queryKeys.auth.user(), data.user);
@@ -91,8 +90,7 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<User>) =>
-      apiClient.put<User>('/users/me', data),
+    mutationFn: (data: Partial<User>) => apiClient.put<User>('/users/me', data),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.auth.user(), data);
     },

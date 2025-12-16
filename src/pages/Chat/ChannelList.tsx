@@ -22,24 +22,23 @@ interface ChannelListProps {
   channels: ChatChannel[];
   activeChannelId?: string;
   unreadCounts: Record<string, number>;
-  currentUserId: string; 
+  currentUserId: string;
   onSelectChannel: (channel: ChatChannel) => void;
   onCreateChannel: () => void;
   onCreateDM: () => void;
   isLoading?: boolean;
 }
 
-
 export const ChannelList: React.FC<ChannelListProps> = ({
   channels,
   activeChannelId,
   unreadCounts,
-  currentUserId, 
+  currentUserId,
   onSelectChannel,
   onCreateChannel,
   onCreateDM,
   isLoading = false,
-})  => {
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['channels', 'direct', 'starred'])
@@ -90,8 +89,8 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 
     const query = searchQuery.toLowerCase();
     const filterChannel = (channel: ChatChannel) => {
-    const name = (getChannelDisplayName(channel, currentUserId) || '').toLowerCase();
-    return name.includes(query);
+      const name = (getChannelDisplayName(channel, currentUserId) || '').toLowerCase();
+      return name.includes(query);
     };
 
     return {
@@ -133,29 +132,29 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   };
 
   // Channel Item Component
-const ChannelItem: React.FC<{
-  channel: ChatChannel;
-  showType?: boolean;
-}> = ({ channel, showType = false }) => {
-  const isActive = channel.id === activeChannelId;
-  const unread = unreadCounts[channel.id] || 0;
-  const isHovered = hoveredChannel === channel.id;
-  
-  // 🔍 DEBUG: Check channel data
-  if (channel.type === 'direct') {
-    console.log('Direct channel:', {
-      id: channel.id,
-      name: channel.name,
-      type: channel.type,
-      otherUser: channel.otherUser,
-      hasOtherUser: !!channel.otherUser,
-    });
-  }
-  
-  const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown';
-  console.log(displayName);
-  const isStarred = starredChannels.has(channel.id);
-  const isDM = channel.type === 'direct';
+  const ChannelItem: React.FC<{
+    channel: ChatChannel;
+    showType?: boolean;
+  }> = ({ channel, showType = false }) => {
+    const isActive = channel.id === activeChannelId;
+    const unread = unreadCounts[channel.id] || 0;
+    const isHovered = hoveredChannel === channel.id;
+
+    // 🔍 DEBUG: Check channel data
+    if (channel.type === 'direct') {
+      console.log('Direct channel:', {
+        id: channel.id,
+        name: channel.name,
+        type: channel.type,
+        otherUser: channel.otherUser,
+        hasOtherUser: !!channel.otherUser,
+      });
+    }
+
+    const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown';
+    console.log(displayName);
+    const isStarred = starredChannels.has(channel.id);
+    const isDM = channel.type === 'direct';
 
     return (
       <button
@@ -168,8 +167,8 @@ const ChannelItem: React.FC<{
             isActive
               ? 'bg-brand-500/20 text-brand-400'
               : unread > 0
-              ? 'text-white hover:bg-[#25282c]'
-              : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
+                ? 'text-white hover:bg-[#25282c]'
+                : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
           }`}
       >
         {/* Channel Icon / Avatar */}
@@ -201,34 +200,22 @@ const ChannelItem: React.FC<{
               isActive ? 'bg-brand-500/30' : 'bg-[#2a2e33]'
             }`}
           >
-            <Hash
-              className={`w-3.5 h-3.5 ${
-                isActive ? 'text-brand-400' : 'text-[#6b7280]'
-              }`}
-            />
+            <Hash className={`w-3.5 h-3.5 ${isActive ? 'text-brand-400' : 'text-[#6b7280]'}`} />
           </div>
         )}
 
         {/* Channel Name */}
-        <span
-          className={`flex-1 truncate text-left ${
-            unread > 0 ? 'font-semibold' : ''
-          }`}
-        >
+        <span className={`flex-1 truncate text-left ${unread > 0 ? 'font-semibold' : ''}`}>
           {displayName}
         </span>
 
         {/* Type Badge (for starred section) */}
         {showType && (
-          <span className="text-[10px] text-[#6b7280] uppercase">
-            {isDM ? 'DM' : channel.type}
-          </span>
+          <span className="text-[10px] text-[#6b7280] uppercase">{isDM ? 'DM' : channel.type}</span>
         )}
 
         {/* Private Lock */}
-        {channel.isPrivate && !isDM && (
-          <Lock className="w-3 h-3 text-[#6b7280] flex-shrink-0" />
-        )}
+        {channel.isPrivate && !isDM && <Lock className="w-3 h-3 text-[#6b7280] flex-shrink-0" />}
 
         {/* Starred Indicator */}
         {isStarred && !showType && (
@@ -275,9 +262,7 @@ const ChannelItem: React.FC<{
           className="flex items-center gap-1.5 text-xs font-semibold text-[#6b7280] uppercase tracking-wider hover:text-[#9ca3af] transition-colors"
         >
           <ChevronRight
-            className={`w-3 h-3 transition-transform duration-200 ${
-              isExpanded ? 'rotate-90' : ''
-            }`}
+            className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
           />
           <span>{title}</span>
         </button>
@@ -287,9 +272,7 @@ const ChannelItem: React.FC<{
         </span>
 
         {unreadCount > 0 && (
-          <span className="text-[10px] font-bold text-red-400 ml-auto mr-1">
-            {unreadCount} new
-          </span>
+          <span className="text-[10px] font-bold text-red-400 ml-auto mr-1">{unreadCount} new</span>
         )}
 
         {onAdd && (
@@ -309,10 +292,7 @@ const ChannelItem: React.FC<{
   const LoadingSkeleton = () => (
     <div className="p-2 space-y-1">
       {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-        <div
-          key={i}
-          className="flex items-center gap-2 px-2 py-1.5 animate-pulse"
-        >
+        <div key={i} className="flex items-center gap-2 px-2 py-1.5 animate-pulse">
           <div className="w-6 h-6 rounded-md bg-[#2a2e33]" />
           <div
             className="h-4 bg-[#2a2e33] rounded flex-1"
@@ -397,11 +377,7 @@ const ChannelItem: React.FC<{
                 {expandedSections.has('starred') && (
                   <div className="px-2 space-y-0.5">
                     {filteredChannels.starred.map((channel) => (
-                      <ChannelItem
-                        key={channel.id}
-                        channel={channel}
-                        showType
-                      />
+                      <ChannelItem key={channel.id} channel={channel} showType />
                     ))}
                   </div>
                 )}
@@ -484,10 +460,7 @@ const ChannelItem: React.FC<{
       {/* Context Menu */}
       {contextMenu && (
         <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setContextMenu(null)}
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <div
             className="fixed z-50 w-48 bg-[#25282c] border border-[#3a3e43] rounded-xl shadow-xl py-1 overflow-hidden"
             style={{

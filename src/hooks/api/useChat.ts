@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/hooks/api/useChat.ts
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -68,9 +66,9 @@ export interface ChatChannelMember {
   joinedAt: string;
   lastRead: string;
   user?: {
-    ID: string;        // Match backend
-    Email: string;     // Match backend
-    Name: string;      // Match backend
+    ID: string; // Match backend
+    Email: string; // Match backend
+    Name: string; // Match backend
     Avatar: string | null;
     Status: string;
   };
@@ -167,13 +165,17 @@ export function useCreateChannel() {
     },
     onError: (error: any) => {
       const message = error?.response?.data?.error || error?.message || 'Failed to create channel';
-      
-      if (message.includes('duplicate') || message.includes('unique') || message.includes('already exists')) {
+
+      if (
+        message.includes('duplicate') ||
+        message.includes('unique') ||
+        message.includes('already exists')
+      ) {
         toast.error('A channel with this configuration already exists');
       } else {
         toast.error(message);
       }
-      
+
       throw error;
     },
   });
@@ -195,7 +197,8 @@ export function useCreateDirectChannel() {
       queryClient.setQueryData(queryKeys.chat.channel(channel.id), channel);
     },
     onError: (error: any) => {
-      const message = error?.response?.data?.error || error?.message || 'Failed to start conversation';
+      const message =
+        error?.response?.data?.error || error?.message || 'Failed to start conversation';
       toast.error(message);
       throw error;
     },
@@ -354,9 +357,8 @@ export function useSendMessage() {
         reactions: [],
       };
 
-      queryClient.setQueryData<ChatMessage[]>(
-        queryKeys.chat.messages(channelId),
-        (old) => (old ? [optimisticMessage, ...old] : [optimisticMessage])
+      queryClient.setQueryData<ChatMessage[]>(queryKeys.chat.messages(channelId), (old) =>
+        old ? [optimisticMessage, ...old] : [optimisticMessage]
       );
 
       return { previousMessages, channelId };
@@ -364,10 +366,7 @@ export function useSendMessage() {
     onError: (_err, { channelId }, context) => {
       // Rollback on error
       if (context?.previousMessages) {
-        queryClient.setQueryData(
-          queryKeys.chat.messages(channelId),
-          context.previousMessages
-        );
+        queryClient.setQueryData(queryKeys.chat.messages(channelId), context.previousMessages);
       }
       toast.error('Failed to send message');
     },
@@ -375,10 +374,7 @@ export function useSendMessage() {
       // Update the optimistic message with the real one
       queryClient.setQueryData<ChatMessage[]>(
         queryKeys.chat.messages(channelId),
-        (old) =>
-          old?.map((msg) =>
-            msg.id.startsWith('temp-') ? newMessage : msg
-          ) || [newMessage]
+        (old) => old?.map((msg) => (msg.id.startsWith('temp-') ? newMessage : msg)) || [newMessage]
       );
 
       // If it's a thread reply, invalidate thread
@@ -419,24 +415,19 @@ export function useEditMessage() {
       );
 
       // Optimistically update the message
-      queryClient.setQueryData<ChatMessage[]>(
-        queryKeys.chat.messages(channelId),
-        (old) =>
-          old?.map((msg) =>
-            msg.id === messageId
-              ? { ...msg, content, isEdited: true, updatedAt: new Date().toISOString() }
-              : msg
-          )
+      queryClient.setQueryData<ChatMessage[]>(queryKeys.chat.messages(channelId), (old) =>
+        old?.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, content, isEdited: true, updatedAt: new Date().toISOString() }
+            : msg
+        )
       );
 
       return { previousMessages, channelId };
     },
     onError: (_err, { channelId }, context) => {
       if (context?.previousMessages) {
-        queryClient.setQueryData(
-          queryKeys.chat.messages(channelId),
-          context.previousMessages
-        );
+        queryClient.setQueryData(queryKeys.chat.messages(channelId), context.previousMessages);
       }
       toast.error('Failed to edit message');
     },
@@ -466,19 +457,15 @@ export function useDeleteMessage() {
       );
 
       // Optimistically remove the message
-      queryClient.setQueryData<ChatMessage[]>(
-        queryKeys.chat.messages(channelId),
-        (old) => old?.filter((m) => m.id !== messageId)
+      queryClient.setQueryData<ChatMessage[]>(queryKeys.chat.messages(channelId), (old) =>
+        old?.filter((m) => m.id !== messageId)
       );
 
       return { previousMessages, channelId };
     },
     onError: (_err, { channelId }, context) => {
       if (context?.previousMessages) {
-        queryClient.setQueryData(
-          queryKeys.chat.messages(channelId),
-          context.previousMessages
-        );
+        queryClient.setQueryData(queryKeys.chat.messages(channelId), context.previousMessages);
       }
       toast.error('Failed to delete message');
     },
@@ -502,14 +489,8 @@ export function useAddReaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      messageId,
-      emoji,
-    }: {
-      messageId: string;
-      emoji: string;
-      channelId: string;
-    }) => apiClient.post(`/chat/messages/${messageId}/reactions`, { emoji }),
+    mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string; channelId: string }) =>
+      apiClient.post(`/chat/messages/${messageId}/reactions`, { emoji }),
     onMutate: async ({ messageId, emoji, channelId }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.chat.messages(channelId) });
 
@@ -518,35 +499,30 @@ export function useAddReaction() {
       );
 
       // Optimistically add reaction
-      queryClient.setQueryData<ChatMessage[]>(
-        queryKeys.chat.messages(channelId),
-        (old) =>
-          old?.map((msg) => {
-            if (msg.id === messageId) {
-              const newReaction: ChatReaction = {
-                id: `temp-${Date.now()}`,
-                messageId,
-                userId: 'current-user',
-                emoji,
-                createdAt: new Date().toISOString(),
-              };
-              return {
-                ...msg,
-                reactions: [...(msg.reactions || []), newReaction],
-              };
-            }
-            return msg;
-          })
+      queryClient.setQueryData<ChatMessage[]>(queryKeys.chat.messages(channelId), (old) =>
+        old?.map((msg) => {
+          if (msg.id === messageId) {
+            const newReaction: ChatReaction = {
+              id: `temp-${Date.now()}`,
+              messageId,
+              userId: 'current-user',
+              emoji,
+              createdAt: new Date().toISOString(),
+            };
+            return {
+              ...msg,
+              reactions: [...(msg.reactions || []), newReaction],
+            };
+          }
+          return msg;
+        })
       );
 
       return { previousMessages, channelId };
     },
     onError: (_err, { channelId }, context) => {
       if (context?.previousMessages) {
-        queryClient.setQueryData(
-          queryKeys.chat.messages(channelId),
-          context.previousMessages
-        );
+        queryClient.setQueryData(queryKeys.chat.messages(channelId), context.previousMessages);
       }
     },
     onSettled: (_, __, { channelId }) => {
@@ -562,17 +538,8 @@ export function useRemoveReaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      messageId,
-      emoji,
-    }: {
-      messageId: string;
-      emoji: string;
-      channelId: string;
-    }) =>
-      apiClient.delete(
-        `/chat/messages/${messageId}/reactions?emoji=${encodeURIComponent(emoji)}`
-      ),
+    mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string; channelId: string }) =>
+      apiClient.delete(`/chat/messages/${messageId}/reactions?emoji=${encodeURIComponent(emoji)}`),
     onMutate: async ({ messageId, emoji, channelId }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.chat.messages(channelId) });
 
@@ -581,30 +548,25 @@ export function useRemoveReaction() {
       );
 
       // Optimistically remove reaction
-      queryClient.setQueryData<ChatMessage[]>(
-        queryKeys.chat.messages(channelId),
-        (old) =>
-          old?.map((msg) => {
-            if (msg.id === messageId) {
-              return {
-                ...msg,
-                reactions: msg.reactions?.filter(
-                  (r) => !(r.emoji === emoji && r.userId === 'current-user')
-                ),
-              };
-            }
-            return msg;
-          })
+      queryClient.setQueryData<ChatMessage[]>(queryKeys.chat.messages(channelId), (old) =>
+        old?.map((msg) => {
+          if (msg.id === messageId) {
+            return {
+              ...msg,
+              reactions: msg.reactions?.filter(
+                (r) => !(r.emoji === emoji && r.userId === 'current-user')
+              ),
+            };
+          }
+          return msg;
+        })
       );
 
       return { previousMessages, channelId };
     },
     onError: (_err, { channelId }, context) => {
       if (context?.previousMessages) {
-        queryClient.setQueryData(
-          queryKeys.chat.messages(channelId),
-          context.previousMessages
-        );
+        queryClient.setQueryData(queryKeys.chat.messages(channelId), context.previousMessages);
       }
     },
     onSettled: (_, __, { channelId }) => {
@@ -653,9 +615,7 @@ export function useChannelMembers(channelId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.chat.members(channelId!),
     queryFn: async () => {
-      const data = await apiClient.get<ChatChannelMember[]>(
-        `/chat/channels/${channelId}/members`
-      );
+      const data = await apiClient.get<ChatChannelMember[]>(`/chat/channels/${channelId}/members`);
       return data || [];
     },
     enabled: !!channelId,
@@ -728,10 +688,10 @@ export function useMarkChannelRead() {
       );
 
       if (previousCounts) {
-        queryClient.setQueryData<Record<string, number>>(
-          queryKeys.chat.unreadCounts(),
-          { ...previousCounts, [channelId]: 0 }
-        );
+        queryClient.setQueryData<Record<string, number>>(queryKeys.chat.unreadCounts(), {
+          ...previousCounts,
+          [channelId]: 0,
+        });
       }
 
       return { previousCounts };
@@ -825,8 +785,10 @@ export function formatMessageTime(dateString: string): string {
   }
 
   if (diffDays < 7) {
-    return date.toLocaleDateString('en-US', { weekday: 'short' }) + 
-      ` at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+    return (
+      date.toLocaleDateString('en-US', { weekday: 'short' }) +
+      ` at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+    );
   }
 
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

@@ -18,8 +18,8 @@ export const queryKeys = {
   tasks: {
     all: ['tasks'] as const,
     lists: () => [...queryKeys.tasks.all, 'list'] as const,
-   list: (projectId: string, filters?: object) => 
-  [...queryKeys.tasks.lists(), projectId, filters] as const,
+    list: (projectId: string, filters?: object) =>
+      [...queryKeys.tasks.lists(), projectId, filters] as const,
     backlog: (projectId: string) => [...queryKeys.tasks.all, 'backlog', projectId] as const,
     bySprint: (sprintId: string) => [...queryKeys.tasks.all, 'sprint', sprintId] as const,
     detail: (id: string) => [...queryKeys.tasks.all, 'detail', id] as const,
@@ -37,7 +37,8 @@ export const queryKeys = {
     bySpace: (spaceId: string) => [...queryKeys.projects.lists(), spaceId] as const,
     detail: (id: string) => [...queryKeys.projects.all, 'detail', id] as const,
     members: (projectId: string) => [...queryKeys.projects.all, 'members', projectId] as const,
-    invitations: (projectId: string) => [...queryKeys.projects.all, 'invitations', projectId] as const,
+    invitations: (projectId: string) =>
+      [...queryKeys.projects.all, 'invitations', projectId] as const,
   },
 
   // ============================================
@@ -78,8 +79,10 @@ export const queryKeys = {
     lists: () => [...queryKeys.workspaces.all, 'list'] as const,
     list: () => [...queryKeys.workspaces.all, 'list'] as const,
     detail: (id: string) => [...queryKeys.workspaces.all, 'detail', id] as const,
-    members: (workspaceId: string) => [...queryKeys.workspaces.all, 'members', workspaceId] as const,
-    invitations: (workspaceId: string) => [...queryKeys.workspaces.all, 'invitations', workspaceId] as const,
+    members: (workspaceId: string) =>
+      [...queryKeys.workspaces.all, 'members', workspaceId] as const,
+    invitations: (workspaceId: string) =>
+      [...queryKeys.workspaces.all, 'invitations', workspaceId] as const,
   },
 
   // ============================================
@@ -91,7 +94,8 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.users.all, 'detail', id] as const,
     search: (query: string) => [...queryKeys.users.all, 'search', query] as const,
     byProject: (projectId: string) => [...queryKeys.users.all, 'project', projectId] as const,
-    byWorkspace: (workspaceId: string) => [...queryKeys.users.all, 'workspace', workspaceId] as const,
+    byWorkspace: (workspaceId: string) =>
+      [...queryKeys.users.all, 'workspace', workspaceId] as const,
   },
 
   // ============================================
@@ -110,7 +114,7 @@ export const queryKeys = {
   notifications: {
     all: ['notifications'] as const,
     lists: () => [...queryKeys.notifications.all, 'list'] as const,
-    list: (filters?: { unreadOnly?: boolean }) => 
+    list: (filters?: { unreadOnly?: boolean }) =>
       [...queryKeys.notifications.lists(), filters] as const,
     unread: () => [...queryKeys.notifications.all, 'unread'] as const,
     count: () => [...queryKeys.notifications.all, 'count'] as const,
@@ -123,7 +127,8 @@ export const queryKeys = {
   invitations: {
     all: ['invitations'] as const,
     pending: () => [...queryKeys.invitations.all, 'pending'] as const,
-    workspace: (workspaceId: string) => [...queryKeys.invitations.all, 'workspace', workspaceId] as const,
+    workspace: (workspaceId: string) =>
+      [...queryKeys.invitations.all, 'workspace', workspaceId] as const,
     project: (projectId: string) => [...queryKeys.invitations.all, 'project', projectId] as const,
     detail: (id: string) => [...queryKeys.invitations.all, 'detail', id] as const,
   },
@@ -134,7 +139,8 @@ export const queryKeys = {
   teams: {
     all: ['teams'] as const,
     lists: () => [...queryKeys.teams.all, 'list'] as const,
-    byWorkspace: (workspaceId: string) => [...queryKeys.teams.all, 'workspace', workspaceId] as const,
+    byWorkspace: (workspaceId: string) =>
+      [...queryKeys.teams.all, 'workspace', workspaceId] as const,
     detail: (id: string) => [...queryKeys.teams.all, 'detail', id] as const,
     members: (teamId: string) => [...queryKeys.teams.all, 'members', teamId] as const,
   },
@@ -146,13 +152,13 @@ export const queryKeys = {
     all: ['chat'] as const,
     // Channels
     channels: () => [...queryKeys.chat.all, 'channels'] as const,
-    workspaceChannels: (workspaceId: string) => 
+    workspaceChannels: (workspaceId: string) =>
       [...queryKeys.chat.all, 'channels', 'workspace', workspaceId] as const,
     channel: (channelId: string) => [...queryKeys.chat.all, 'channel', channelId] as const,
-    channelByTarget: (targetType: string, targetId: string) => 
+    channelByTarget: (targetType: string, targetId: string) =>
       [...queryKeys.chat.all, 'channel', 'target', targetType, targetId] as const,
     // Messages
-    messages: (channelId: string, limit?: number, offset?: number) => 
+    messages: (channelId: string, limit?: number, offset?: number) =>
       [...queryKeys.chat.all, 'messages', channelId, { limit, offset }] as const,
     thread: (parentId: string) => [...queryKeys.chat.all, 'thread', parentId] as const,
     // Members
@@ -163,7 +169,7 @@ export const queryKeys = {
     // Reactions
     reactions: (messageId: string) => [...queryKeys.chat.all, 'reactions', messageId] as const,
     // Direct messages
-    directChannel: (user1Id: string, user2Id: string) => 
+    directChannel: (user1Id: string, user2Id: string) =>
       [...queryKeys.chat.all, 'direct', user1Id, user2Id] as const,
   },
 
@@ -176,7 +182,8 @@ export const queryKeys = {
     byTask: (taskId: string) => [...queryKeys.activities.all, 'task', taskId] as const,
     byProject: (projectId: string) => [...queryKeys.activities.all, 'project', projectId] as const,
     byUser: (userId?: string) => [...queryKeys.activities.all, 'user', userId] as const,
-    byWorkspace: (workspaceId: string) => [...queryKeys.activities.all, 'workspace', workspaceId] as const,
+    byWorkspace: (workspaceId: string) =>
+      [...queryKeys.activities.all, 'workspace', workspaceId] as const,
   },
 
   // ============================================
@@ -194,9 +201,9 @@ export const queryKeys = {
   search: {
     all: ['search'] as const,
     global: (query: string) => [...queryKeys.search.all, 'global', query] as const,
-    tasks: (query: string, projectId?: string) => 
+    tasks: (query: string, projectId?: string) =>
       [...queryKeys.search.all, 'tasks', query, projectId] as const,
-    users: (query: string, scope?: { workspaceId?: string; projectId?: string }) => 
+    users: (query: string, scope?: { workspaceId?: string; projectId?: string }) =>
       [...queryKeys.search.all, 'users', query, scope] as const,
   },
 
@@ -226,10 +233,7 @@ export const invalidateEntity = (entity: keyof typeof queryKeys) => {
 /**
  * Prefetch a query
  */
-export const prefetchQuery = async <T>(
-  queryKey: readonly unknown[],
-  queryFn: () => Promise<T>
-) => {
+export const prefetchQuery = async <T>(queryKey: readonly unknown[], queryFn: () => Promise<T>) => {
   await queryClient.prefetchQuery({
     queryKey,
     queryFn,

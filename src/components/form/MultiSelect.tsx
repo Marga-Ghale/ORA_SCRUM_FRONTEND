@@ -1,5 +1,5 @@
-import type React from "react";
-import { useState, useEffect, useRef } from "react";
+import type React from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Option {
   value: string;
@@ -23,11 +23,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   value,
   onChange,
   disabled = false,
-  placeholder = "Select options",
+  placeholder = 'Select options',
 }) => {
   const isControlled = value !== undefined;
-  const [internalSelected, setInternalSelected] =
-    useState<string[]>(defaultSelected);
+  const [internalSelected, setInternalSelected] = useState<string[]>(defaultSelected);
   const selectedOptions = isControlled ? value : internalSelected;
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -35,18 +34,14 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isOpen]);
 
@@ -78,24 +73,24 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
     e.preventDefault();
     switch (e.key) {
-      case "Enter":
+      case 'Enter':
         if (!isOpen) {
           setIsOpen(true);
         } else if (focusedIndex >= 0) {
           handleSelect(options[focusedIndex].value);
         }
         break;
-      case "Escape":
+      case 'Escape':
         setIsOpen(false);
         break;
-      case "ArrowDown":
+      case 'ArrowDown':
         if (!isOpen) {
           setIsOpen(true);
         } else {
           setFocusedIndex((prev) => (prev < options.length - 1 ? prev + 1 : 0));
         }
         break;
-      case "ArrowUp":
+      case 'ArrowUp':
         if (isOpen) {
           setFocusedIndex((prev) => (prev > 0 ? prev - 1 : options.length - 1));
         }
@@ -128,15 +123,14 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             <div
               className={`mb-2 flex min-h-11  rounded-lg border border-gray-300 py-1.5 pl-3 pr-3 shadow-theme-xs outline-hidden transition focus:border-brand-300 focus:shadow-focus-ring dark:border-gray-700 dark:bg-gray-900 dark:focus:border-brand-300 ${
                 disabled
-                  ? "opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800"
-                  : "cursor-pointer"
+                  ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800'
+                  : 'cursor-pointer'
               }`}
             >
               <div className="flex flex-wrap flex-auto gap-2">
                 {selectedOptions.length > 0 ? (
                   selectedOptions.map((value) => {
-                    const text =
-                      options.find((opt) => opt.value === value)?.text || value;
+                    const text = options.find((opt) => opt.value === value)?.text || value;
                     return (
                       <div
                         key={value}
@@ -187,9 +181,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                   className="w-5 h-5 text-gray-700 outline-hidden cursor-pointer focus:outline-hidden dark:text-gray-400 disabled:cursor-not-allowed"
                 >
                   <svg
-                    className={`stroke-current transition-transform ${
-                      isOpen ? "rotate-180" : ""
-                    }`}
+                    className={`stroke-current transition-transform ${isOpen ? 'rotate-180' : ''}`}
                     width="20"
                     height="20"
                     viewBox="0 0 20 20"
@@ -224,8 +216,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                   <div
                     key={option.value}
                     className={`hover:bg-primary/5 w-full cursor-pointer rounded-t border-b border-gray-200 dark:border-gray-800 ${
-                      isFocused ? "bg-primary/5" : ""
-                    } ${isSelected ? "bg-primary/10" : ""}`}
+                      isFocused ? 'bg-primary/5' : ''
+                    } ${isSelected ? 'bg-primary/10' : ''}`}
                     onClick={() => handleSelect(option.value)}
                     role="option"
                     aria-selected={isSelected}

@@ -18,7 +18,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
   // Safely get config - handle both uppercase and lowercase
   const priorityKey = (task.priority?.toLowerCase() || 'medium') as Priority;
   const typeKey = (task.type?.toLowerCase() || 'task') as TaskType;
-  
+
   const priorityConfig = PRIORITY_CONFIG[priorityKey] || PRIORITY_CONFIG.medium;
   const typeConfig = TASK_TYPE_CONFIG[typeKey] || TASK_TYPE_CONFIG.task;
 
@@ -29,8 +29,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
         setMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const formatDate = (date?: Date) => {
@@ -40,15 +40,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
     const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      return { text: `${Math.abs(diffDays)}d overdue`, color: "text-error-500" };
+      return { text: `${Math.abs(diffDays)}d overdue`, color: 'text-error-500' };
     } else if (diffDays === 0) {
-      return { text: "Today", color: "text-warning-500" };
+      return { text: 'Today', color: 'text-warning-500' };
     } else if (diffDays === 1) {
-      return { text: "Tomorrow", color: "text-warning-500" };
+      return { text: 'Tomorrow', color: 'text-warning-500' };
     } else if (diffDays <= 7) {
-      return { text: `${diffDays}d`, color: "text-gray-500" };
+      return { text: `${diffDays}d`, color: 'text-gray-500' };
     }
-    return { text: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), color: "text-gray-500" };
+    return {
+      text: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      color: 'text-gray-500',
+    };
   };
 
   const dueInfo = formatDate(task.dueDate);
@@ -59,11 +62,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
       className={`
         group relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700
         hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer transition-all duration-200
-        ${isDragging ? "shadow-lg ring-2 ring-brand-500 opacity-90" : "hover:shadow-md"}
-        ${compact ? "p-3" : "p-4"}
+        ${isDragging ? 'shadow-lg ring-2 ring-brand-500 opacity-90' : 'hover:shadow-md'}
+        ${compact ? 'p-3' : 'p-4'}
       `}
     >
-
       {/* --- Top Row --- */}
       <div className="flex items-center gap-2 mb-2">
         <span
@@ -73,27 +75,24 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
           {typeConfig.icon}
         </span>
 
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-          {task.key}
-        </span>
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{task.key}</span>
 
         <div className="flex-1" />
 
-        <span
-          className="w-2 h-2 rounded-full"
-          style={{ backgroundColor: priorityConfig.color }}
-        />
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: priorityConfig.color }} />
       </div>
 
       {/* Title */}
-      <h4 className={`font-medium text-gray-900 dark:text-white ${compact ? "text-sm" : "text-sm"} line-clamp-2 mb-3`}>
+      <h4
+        className={`font-medium text-gray-900 dark:text-white ${compact ? 'text-sm' : 'text-sm'} line-clamp-2 mb-3`}
+      >
         {task.title}
       </h4>
 
       {/* Labels */}
       {task.labels && task.labels.length > 0 && !compact && (
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {task.labels.slice(0, 3).map(label => (
+          {task.labels.slice(0, 3).map((label) => (
             <span
               key={label.id}
               className="px-2 py-0.5 rounded text-xs font-medium"
@@ -120,26 +119,32 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
           )}
 
           {dueInfo && (
-            <span className={`text-xs font-medium ${dueInfo.color}`}>
-              {dueInfo.text}
-            </span>
+            <span className={`text-xs font-medium ${dueInfo.color}`}>{dueInfo.text}</span>
           )}
 
           {task.subtasks && task.subtasks.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-gray-500">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+                <path
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
+                />
               </svg>
-              {task.subtasks.filter(s => s.status === "done").length}/{task.subtasks.length}
+              {task.subtasks.filter((s) => s.status === 'done').length}/{task.subtasks.length}
             </span>
           )}
 
           {task.comments && task.comments.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-gray-500">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <path
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
               </svg>
               {task.comments.length}
             </span>
@@ -150,7 +155,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
         {task.assignee ? (
           <div className="w-7 h-7 rounded-full overflow-hidden ring-2 ring-white dark:ring-gray-800">
             {task.assignee.avatar ? (
-              <img src={task.assignee.avatar} alt={task.assignee.name} className="w-full h-full object-cover" />
+              <img
+                src={task.assignee.avatar}
+                alt={task.assignee.name}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="w-full h-full bg-brand-500 flex items-center justify-center text-xs font-bold text-white">
                 {task.assignee.name?.charAt(0)?.toUpperCase() || '?'}
@@ -159,9 +168,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
           </div>
         ) : (
           <div className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
-            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <svg
+              className="w-4 h-4 text-gray-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
             </svg>
           </div>
         )}
@@ -177,33 +195,50 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
           onClick={() => setMenuOpen(!menuOpen)}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
         >
-          <svg className="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-              d="M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          <svg
+            className="w-4 h-4 text-gray-500"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+            />
           </svg>
         </button>
 
         {/* Quick Action Menu */}
         {menuOpen && (
           <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-
             <button
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-              onClick={() => { openTaskModal(task); setMenuOpen(false); }}
+              onClick={() => {
+                openTaskModal(task);
+                setMenuOpen(false);
+              }}
             >
               ✏️ Edit Task
             </button>
 
             <button
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-              onClick={() => { navigator.clipboard.writeText(window.location.href + `?task=${task.id}`); setMenuOpen(false); }}
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href + `?task=${task.id}`);
+                setMenuOpen(false);
+              }}
             >
               🔗 Copy Link
             </button>
 
             <button
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-              onClick={() => { deleteTask(task.id); setMenuOpen(false); }}
+              onClick={() => {
+                deleteTask(task.id);
+                setMenuOpen(false);
+              }}
             >
               🗑️ Delete Task
             </button>

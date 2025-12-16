@@ -1,5 +1,5 @@
-import type React from "react";
-import { useEffect, useRef } from "react";
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 
 interface DropdownProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   isOpen,
   onClose,
   children,
-  className = "",
+  className = '',
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -21,15 +21,15 @@ export const Dropdown: React.FC<DropdownProps> = ({
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node) &&
-        !(event.target as HTMLElement).closest(".dropdown-toggle")
+        !(event.target as HTMLElement).closest('.dropdown-toggle')
       ) {
         onClose();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [onClose]);
 

@@ -33,7 +33,7 @@ export function useCreateLabel() {
       apiClient.post<Label>(`/projects/${projectId}/labels`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.labels?.list?.(variables.projectId) || ['labels', variables.projectId]
+        queryKey: queryKeys.labels?.list?.(variables.projectId) || ['labels', variables.projectId],
       });
     },
   });

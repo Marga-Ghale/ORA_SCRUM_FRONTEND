@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Task, TaskStatus, STATUS_COLUMNS, PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
+import {
+  Task,
+  TaskStatus,
+  STATUS_COLUMNS,
+  PRIORITY_CONFIG,
+  TASK_TYPE_CONFIG,
+} from '../../types/project';
 import { useProject } from '../../context/ProjectContext';
 
 interface TaskListViewProps {
@@ -15,7 +21,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
   const { openTaskModal, updateTaskStatus } = useProject();
   const typeConfig = TASK_TYPE_CONFIG[task.type];
   const priorityConfig = PRIORITY_CONFIG[task.priority];
-  const statusConfig = STATUS_COLUMNS.find(s => s.id === task.status);
+  const statusConfig = STATUS_COLUMNS.find((s) => s.id === task.status);
 
   const formatDate = (date?: Date) => {
     if (!date) return '-';
@@ -45,9 +51,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
           >
             {typeConfig.icon}
           </span>
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            {task.key}
-          </span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{task.key}</span>
         </div>
       </td>
 
@@ -59,7 +63,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
           </span>
           {task.labels.length > 0 && (
             <div className="flex items-center gap-1 ml-2">
-              {task.labels.slice(0, 2).map(label => (
+              {task.labels.slice(0, 2).map((label) => (
                 <span
                   key={label.id}
                   className="w-2 h-2 rounded-full"
@@ -87,8 +91,10 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
             color: statusConfig?.color,
           }}
         >
-          {STATUS_COLUMNS.map(status => (
-            <option key={status.id} value={status.id}>{status.name}</option>
+          {STATUS_COLUMNS.map((status) => (
+            <option key={status.id} value={status.id}>
+              {status.name}
+            </option>
           ))}
         </select>
       </td>
@@ -100,9 +106,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: priorityConfig.color }}
           />
-          <span className="text-xs text-gray-600 dark:text-gray-400">
-            {priorityConfig.name}
-          </span>
+          <span className="text-xs text-gray-600 dark:text-gray-400">{priorityConfig.name}</span>
         </div>
       </td>
 
@@ -118,7 +122,10 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
               />
             ) : (
               <div className="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-xs font-medium text-brand-600 dark:text-brand-400">
-                {task.assignee.name.split(' ').map(n => n[0]).join('')}
+                {task.assignee.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')}
               </div>
             )}
             <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
@@ -143,9 +150,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
 
       {/* Due Date */}
       <td className="px-3 py-3 w-28">
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {formatDate(task.dueDate)}
-        </span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(task.dueDate)}</span>
       </td>
 
       {/* Actions */}
@@ -157,8 +162,18 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
           }}
           className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
         >
-          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          <svg
+            className="w-4 h-4 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+            />
           </svg>
         </button>
       </td>
@@ -197,7 +212,7 @@ const TaskGroup: React.FC<TaskGroupProps> = ({ title, color, tasks, isOpen, onTo
         <div className="mt-2">
           <table className="w-full">
             <tbody>
-              {tasks.map(task => (
+              {tasks.map((task) => (
                 <TaskRow key={task.id} task={task} />
               ))}
             </tbody>
@@ -210,14 +225,19 @@ const TaskGroup: React.FC<TaskGroupProps> = ({ title, color, tasks, isOpen, onTo
 
 const TaskListView: React.FC<TaskListViewProps> = ({ tasks, groupBy = 'status' }) => {
   const { filters } = useProject();
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(STATUS_COLUMNS.map(s => s.id)));
+  const [openGroups, setOpenGroups] = useState<Set<string>>(
+    new Set(STATUS_COLUMNS.map((s) => s.id))
+  );
 
   // Filter tasks
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = tasks.filter((task) => {
     if (filters.search && !task.title.toLowerCase().includes(filters.search.toLowerCase())) {
       return false;
     }
-    if (filters.assignees.length > 0 && (!task.assignee || !filters.assignees.includes(task.assignee.id))) {
+    if (
+      filters.assignees.length > 0 &&
+      (!task.assignee || !filters.assignees.includes(task.assignee.id))
+    ) {
       return false;
     }
     if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) {
@@ -230,7 +250,7 @@ const TaskListView: React.FC<TaskListViewProps> = ({ tasks, groupBy = 'status' }
   });
 
   const toggleGroup = (groupId: string) => {
-    setOpenGroups(prev => {
+    setOpenGroups((prev) => {
       const next = new Set(prev);
       if (next.has(groupId)) {
         next.delete(groupId);
@@ -248,7 +268,10 @@ const TaskListView: React.FC<TaskListViewProps> = ({ tasks, groupBy = 'status' }
           <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
             <tr>
               <th className="px-4 py-3 w-10">
-                <input type="checkbox" className="w-4 h-4 rounded border-gray-300 dark:border-gray-600" />
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+                />
               </th>
               <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
                 Key
@@ -275,15 +298,13 @@ const TaskListView: React.FC<TaskListViewProps> = ({ tasks, groupBy = 'status' }
             </tr>
           </thead>
           <tbody>
-            {filteredTasks.map(task => (
+            {filteredTasks.map((task) => (
               <TaskRow key={task.id} task={task} />
             ))}
           </tbody>
         </table>
         {filteredTasks.length === 0 && (
-          <div className="py-12 text-center text-gray-400">
-            No tasks found
-          </div>
+          <div className="py-12 text-center text-gray-400">No tasks found</div>
         )}
       </div>
     );
@@ -293,8 +314,8 @@ const TaskListView: React.FC<TaskListViewProps> = ({ tasks, groupBy = 'status' }
   if (groupBy === 'status') {
     return (
       <div className="space-y-2">
-        {STATUS_COLUMNS.map(status => {
-          const groupTasks = filteredTasks.filter(t => t.status === status.id);
+        {STATUS_COLUMNS.map((status) => {
+          const groupTasks = filteredTasks.filter((t) => t.status === status.id);
           return (
             <TaskGroup
               key={status.id}

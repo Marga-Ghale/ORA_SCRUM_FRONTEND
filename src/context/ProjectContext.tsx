@@ -1,9 +1,20 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/context/ProjectContext.tsx
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useEffect,
+} from 'react';
 import { Task, TaskStatus, Project, Space, Sprint, User, Workspace, Label } from '../types/project';
 import { mockUsers, mockLabels } from '../data/mockData';
-import { useTasks, useUpdateTaskStatus, useDeleteTask as useDeleteTaskMutation, Task as ApiTask } from '../hooks/api/useTasks';
+import {
+  useTasks,
+  useUpdateTaskStatus,
+  useDeleteTask as useDeleteTaskMutation,
+  Task as ApiTask,
+} from '../hooks/api/useTasks';
 import { apiClient } from '../lib/api-client';
 import { useAuth } from '../components/UserProfile/AuthContext';
 
@@ -81,7 +92,10 @@ interface ProjectContextType {
   deleteSpace: (spaceId: string) => void;
 
   // Project operations
-  createProject: (spaceId: string, projectData: { name: string; key: string; description?: string }) => Promise<void>;
+  createProject: (
+    spaceId: string,
+    projectData: { name: string; key: string; description?: string }
+  ) => Promise<void>;
   updateProject: (projectId: string, updates: Partial<Project>) => void;
   deleteProject: (projectId: string) => void;
 
@@ -139,51 +153,51 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 // Helper to map backend status to frontend status
 const mapStatusFromBackend = (status: string): TaskStatus => {
   const statusMap: Record<string, TaskStatus> = {
-    'BACKLOG': 'backlog',
-    'TODO': 'todo',
-    'IN_PROGRESS': 'in_progress',
-    'IN_REVIEW': 'in_review',
-    'DONE': 'done',
-    'backlog': 'backlog',
-    'todo': 'todo',
-    'in_progress': 'in_progress',
-    'in_review': 'in_review',
-    'done': 'done',
+    BACKLOG: 'backlog',
+    TODO: 'todo',
+    IN_PROGRESS: 'in_progress',
+    IN_REVIEW: 'in_review',
+    DONE: 'done',
+    backlog: 'backlog',
+    todo: 'todo',
+    in_progress: 'in_progress',
+    in_review: 'in_review',
+    done: 'done',
   };
   return statusMap[status] || 'todo';
 };
 
 // Helper to map backend task to frontend task format
 const mapBackendTask = (task: ApiTask): Task => {
- const priorityMap: Record<string, Task['priority']> = {
-  'URGENT': 'urgent',
-  'HIGH': 'high',
-  'MEDIUM': 'medium',
-  'LOW': 'low',
-  'NONE': 'none',
-  'urgent': 'urgent',
-  'high': 'high',
-  'medium': 'medium',
-  'low': 'low',
-  'none': 'none',
-  // Backwards compatibility (map lowest/highest to low/urgent)
-  'LOWEST': 'low',
-  'HIGHEST': 'urgent',
-  'lowest': 'low',
-  'highest': 'urgent',
-};
+  const priorityMap: Record<string, Task['priority']> = {
+    URGENT: 'urgent',
+    HIGH: 'high',
+    MEDIUM: 'medium',
+    LOW: 'low',
+    NONE: 'none',
+    urgent: 'urgent',
+    high: 'high',
+    medium: 'medium',
+    low: 'low',
+    none: 'none',
+    // Backwards compatibility (map lowest/highest to low/urgent)
+    LOWEST: 'low',
+    HIGHEST: 'urgent',
+    lowest: 'low',
+    highest: 'urgent',
+  };
 
   const typeMap: Record<string, Task['type']> = {
-    'EPIC': 'epic',
-    'STORY': 'story',
-    'TASK': 'task',
-    'BUG': 'bug',
-    'SUBTASK': 'subtask',
-    'epic': 'epic',
-    'story': 'story',
-    'task': 'task',
-    'bug': 'bug',
-    'subtask': 'subtask',
+    EPIC: 'epic',
+    STORY: 'story',
+    TASK: 'task',
+    BUG: 'bug',
+    SUBTASK: 'subtask',
+    epic: 'epic',
+    story: 'story',
+    task: 'task',
+    bug: 'bug',
+    subtask: 'subtask',
   };
 
   return {
@@ -194,28 +208,32 @@ const mapBackendTask = (task: ApiTask): Task => {
     status: mapStatusFromBackend(task.status),
     priority: priorityMap[task.priority] || 'medium',
     type: typeMap[task.type] || 'task',
-    assignee: task.assignee ? {
-      id: task.assignee.id,
-      name: task.assignee.name,
-      email: '',
-      avatar: task.assignee.avatar,
-      role: 'member' as const,
-      status: 'online' as const,
-    } : undefined,
-    reporter: task.reporter ? {
-      id: task.reporter.id,
-      name: task.reporter.name,
-      email: '',
-      avatar: task.reporter.avatar,
-      role: 'member' as const,
-      status: 'online' as const,
-    } : {
-      id: 'unknown',
-      name: 'Unknown',
-      email: '',
-      role: 'member' as const,
-      status: 'offline' as const,
-    },
+    assignee: task.assignee
+      ? {
+          id: task.assignee.id,
+          name: task.assignee.name,
+          email: '',
+          avatar: task.assignee.avatar,
+          role: 'member' as const,
+          status: 'online' as const,
+        }
+      : undefined,
+    reporter: task.reporter
+      ? {
+          id: task.reporter.id,
+          name: task.reporter.name,
+          email: '',
+          avatar: task.reporter.avatar,
+          role: 'member' as const,
+          status: 'online' as const,
+        }
+      : {
+          id: 'unknown',
+          name: 'Unknown',
+          email: '',
+          role: 'member' as const,
+          status: 'offline' as const,
+        },
     labels: task.labels?.map((l: string) => ({ id: l, name: l, color: '#6366f1' })) || [],
     storyPoints: task.storyPoints,
     dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
@@ -251,17 +269,17 @@ const mapApiSpace = (space: ApiSpace, projects: Project[] = []): Space => ({
 
 export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
-  
+
   // API data state
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [currentSpace, setCurrentSpace] = useState<Space | null>(null);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [currentSprint, setCurrentSprint] = useState<Sprint | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  
+
   // All spaces for the current workspace
   const [allSpaces, setAllSpaces] = useState<Space[]>([]);
-  
+
   // Loading states
   const [isInitializing, setIsInitializing] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
@@ -284,7 +302,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [isInviteMemberModalOpen, setIsInviteMemberModalOpen] = useState(false);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [createTaskInitialStatus, setCreateTaskInitialStatus] = useState<TaskStatus>('todo');
-  
+
   const [users, setUsers] = useState<User[]>(mockUsers);
 
   // Fetch all spaces with their projects for a workspace
@@ -316,12 +334,12 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Refresh spaces (call this after creating a space)
   const refreshSpaces = useCallback(async () => {
     if (!currentWorkspace) return;
-    
+
     const spaces = await fetchSpacesWithProjects(currentWorkspace.id);
     setAllSpaces(spaces);
-    
+
     // Update currentWorkspace with spaces
-    setCurrentWorkspace(prev => prev ? { ...prev, spaces } : null);
+    setCurrentWorkspace((prev) => (prev ? { ...prev, spaces } : null));
   }, [currentWorkspace, fetchSpacesWithProjects]);
 
   // Initialize workspace/space/project from API when authenticated
@@ -388,7 +406,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
           });
           activeSpace = mapApiSpace(newSpace, []);
           setAllSpaces([activeSpace]);
-          setCurrentWorkspace(prev => prev ? { ...prev, spaces: [activeSpace] } : null);
+          setCurrentWorkspace((prev) => (prev ? { ...prev, spaces: [activeSpace] } : null));
         }
         setCurrentSpace(activeSpace);
 
@@ -398,29 +416,41 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
           activeProject = activeSpace.projects[0];
         } else {
           // Create a default project
-          const newProject = await apiClient.post<ApiProject>(`/spaces/${activeSpace.id}/projects`, {
-            name: 'My Project',
-            key: 'PRJ',
-          });
+          const newProject = await apiClient.post<ApiProject>(
+            `/spaces/${activeSpace.id}/projects`,
+            {
+              name: 'My Project',
+              key: 'PRJ',
+            }
+          );
           activeProject = mapApiProject(newProject);
-          
+
           // Update the space with the new project
           const updatedSpace = { ...activeSpace, projects: [activeProject] };
           setCurrentSpace(updatedSpace);
-          setAllSpaces(prev => prev.map(s => s.id === activeSpace.id ? updatedSpace : s));
-          setCurrentWorkspace(prev => prev ? {
-            ...prev,
-            spaces: prev.spaces.map(s => s.id === activeSpace.id ? updatedSpace : s),
-          } : null);
+          setAllSpaces((prev) => prev.map((s) => (s.id === activeSpace.id ? updatedSpace : s)));
+          setCurrentWorkspace((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  spaces: prev.spaces.map((s) => (s.id === activeSpace.id ? updatedSpace : s)),
+                }
+              : null
+          );
         }
         setCurrentProject(activeProject);
 
         console.log('[ProjectContext] ✅ Initialization complete!');
         console.log('[ProjectContext] Spaces loaded:', spacesWithProjects.length);
-        console.log('[ProjectContext] Current project:', activeProject.id, 'Key:', activeProject.key);
-
+        console.log(
+          '[ProjectContext] Current project:',
+          activeProject.id,
+          'Key:',
+          activeProject.key
+        );
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to initialize workspace data';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to initialize workspace data';
         console.error('[ProjectContext] Initialization error:', error);
         setInitError(errorMessage);
       } finally {
@@ -432,16 +462,17 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [isAuthenticated, user, fetchSpacesWithProjects]);
 
   // Check if project ID is valid (UUID format)
-  const isValidProjectId = currentProject?.id && 
-    !currentProject.id.startsWith('project-') && 
+  const isValidProjectId =
+    currentProject?.id &&
+    !currentProject.id.startsWith('project-') &&
     currentProject.id.includes('-');
-  
+
   // Fetch tasks from API
-  const { 
-    data: apiTasks, 
-    isLoading: tasksLoading, 
+  const {
+    data: apiTasks,
+    isLoading: tasksLoading,
     error: tasksError,
-    refetch: refetchTasks 
+    refetch: refetchTasks,
   } = useTasks(isValidProjectId ? currentProject!.id : '');
 
   // Map API tasks to frontend format
@@ -452,284 +483,382 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const deleteTaskMutation = useDeleteTaskMutation();
 
   // Task operations
-  const updateTaskStatus = useCallback((taskId: string, newStatus: TaskStatus) => {
-    updateStatusMutation.mutate({ id: taskId, status: newStatus });
-  }, [updateStatusMutation]);
+  const updateTaskStatus = useCallback(
+    (taskId: string, newStatus: TaskStatus) => {
+      updateStatusMutation.mutate({ id: taskId, status: newStatus });
+    },
+    [updateStatusMutation]
+  );
 
-  const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
-    if (updates.status) {
-      updateTaskStatus(taskId, updates.status);
-    }
-  }, [updateTaskStatus]);
+  const updateTask = useCallback(
+    (taskId: string, updates: Partial<Task>) => {
+      if (updates.status) {
+        updateTaskStatus(taskId, updates.status);
+      }
+    },
+    [updateTaskStatus]
+  );
 
-  const deleteTask = useCallback((taskId: string) => {
-    deleteTaskMutation.mutate(taskId);
-    if (selectedTask?.id === taskId) {
-      setSelectedTask(null);
-      setIsTaskModalOpen(false);
-    }
-  }, [deleteTaskMutation, selectedTask]);
+  const deleteTask = useCallback(
+    (taskId: string) => {
+      deleteTaskMutation.mutate(taskId);
+      if (selectedTask?.id === taskId) {
+        setSelectedTask(null);
+        setIsTaskModalOpen(false);
+      }
+    },
+    [deleteTaskMutation, selectedTask]
+  );
 
-  const moveTask = useCallback((taskId: string, newStatus: TaskStatus, _newIndex: number) => {
-    updateTaskStatus(taskId, newStatus);
-  }, [updateTaskStatus]);
+  const moveTask = useCallback(
+    (taskId: string, newStatus: TaskStatus, _newIndex: number) => {
+      updateTaskStatus(taskId, newStatus);
+    },
+    [updateTaskStatus]
+  );
 
   // Space operations - NOW WITH API CALLS
-  const createSpace = useCallback(async (spaceData: { name: string; color?: string; icon?: string }) => {
-    if (!currentWorkspace) {
-      console.error('[ProjectContext] No workspace to create space in');
-      return;
-    }
-
-    try {
-      console.log('[ProjectContext] Creating space:', spaceData.name);
-      
-      // Create space via API
-     const newApiSpace = await apiClient.post<ApiSpace>(`/workspaces/${currentWorkspace.id}/spaces`, {
-  name: spaceData.name,
-  icon: spaceData.icon,
-  color: spaceData.color,
-});
-      
-      const newSpace: Space = {
-        id: newApiSpace.id,
-        name: newApiSpace.name,
-        icon: spaceData.icon || '📁',
-        color: spaceData.color || '#6366f1',
-        projects: [],
-      };
-
-      console.log('[ProjectContext] Created space:', newSpace.id);
-
-      // Update local state
-      setAllSpaces(prev => [...prev, newSpace]);
-      setCurrentWorkspace(prev => prev ? { 
-        ...prev, 
-        spaces: [...prev.spaces, newSpace] 
-      } : null);
-      
-      // Set as current space
-      setCurrentSpace(newSpace);
-      
-    } catch (error) {
-      console.error('[ProjectContext] Failed to create space:', error);
-      throw error;
-    }
-  }, [currentWorkspace]);
-
-  const updateSpace = useCallback((spaceId: string, updates: Partial<Space>) => {
-    setAllSpaces(prev => prev.map(space => 
-      space.id === spaceId ? { ...space, ...updates } : space
-    ));
-    setCurrentWorkspace(prev => prev ? { 
-      ...prev, 
-      spaces: prev.spaces.map(space => space.id === spaceId ? { ...space, ...updates } : space) 
-    } : null);
-    if (currentSpace?.id === spaceId) {
-      setCurrentSpace(prev => prev ? { ...prev, ...updates } : null);
-    }
-  }, [currentSpace?.id]);
-
-  const deleteSpace = useCallback(async (spaceId: string) => {
-    try {
-      // Delete via API
-      await apiClient.delete(`/spaces/${spaceId}`);
-      
-      // Update local state
-      setAllSpaces(prev => prev.filter(space => space.id !== spaceId));
-      setCurrentWorkspace(prev => prev ? { 
-        ...prev, 
-        spaces: prev.spaces.filter(space => space.id !== spaceId) 
-      } : null);
-      
-      if (currentSpace?.id === spaceId) {
-        // Switch to another space if available
-        const remainingSpaces = allSpaces.filter(s => s.id !== spaceId);
-        if (remainingSpaces.length > 0) {
-          setCurrentSpace(remainingSpaces[0]);
-          setCurrentProject(remainingSpaces[0].projects[0] || null);
-        } else {
-          setCurrentSpace(null);
-          setCurrentProject(null);
-        }
+  const createSpace = useCallback(
+    async (spaceData: { name: string; color?: string; icon?: string }) => {
+      if (!currentWorkspace) {
+        console.error('[ProjectContext] No workspace to create space in');
+        return;
       }
-    } catch (error) {
-      console.error('[ProjectContext] Failed to delete space:', error);
-      throw error;
-    }
-  }, [currentSpace?.id, allSpaces]);
+
+      try {
+        console.log('[ProjectContext] Creating space:', spaceData.name);
+
+        // Create space via API
+        const newApiSpace = await apiClient.post<ApiSpace>(
+          `/workspaces/${currentWorkspace.id}/spaces`,
+          {
+            name: spaceData.name,
+            icon: spaceData.icon,
+            color: spaceData.color,
+          }
+        );
+
+        const newSpace: Space = {
+          id: newApiSpace.id,
+          name: newApiSpace.name,
+          icon: spaceData.icon || '📁',
+          color: spaceData.color || '#6366f1',
+          projects: [],
+        };
+
+        console.log('[ProjectContext] Created space:', newSpace.id);
+
+        // Update local state
+        setAllSpaces((prev) => [...prev, newSpace]);
+        setCurrentWorkspace((prev) =>
+          prev
+            ? {
+                ...prev,
+                spaces: [...prev.spaces, newSpace],
+              }
+            : null
+        );
+
+        // Set as current space
+        setCurrentSpace(newSpace);
+      } catch (error) {
+        console.error('[ProjectContext] Failed to create space:', error);
+        throw error;
+      }
+    },
+    [currentWorkspace]
+  );
+
+  const updateSpace = useCallback(
+    (spaceId: string, updates: Partial<Space>) => {
+      setAllSpaces((prev) =>
+        prev.map((space) => (space.id === spaceId ? { ...space, ...updates } : space))
+      );
+      setCurrentWorkspace((prev) =>
+        prev
+          ? {
+              ...prev,
+              spaces: prev.spaces.map((space) =>
+                space.id === spaceId ? { ...space, ...updates } : space
+              ),
+            }
+          : null
+      );
+      if (currentSpace?.id === spaceId) {
+        setCurrentSpace((prev) => (prev ? { ...prev, ...updates } : null));
+      }
+    },
+    [currentSpace?.id]
+  );
+
+  const deleteSpace = useCallback(
+    async (spaceId: string) => {
+      try {
+        // Delete via API
+        await apiClient.delete(`/spaces/${spaceId}`);
+
+        // Update local state
+        setAllSpaces((prev) => prev.filter((space) => space.id !== spaceId));
+        setCurrentWorkspace((prev) =>
+          prev
+            ? {
+                ...prev,
+                spaces: prev.spaces.filter((space) => space.id !== spaceId),
+              }
+            : null
+        );
+
+        if (currentSpace?.id === spaceId) {
+          // Switch to another space if available
+          const remainingSpaces = allSpaces.filter((s) => s.id !== spaceId);
+          if (remainingSpaces.length > 0) {
+            setCurrentSpace(remainingSpaces[0]);
+            setCurrentProject(remainingSpaces[0].projects[0] || null);
+          } else {
+            setCurrentSpace(null);
+            setCurrentProject(null);
+          }
+        }
+      } catch (error) {
+        console.error('[ProjectContext] Failed to delete space:', error);
+        throw error;
+      }
+    },
+    [currentSpace?.id, allSpaces]
+  );
 
   // Project operations - NOW WITH API CALLS
-  const createProject = useCallback(async (
-    spaceId: string, 
-    projectData: { name: string; key: string; description?: string }
-  ) => {
-    try {
-      console.log('[ProjectContext] Creating project:', projectData.name, 'in space:', spaceId);
-      
-      // Create project via API
-      const newApiProject = await apiClient.post<ApiProject>(`/spaces/${spaceId}/projects`, {
-        name: projectData.name,
-        key: projectData.key,
-        description: projectData.description,
-      });
-      
-      const newProject: Project = mapApiProject(newApiProject);
-      console.log('[ProjectContext] Created project:', newProject.id);
+  const createProject = useCallback(
+    async (spaceId: string, projectData: { name: string; key: string; description?: string }) => {
+      try {
+        console.log('[ProjectContext] Creating project:', projectData.name, 'in space:', spaceId);
 
-      // Update local state
-      setAllSpaces(prev => prev.map(space => 
-        space.id === spaceId 
-          ? { ...space, projects: [...space.projects, newProject] }
-          : space
-      ));
-      setCurrentWorkspace(prev => prev ? {
-        ...prev,
-        spaces: prev.spaces.map(space => 
-          space.id === spaceId 
-            ? { ...space, projects: [...space.projects, newProject] }
-            : space
-        ),
-      } : null);
-      
-      // Update current space if it matches
-      if (currentSpace?.id === spaceId) {
-        setCurrentSpace(prev => prev ? { 
-          ...prev, 
-          projects: [...prev.projects, newProject] 
-        } : null);
+        // Create project via API
+        const newApiProject = await apiClient.post<ApiProject>(`/spaces/${spaceId}/projects`, {
+          name: projectData.name,
+          key: projectData.key,
+          description: projectData.description,
+        });
+
+        const newProject: Project = mapApiProject(newApiProject);
+        console.log('[ProjectContext] Created project:', newProject.id);
+
+        // Update local state
+        setAllSpaces((prev) =>
+          prev.map((space) =>
+            space.id === spaceId ? { ...space, projects: [...space.projects, newProject] } : space
+          )
+        );
+        setCurrentWorkspace((prev) =>
+          prev
+            ? {
+                ...prev,
+                spaces: prev.spaces.map((space) =>
+                  space.id === spaceId
+                    ? { ...space, projects: [...space.projects, newProject] }
+                    : space
+                ),
+              }
+            : null
+        );
+
+        // Update current space if it matches
+        if (currentSpace?.id === spaceId) {
+          setCurrentSpace((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  projects: [...prev.projects, newProject],
+                }
+              : null
+          );
+        }
+
+        // Set as current project
+        setCurrentProject(newProject);
+      } catch (error) {
+        console.error('[ProjectContext] Failed to create project:', error);
+        throw error;
       }
-      
-      // Set as current project
-      setCurrentProject(newProject);
-      
-    } catch (error) {
-      console.error('[ProjectContext] Failed to create project:', error);
-      throw error;
-    }
-  }, [currentSpace?.id]);
+    },
+    [currentSpace?.id]
+  );
 
-  const updateProject = useCallback((projectId: string, updates: Partial<Project>) => {
-    setAllSpaces(prev => prev.map(space => ({
-      ...space,
-      projects: space.projects.map(project => 
-        project.id === projectId ? { ...project, ...updates } : project
-      ),
-    })));
-    setCurrentWorkspace(prev => prev ? {
-      ...prev,
-      spaces: prev.spaces.map(space => ({ 
-        ...space, 
-        projects: space.projects.map(project => 
-          project.id === projectId ? { ...project, ...updates } : project
-        ) 
-      })),
-    } : null);
-    if (currentProject?.id === projectId) {
-      setCurrentProject(prev => prev ? { ...prev, ...updates } : null);
-    }
-  }, [currentProject?.id]);
-
-  const deleteProject = useCallback(async (projectId: string) => {
-    try {
-      await apiClient.delete(`/projects/${projectId}`);
-      
-      setAllSpaces(prev => prev.map(space => ({
-        ...space,
-        projects: space.projects.filter(project => project.id !== projectId),
-      })));
-      setCurrentWorkspace(prev => prev ? {
-        ...prev,
-        spaces: prev.spaces.map(space => ({ 
-          ...space, 
-          projects: space.projects.filter(project => project.id !== projectId) 
-        })),
-      } : null);
-      
+  const updateProject = useCallback(
+    (projectId: string, updates: Partial<Project>) => {
+      setAllSpaces((prev) =>
+        prev.map((space) => ({
+          ...space,
+          projects: space.projects.map((project) =>
+            project.id === projectId ? { ...project, ...updates } : project
+          ),
+        }))
+      );
+      setCurrentWorkspace((prev) =>
+        prev
+          ? {
+              ...prev,
+              spaces: prev.spaces.map((space) => ({
+                ...space,
+                projects: space.projects.map((project) =>
+                  project.id === projectId ? { ...project, ...updates } : project
+                ),
+              })),
+            }
+          : null
+      );
       if (currentProject?.id === projectId) {
-        setCurrentProject(null);
+        setCurrentProject((prev) => (prev ? { ...prev, ...updates } : null));
       }
-    } catch (error) {
-      console.error('[ProjectContext] Failed to delete project:', error);
-      throw error;
-    }
-  }, [currentProject?.id]);
+    },
+    [currentProject?.id]
+  );
+
+  const deleteProject = useCallback(
+    async (projectId: string) => {
+      try {
+        await apiClient.delete(`/projects/${projectId}`);
+
+        setAllSpaces((prev) =>
+          prev.map((space) => ({
+            ...space,
+            projects: space.projects.filter((project) => project.id !== projectId),
+          }))
+        );
+        setCurrentWorkspace((prev) =>
+          prev
+            ? {
+                ...prev,
+                spaces: prev.spaces.map((space) => ({
+                  ...space,
+                  projects: space.projects.filter((project) => project.id !== projectId),
+                })),
+              }
+            : null
+        );
+
+        if (currentProject?.id === projectId) {
+          setCurrentProject(null);
+        }
+      } catch (error) {
+        console.error('[ProjectContext] Failed to delete project:', error);
+        throw error;
+      }
+    },
+    [currentProject?.id]
+  );
 
   // Sprint operations (unchanged - these are local for now)
-  const createSprint = useCallback((sprintData: Omit<Sprint, 'id'>) => {
-    const newSprint: Sprint = { ...sprintData, id: `sprint-${Date.now()}` };
-    if (currentProject) {
-      updateProject(currentProject.id, { sprints: [...(currentProject.sprints || []), newSprint] });
-    }
-  }, [currentProject, updateProject]);
+  const createSprint = useCallback(
+    (sprintData: Omit<Sprint, 'id'>) => {
+      const newSprint: Sprint = { ...sprintData, id: `sprint-${Date.now()}` };
+      if (currentProject) {
+        updateProject(currentProject.id, {
+          sprints: [...(currentProject.sprints || []), newSprint],
+        });
+      }
+    },
+    [currentProject, updateProject]
+  );
 
-  const updateSprint = useCallback((sprintId: string, updates: Partial<Sprint>) => {
-    if (currentProject) {
-      const updatedSprints = currentProject.sprints.map(s => s.id === sprintId ? { ...s, ...updates } : s);
-      updateProject(currentProject.id, { sprints: updatedSprints });
-    }
-    if (currentSprint?.id === sprintId) {
-      setCurrentSprint(prev => prev ? { ...prev, ...updates } : null);
-    }
-  }, [currentProject, currentSprint?.id, updateProject]);
+  const updateSprint = useCallback(
+    (sprintId: string, updates: Partial<Sprint>) => {
+      if (currentProject) {
+        const updatedSprints = currentProject.sprints.map((s) =>
+          s.id === sprintId ? { ...s, ...updates } : s
+        );
+        updateProject(currentProject.id, { sprints: updatedSprints });
+      }
+      if (currentSprint?.id === sprintId) {
+        setCurrentSprint((prev) => (prev ? { ...prev, ...updates } : null));
+      }
+    },
+    [currentProject, currentSprint?.id, updateProject]
+  );
 
-  const deleteSprint = useCallback((sprintId: string) => {
-    if (currentProject) {
-      const updatedSprints = currentProject.sprints.filter(s => s.id !== sprintId);
-      updateProject(currentProject.id, { sprints: updatedSprints });
-    }
-    if (currentSprint?.id === sprintId) setCurrentSprint(null);
-  }, [currentProject, currentSprint?.id, updateProject]);
+  const deleteSprint = useCallback(
+    (sprintId: string) => {
+      if (currentProject) {
+        const updatedSprints = currentProject.sprints.filter((s) => s.id !== sprintId);
+        updateProject(currentProject.id, { sprints: updatedSprints });
+      }
+      if (currentSprint?.id === sprintId) setCurrentSprint(null);
+    },
+    [currentProject, currentSprint?.id, updateProject]
+  );
 
-  const startSprint = useCallback((sprintId: string) => { 
-    updateSprint(sprintId, { status: 'active', startDate: new Date() }); 
-  }, [updateSprint]);
+  const startSprint = useCallback(
+    (sprintId: string) => {
+      updateSprint(sprintId, { status: 'active', startDate: new Date() });
+    },
+    [updateSprint]
+  );
 
-  const completeSprint = useCallback((sprintId: string) => { 
-    updateSprint(sprintId, { status: 'completed', endDate: new Date() }); 
-  }, [updateSprint]);
+  const completeSprint = useCallback(
+    (sprintId: string) => {
+      updateSprint(sprintId, { status: 'completed', endDate: new Date() });
+    },
+    [updateSprint]
+  );
 
   // Member operations (unchanged)
-  const inviteMember = useCallback((memberData: { email: string; name: string; role: User['role'] }) => {
-    const newMember: User = { 
-      id: `user-${Date.now()}`, 
-      name: memberData.name, 
-      email: memberData.email, 
-      role: memberData.role, 
-      status: 'offline' 
-    };
-    setUsers(prev => [...prev, newMember]);
-    if (currentWorkspace) {
-      setCurrentWorkspace(prev => prev ? { ...prev, members: [...prev.members, newMember] } : null);
-    }
-  }, [currentWorkspace]);
+  const inviteMember = useCallback(
+    (memberData: { email: string; name: string; role: User['role'] }) => {
+      const newMember: User = {
+        id: `user-${Date.now()}`,
+        name: memberData.name,
+        email: memberData.email,
+        role: memberData.role,
+        status: 'offline',
+      };
+      setUsers((prev) => [...prev, newMember]);
+      if (currentWorkspace) {
+        setCurrentWorkspace((prev) =>
+          prev ? { ...prev, members: [...prev.members, newMember] } : null
+        );
+      }
+    },
+    [currentWorkspace]
+  );
 
-  const removeMember = useCallback((userId: string) => {
-    setUsers(prev => prev.filter(u => u.id !== userId));
-    if (currentWorkspace) {
-      setCurrentWorkspace(prev => prev ? { ...prev, members: prev.members.filter(m => m.id !== userId) } : null);
-    }
-  }, [currentWorkspace]);
+  const removeMember = useCallback(
+    (userId: string) => {
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      if (currentWorkspace) {
+        setCurrentWorkspace((prev) =>
+          prev ? { ...prev, members: prev.members.filter((m) => m.id !== userId) } : null
+        );
+      }
+    },
+    [currentWorkspace]
+  );
 
-  const updateMemberRole = useCallback((userId: string, role: User['role']) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
-    if (currentWorkspace) {
-      setCurrentWorkspace(prev => prev ? { 
-        ...prev, 
-        members: prev.members.map(m => m.id === userId ? { ...m, role } : m) 
-      } : null);
-    }
-  }, [currentWorkspace]);
+  const updateMemberRole = useCallback(
+    (userId: string, role: User['role']) => {
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role } : u)));
+      if (currentWorkspace) {
+        setCurrentWorkspace((prev) =>
+          prev
+            ? {
+                ...prev,
+                members: prev.members.map((m) => (m.id === userId ? { ...m, role } : m)),
+              }
+            : null
+        );
+      }
+    },
+    [currentWorkspace]
+  );
 
   // Modal operations
-  const openTaskModal = useCallback((task: Task) => { 
-    setSelectedTask(task); 
-    setIsTaskModalOpen(true); 
+  const openTaskModal = useCallback((task: Task) => {
+    setSelectedTask(task);
+    setIsTaskModalOpen(true);
   }, []);
 
-  const closeTaskModal = useCallback(() => { 
-    setIsTaskModalOpen(false); 
-    setTimeout(() => setSelectedTask(null), 300); 
+  const closeTaskModal = useCallback(() => {
+    setIsTaskModalOpen(false);
+    setTimeout(() => setSelectedTask(null), 300);
   }, []);
 
   const value: ProjectContextType = {

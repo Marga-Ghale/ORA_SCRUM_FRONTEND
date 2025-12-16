@@ -75,7 +75,7 @@ export function useCreateProject() {
       apiClient.post<Project>(`/spaces/${spaceId}/projects`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projects.list(variables.spaceId)
+        queryKey: queryKeys.projects.list(variables.spaceId),
       });
     },
   });
@@ -115,16 +115,15 @@ export function useAddProjectMember() {
     mutationFn: ({
       projectId,
       userId,
-      role
+      role,
     }: {
       projectId: string;
       userId: string;
-      role: string
-    }) =>
-      apiClient.post(`/projects/${projectId}/members`, { userId, role }),
+      role: string;
+    }) => apiClient.post(`/projects/${projectId}/members`, { userId, role }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projects.members(variables.projectId)
+        queryKey: queryKeys.projects.members(variables.projectId),
       });
     },
   });
@@ -139,7 +138,7 @@ export function useRemoveProjectMember() {
       apiClient.delete(`/projects/${projectId}/members/${userId}`),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projects.members(variables.projectId)
+        queryKey: queryKeys.projects.members(variables.projectId),
       });
     },
   });

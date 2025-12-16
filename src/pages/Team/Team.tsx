@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  UserPlus, 
-  Search, 
-  Grid3x3, 
+import {
+  UserPlus,
+  Search,
+  Grid3x3,
   List,
   MoreVertical,
   MessageCircle,
@@ -45,7 +45,10 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
             />
           ) : (
             <div className="w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-xl font-semibold text-brand-600 dark:text-brand-400">
-              {member.name.split(' ').map(n => n[0]).join('')}
+              {member.name
+                .split(' ')
+                .map((n) => n[0])
+                .join('')}
             </div>
           )}
           <span
@@ -54,17 +57,15 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
             title={member.status}
           />
         </div>
-        <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${roleColors[member.role]}`}>
+        <span
+          className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${roleColors[member.role]}`}
+        >
           {member.role}
         </span>
       </div>
 
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-        {member.name}
-      </h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        {member.email}
-      </p>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{member.name}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{member.email}</p>
 
       <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
         <div>
@@ -89,31 +90,32 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
 
 const Team: React.FC = () => {
   const { tasks, currentWorkspace, currentProject, setIsInviteMemberModalOpen } = useProject();
-  
+
   // Fetch real users from project API
   const { data: projectUsers } = useProjectUsers(currentProject?.id || '');
   const users = projectUsers || [];
-  
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
-  const filteredMembers = users.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredMembers = users.filter((member) => {
+    const matchesSearch =
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === 'all' || member.role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
   const getTasksForMember = (memberId: string) => {
-    return tasks.filter(t => t.assignee?.id === memberId).length;
+    return tasks.filter((t) => t.assignee?.id === memberId).length;
   };
 
   const statusStats = {
-    online: users.filter(u => u.status === 'online').length,
-    busy: users.filter(u => u.status === 'busy').length,
-    away: users.filter(u => u.status === 'away').length,
-    offline: users.filter(u => u.status === 'offline').length,
+    online: users.filter((u) => u.status === 'online').length,
+    busy: users.filter((u) => u.status === 'busy').length,
+    away: users.filter((u) => u.status === 'away').length,
+    offline: users.filter((u) => u.status === 'offline').length,
   };
 
   return (
@@ -166,7 +168,9 @@ const Team: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-gray-300" />
               <span className="text-sm text-gray-500 dark:text-gray-400">Offline</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{statusStats.offline}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {statusStats.offline}
+            </p>
           </div>
         </div>
 
@@ -226,7 +230,7 @@ const Team: React.FC = () => {
         {/* Content */}
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredMembers.map(member => (
+            {filteredMembers.map((member) => (
               <TeamMemberCard
                 key={member.id}
                 member={member}
@@ -258,15 +262,25 @@ const Team: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {filteredMembers.map(member => (
-                  <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                {filteredMembers.map((member) => (
+                  <tr
+                    key={member.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {member.avatar ? (
-                          <img src={member.avatar} alt={member.name} className="w-10 h-10 rounded-full object-cover" />
+                          <img
+                            src={member.avatar}
+                            alt={member.name}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-sm font-medium text-brand-600 dark:text-brand-400">
-                            {member.name.split(' ').map(n => n[0]).join('')}
+                            {member.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
                           </div>
                         )}
                         <div>
@@ -284,14 +298,20 @@ const Team: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span
                           className="w-2 h-2 rounded-full"
-                          style={{ 
-                            backgroundColor: 
-                              member.status === 'online' ? '#10B981' : 
-                              member.status === 'busy' ? '#F59E0B' : 
-                              member.status === 'away' ? '#6B7280' : '#9CA3AF' 
+                          style={{
+                            backgroundColor:
+                              member.status === 'online'
+                                ? '#10B981'
+                                : member.status === 'busy'
+                                  ? '#F59E0B'
+                                  : member.status === 'away'
+                                    ? '#6B7280'
+                                    : '#9CA3AF',
                           }}
                         />
-                        <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">{member.status}</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                          {member.status}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

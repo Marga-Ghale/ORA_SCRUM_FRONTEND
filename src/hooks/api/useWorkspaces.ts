@@ -71,8 +71,7 @@ export function useCreateWorkspace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateWorkspaceData) =>
-      apiClient.post<Workspace>('/workspaces', data),
+    mutationFn: (data: CreateWorkspaceData) => apiClient.post<Workspace>('/workspaces', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
     },
@@ -114,7 +113,7 @@ export function useInviteWorkspaceMember() {
       apiClient.post(`/workspaces/${workspaceId}/members`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.workspaces.members(variables.workspaceId)
+        queryKey: queryKeys.workspaces.members(variables.workspaceId),
       });
     },
   });
@@ -129,7 +128,7 @@ export function useRemoveWorkspaceMember() {
       apiClient.delete(`/workspaces/${workspaceId}/members/${userId}`),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.workspaces.members(variables.workspaceId)
+        queryKey: queryKeys.workspaces.members(variables.workspaceId),
       });
     },
   });
@@ -143,16 +142,15 @@ export function useUpdateWorkspaceMemberRole() {
     mutationFn: ({
       workspaceId,
       userId,
-      role
+      role,
     }: {
       workspaceId: string;
       userId: string;
-      role: string
-    }) =>
-      apiClient.put(`/workspaces/${workspaceId}/members/${userId}`, { role }),
+      role: string;
+    }) => apiClient.put(`/workspaces/${workspaceId}/members/${userId}`, { role }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.workspaces.members(variables.workspaceId)
+        queryKey: queryKeys.workspaces.members(variables.workspaceId),
       });
     },
   });

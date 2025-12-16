@@ -25,9 +25,6 @@ export interface Member {
   user: MemberUser;
 }
 
-
-
-
 export interface WorkspaceMember extends Member {
   workspaceId: string;
 }
@@ -80,8 +77,6 @@ export interface SearchUserResult {
 // ============================================
 // Workspace Members
 // ============================================
-
-
 
 export function useAddWorkspaceMember(workspaceId: string) {
   const queryClient = useQueryClient();
@@ -217,8 +212,7 @@ export function useRemoveProjectMember(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) =>
-      apiClient.delete(`/projects/${projectId}/members/${userId}`),
+    mutationFn: (userId: string) => apiClient.delete(`/projects/${projectId}/members/${userId}`),
     onSuccess: () => {
       toast.success('Member removed from project');
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId) });
@@ -302,8 +296,7 @@ export function useAcceptInvitation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (token: string) =>
-      apiClient.post(`/invitations/accept/${token}`),
+    mutationFn: (token: string) => apiClient.post(`/invitations/accept/${token}`),
     onSuccess: () => {
       toast.success('Invitation accepted!');
       queryClient.invalidateQueries({ queryKey: queryKeys.invitations.pending() });
@@ -321,8 +314,7 @@ export function useDeclineInvitation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (invitationId: string) =>
-      apiClient.delete(`/invitations/${invitationId}`),
+    mutationFn: (invitationId: string) => apiClient.delete(`/invitations/${invitationId}`),
     onSuccess: () => {
       toast.success('Invitation declined');
       queryClient.invalidateQueries({ queryKey: queryKeys.invitations.pending() });
@@ -338,12 +330,15 @@ export function useCancelInvitation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ invitationId, workspaceId, projectId }: { 
-      invitationId: string; 
-      workspaceId?: string; 
-      projectId?: string 
-    }) =>
-      apiClient.delete(`/invitations/${invitationId}`).then(() => ({ workspaceId, projectId })),
+    mutationFn: ({
+      invitationId,
+      workspaceId,
+      projectId,
+    }: {
+      invitationId: string;
+      workspaceId?: string;
+      projectId?: string;
+    }) => apiClient.delete(`/invitations/${invitationId}`).then(() => ({ workspaceId, projectId })),
     onSuccess: ({ workspaceId, projectId }) => {
       toast.success('Invitation cancelled');
       if (workspaceId) {
@@ -362,8 +357,7 @@ export function useCancelInvitation() {
 // Resend invitation
 export function useResendInvitation() {
   return useMutation({
-    mutationFn: (invitationId: string) =>
-      apiClient.post(`/invitations/resend/${invitationId}`),
+    mutationFn: (invitationId: string) => apiClient.post(`/invitations/resend/${invitationId}`),
     onSuccess: () => {
       toast.success('Invitation resent');
     },
@@ -377,7 +371,10 @@ export function useResendInvitation() {
 // User Search (for inviting)
 // ============================================
 
-export function useSearchUsers(query: string, options?: { workspaceId?: string; projectId?: string }) {
+export function useSearchUsers(
+  query: string,
+  options?: { workspaceId?: string; projectId?: string }
+) {
   return useQuery({
     queryKey: queryKeys.users.search(query),
     queryFn: () => {
@@ -427,17 +424,20 @@ export function useSearchProjectMembers(projectId: string | undefined, query: st
 // Available Members (for adding to projects)
 // ============================================
 
-export function useAvailableMembers(workspaceId: string | undefined, projectId: string | undefined) {
+export function useAvailableMembers(
+  workspaceId: string | undefined,
+  projectId: string | undefined
+) {
   // Get all workspace members
-  const { 
-    data: workspaceMembers = [], 
+  const {
+    data: workspaceMembers = [],
     isLoading: isLoadingWorkspace,
     error: workspaceError,
   } = useWorkspaceMembers(workspaceId);
 
   // Get current project members
-  const { 
-    data: projectMembers = [], 
+  const {
+    data: projectMembers = [],
     isLoading: isLoadingProject,
     error: projectError,
   } = useProjectMembers(projectId);
@@ -445,9 +445,9 @@ export function useAvailableMembers(workspaceId: string | undefined, projectId: 
   // Filter out users already in project
   const availableMembers = useMemo(() => {
     if (!workspaceMembers.length) return [];
-    
-    const projectMemberIds = new Set(projectMembers.map(m => m.userId));
-    return workspaceMembers.filter(m => !projectMemberIds.has(m.userId));
+
+    const projectMemberIds = new Set(projectMembers.map((m) => m.userId));
+    return workspaceMembers.filter((m) => !projectMemberIds.has(m.userId));
   }, [workspaceMembers, projectMembers]);
 
   // Debug logging
@@ -463,9 +463,9 @@ export function useAvailableMembers(workspaceId: string | undefined, projectId: 
     projectError,
   });
 
-  return { 
-    availableMembers, 
-    projectMembers, 
+  return {
+    availableMembers,
+    projectMembers,
     workspaceMembers,
     isLoading: isLoadingWorkspace || isLoadingProject,
     error: workspaceError || projectError,
@@ -484,10 +484,8 @@ export function useWorkspaceMembers(workspaceId: string | undefined) {
     queryKey: queryKeys.workspaces.members(workspaceId || ''),
     queryFn: async () => {
       if (!workspaceId) return [];
-      const data = await apiClient.get<WorkspaceMember[]>(
-        `/workspaces/${workspaceId}/members`
-      );
-      return data || [];  // ← Remove .data
+      const data = await apiClient.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`);
+      return data || []; // ← Remove .data
     },
     enabled: !!workspaceId,
     staleTime: 60 * 1000,

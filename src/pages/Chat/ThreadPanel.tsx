@@ -148,8 +148,7 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
         ) : (
           <div className="py-2">
             {replies.map((reply, index) => {
-              const showAvatar =
-                index === 0 || reply.userId !== replies[index - 1].userId;
+              const showAvatar = index === 0 || reply.userId !== replies[index - 1].userId;
               return (
                 <MessageItem
                   key={reply.id}

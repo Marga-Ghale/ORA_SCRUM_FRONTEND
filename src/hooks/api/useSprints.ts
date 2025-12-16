@@ -39,7 +39,7 @@ export function useActiveSprint(projectId: string) {
     queryKey: queryKeys.sprints.active(projectId),
     queryFn: async () => {
       const sprints = await apiClient.get<Sprint[]>(`/projects/${projectId}/sprints`);
-      return sprints.find(s => s.status === 'active') || null;
+      return sprints.find((s) => s.status === 'active') || null;
     },
     enabled: !!projectId,
   });
@@ -63,7 +63,7 @@ export function useCreateSprint() {
       apiClient.post<Sprint>(`/projects/${projectId}/sprints`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.sprints.list(variables.projectId)
+        queryKey: queryKeys.sprints.list(variables.projectId),
       });
     },
   });

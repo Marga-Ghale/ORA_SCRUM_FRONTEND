@@ -72,7 +72,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     if (!message.reactions?.length) return [];
 
     const groups: { [key: string]: GroupedReaction } = {};
-    
+
     message.reactions.forEach((r: ChatReaction) => {
       if (!groups[r.emoji]) {
         groups[r.emoji] = { emoji: r.emoji, count: 0, userIds: [] };
@@ -115,9 +115,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       )}
 
       {/* Message Content */}
-      <div
-        className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}
-      >
+      <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
         {/* Username & Time - Only for received messages with avatar */}
         {showAvatar && !isOwn && (
           <div className="flex items-baseline gap-2 mb-1">
@@ -134,25 +132,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               : 'bg-[#25282c] text-[#e5e7eb] rounded-bl-md'
           }`}
         >
-          <p className="text-sm whitespace-pre-wrap break-words">
-            {message.content}
-          </p>
+          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
 
           {/* Time & Status for own messages */}
           <div
-            className={`flex items-center gap-1 mt-1 ${
-              isOwn ? 'justify-end' : 'justify-start'
-            }`}
+            className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}
           >
-            <span
-              className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-[#6b7280]'}`}
-            >
+            <span className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-[#6b7280]'}`}>
               {time}
             </span>
             {message.isEdited && (
-              <span
-                className={`text-[10px] italic ${isOwn ? 'text-white/70' : 'text-[#6b7280]'}`}
-              >
+              <span className={`text-[10px] italic ${isOwn ? 'text-white/70' : 'text-[#6b7280]'}`}>
                 (edited)
               </span>
             )}
@@ -167,9 +157,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
         {/* Reactions */}
         {groupedReactions.length > 0 && (
-          <div
-            className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}
-          >
+          <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
             {groupedReactions.map((reaction) => {
               const hasReacted = reaction.userIds.includes(currentUserId);
               return (

@@ -1,15 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/chat/ChannelMembersPanel.tsx
 import React, { useState } from 'react';
-import {
-  X,
-  Search,
-  UserPlus,
-  Crown,
-  Circle,
-  Loader2,
-  UserMinus,
-} from 'lucide-react';
+import { X, Search, UserPlus, Crown, Circle, Loader2, UserMinus } from 'lucide-react';
 import {
   useChannelMembers,
   useJoinChannel,
@@ -161,9 +152,7 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-medium text-white truncate">{userName}</span>
-            {isOwner && (
-              <Crown className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0"  />
-            )}
+            {isOwner && <Crown className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />}
             {isCurrentUser && <span className="text-xs text-[#6b7280]">(you)</span>}
           </div>
           <p className="text-xs text-[#6b7280] truncate">{userEmail}</p>

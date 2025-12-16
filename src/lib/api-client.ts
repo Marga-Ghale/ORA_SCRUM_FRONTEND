@@ -66,10 +66,7 @@ class ApiClient {
     }
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -101,7 +98,7 @@ class ApiClient {
 
     // Handle empty response
     const text = await response.text();
-    return text ? JSON.parse(text) : {} as T;
+    return text ? JSON.parse(text) : ({} as T);
   }
 
   // GET request

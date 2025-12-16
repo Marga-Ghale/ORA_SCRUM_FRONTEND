@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // src/pages/chat/CreateChannelModal.tsx
 import React, { useState } from 'react';
 import { X, Hash, Lock, Globe, Users, Folder, Briefcase, AlertCircle } from 'lucide-react';
@@ -29,12 +29,14 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Get all projects from spaces
-  const allProjects = allSpaces?.flatMap((space) =>
-    space.projects?.map((project) => ({
-      ...project,
-      spaceName: space.name,
-    })) || []
-  ) || [];
+  const allProjects =
+    allSpaces?.flatMap(
+      (space) =>
+        space.projects?.map((project) => ({
+          ...project,
+          spaceName: space.name,
+        })) || []
+    ) || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +50,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
     // For team channels, use workspace ID as targetId
     // For project/space channels, generate a unique targetId by combining with name
     let targetId: string;
-    
+
     if (channelType === 'team') {
       // For team channels, make targetId unique by including the channel name
       targetId = `${currentWorkspace.id}_${name.trim().toLowerCase().replace(/\s+/g, '-')}`;
@@ -96,10 +98,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={handleClose}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Modal */}
       <div className="relative w-full max-w-lg bg-[#1a1d21] border border-[#2a2e33] rounded-2xl shadow-2xl">
@@ -111,9 +110,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">Create Channel</h2>
-              <p className="text-xs text-[#6b7280]">
-                Channels are for team conversations
-              </p>
+              <p className="text-xs text-[#6b7280]">Channels are for team conversations</p>
             </div>
           </div>
           <button
@@ -136,14 +133,27 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
           {/* Channel Type Selection */}
           <div>
-            <label className="block text-sm font-medium text-[#9ca3af] mb-2">
-              Channel Type
-            </label>
+            <label className="block text-sm font-medium text-[#9ca3af] mb-2">Channel Type</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { type: 'team' as ChannelType, icon: Users, label: 'Team', desc: 'General workspace channel' },
-                { type: 'project' as ChannelType, icon: Briefcase, label: 'Project', desc: 'Project-specific channel' },
-                { type: 'space' as ChannelType, icon: Folder, label: 'Space', desc: 'Space-wide channel' },
+                {
+                  type: 'team' as ChannelType,
+                  icon: Users,
+                  label: 'Team',
+                  desc: 'General workspace channel',
+                },
+                {
+                  type: 'project' as ChannelType,
+                  icon: Briefcase,
+                  label: 'Project',
+                  desc: 'Project-specific channel',
+                },
+                {
+                  type: 'space' as ChannelType,
+                  icon: Folder,
+                  label: 'Space',
+                  desc: 'Space-wide channel',
+                },
               ].map(({ type, icon: Icon, label, desc }) => (
                 <button
                   key={type}
@@ -180,9 +190,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                 }}
                 className="w-full px-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white text-sm focus:outline-none focus:border-brand-500/50"
               >
-                <option value="">
-                  Select a {channelType === 'project' ? 'project' : 'space'}
-                </option>
+                <option value="">Select a {channelType === 'project' ? 'project' : 'space'}</option>
                 {channelType === 'project'
                   ? allProjects.map((project) => (
                       <option key={project.id} value={project.id}>
@@ -200,9 +208,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
           {/* Channel Name */}
           <div>
-            <label className="block text-sm font-medium text-[#9ca3af] mb-2">
-              Channel Name
-            </label>
+            <label className="block text-sm font-medium text-[#9ca3af] mb-2">Channel Name</label>
             <div className="relative">
               <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280]" />
               <input

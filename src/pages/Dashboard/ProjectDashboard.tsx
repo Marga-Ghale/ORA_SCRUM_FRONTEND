@@ -23,12 +23,8 @@ import { useAuth } from '../../components/UserProfile/AuthContext';
 import { useProjectUsers } from '../../hooks/useUser';
 
 const ProjectDashboard: React.FC = () => {
-  const { 
-    tasks, 
-    currentProject, 
-    tasksLoading,
-  } = useProject();
-  
+  const { tasks, currentProject, tasksLoading } = useProject();
+
   const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -37,16 +33,19 @@ const ProjectDashboard: React.FC = () => {
   const users = projectUsers || [];
 
   // Get user's tasks (dynamic)
-  const myTasks = tasks.filter(t => t.assignee?.id === user?.id);
+  const myTasks = tasks.filter((t) => t.assignee?.id === user?.id);
   const recentTasks = [...tasks]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5);
 
   // Dynamic status counts
-  const statusCounts = STATUS_COLUMNS.reduce((acc, status) => {
-    acc[status.id] = tasks.filter(t => t.status === status.id).length;
-    return acc;
-  }, {} as Record<string, number>);
+  const statusCounts = STATUS_COLUMNS.reduce(
+    (acc, status) => {
+      acc[status.id] = tasks.filter((t) => t.status === status.id).length;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   // Get time of day greeting
   const getGreeting = () => {
@@ -57,13 +56,12 @@ const ProjectDashboard: React.FC = () => {
   };
 
   // Progress calculation (dynamic)
-  const completedTasks = tasks.filter(t => t.status === 'done').length;
-  const progressPercentage = tasks.length > 0 
-    ? Math.round((completedTasks / tasks.length) * 100) 
-    : 0;
+  const completedTasks = tasks.filter((t) => t.status === 'done').length;
+  const progressPercentage =
+    tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
   // Calculate trend (simplified - you could track this over time)
-  const lastWeekTasks = tasks.filter(t => {
+  const lastWeekTasks = tasks.filter((t) => {
     const taskDate = new Date(t.createdAt);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
@@ -72,9 +70,7 @@ const ProjectDashboard: React.FC = () => {
   const trend = lastWeekTasks > 0 ? `+${lastWeekTasks} this week` : 'No change';
 
   // Dynamic project board link
-  const boardLink = currentProject 
-    ? `/project/${currentProject.id}/board` 
-    : '/';
+  const boardLink = currentProject ? `/project/${currentProject.id}/board` : '/';
 
   if (tasksLoading) {
     return (
@@ -86,9 +82,9 @@ const ProjectDashboard: React.FC = () => {
 
   return (
     <>
-      <PageMeta 
-        title={`Dashboard - ${currentProject?.name || 'ORA SCRUM'}`} 
-        description="Project management dashboard" 
+      <PageMeta
+        title={`Dashboard - ${currentProject?.name || 'ORA SCRUM'}`}
+        description="Project management dashboard"
       />
 
       <div className="space-y-6">
@@ -101,8 +97,8 @@ const ProjectDashboard: React.FC = () => {
                 <span className="text-2xl">👋</span>
               </h1>
               <p className="text-brand-100">
-                {currentProject 
-                  ? `Working on ${currentProject.name}` 
+                {currentProject
+                  ? `Working on ${currentProject.name}`
                   : "Here's what's happening with your projects today"}
               </p>
             </div>
@@ -199,8 +195,8 @@ const ProjectDashboard: React.FC = () => {
                     </span>
                   )}
                 </h2>
-                <Link 
-                  to="/my-tasks" 
+                <Link
+                  to="/my-tasks"
                   className="text-sm text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1"
                 >
                   View all
@@ -208,7 +204,7 @@ const ProjectDashboard: React.FC = () => {
                 </Link>
               </div>
               <div className="p-5 space-y-3">
-                {myTasks.slice(0, 4).map(task => (
+                {myTasks.slice(0, 4).map((task) => (
                   <TaskCard key={task.id} task={task} compact />
                 ))}
                 {myTasks.length === 0 && (
@@ -216,7 +212,9 @@ const ProjectDashboard: React.FC = () => {
                     <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                       <CheckCircle2 className="w-8 h-8 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 dark:text-gray-400 mb-2">No tasks assigned to you</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-2">
+                      No tasks assigned to you
+                    </p>
                     <button
                       onClick={() => setIsCreateModalOpen(true)}
                       className="text-sm text-brand-500 hover:text-brand-600 font-medium"
@@ -238,18 +236,24 @@ const ProjectDashboard: React.FC = () => {
               </div>
               <div className="p-5">
                 <div className="space-y-4">
-                  {recentTasks.map(task => (
-                    <div key={task.id} className="flex items-start gap-3 group hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded-lg transition-colors">
+                  {recentTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-start gap-3 group hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded-lg transition-colors"
+                    >
                       <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                         {task.reporter?.avatar ? (
-                          <img 
-                            src={task.reporter.avatar} 
-                            alt={task.reporter.name} 
-                            className="w-8 h-8 rounded-full" 
+                          <img
+                            src={task.reporter.avatar}
+                            alt={task.reporter.name}
+                            className="w-8 h-8 rounded-full"
                           />
                         ) : (
                           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                            {task.reporter?.name?.split(' ').map(n => n[0]).join('') || '?'}
+                            {task.reporter?.name
+                              ?.split(' ')
+                              .map((n) => n[0])
+                              .join('') || '?'}
                           </span>
                         )}
                       </div>
@@ -268,7 +272,7 @@ const ProjectDashboard: React.FC = () => {
                             month: 'short',
                             day: 'numeric',
                             hour: '2-digit',
-                            minute: '2-digit'
+                            minute: '2-digit',
                           })}
                         </p>
                       </div>
@@ -295,7 +299,7 @@ const ProjectDashboard: React.FC = () => {
                 <TrendingUp className="w-5 h-5 text-brand-500" />
                 Project Progress
               </h2>
-              
+
               {/* Progress Circle */}
               <div className="relative w-32 h-32 mx-auto mb-6">
                 <svg className="w-full h-full transform -rotate-90">
@@ -330,18 +334,17 @@ const ProjectDashboard: React.FC = () => {
 
               {/* Status Breakdown */}
               <div className="space-y-2">
-                {STATUS_COLUMNS.filter(s => s.id !== 'cancelled').map(status => {
+                {STATUS_COLUMNS.filter((s) => s.id !== 'cancelled').map((status) => {
                   const count = statusCounts[status.id] || 0;
-                  const percentage = tasks.length > 0 
-                    ? Math.round((count / tasks.length) * 100) 
-                    : 0;
-                  
+                  const percentage =
+                    tasks.length > 0 ? Math.round((count / tasks.length) * 100) : 0;
+
                   return (
                     <div key={status.id} className="flex items-center justify-between group">
                       <div className="flex items-center gap-2">
-                        <span 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: status.color }} 
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: status.color }}
                         />
                         <span className="text-sm text-gray-600 dark:text-gray-400">
                           {status.name}
@@ -367,8 +370,8 @@ const ProjectDashboard: React.FC = () => {
                   Team
                 </h2>
                 {currentProject && (
-                  <Link 
-                    to={`/project/${currentProject.id}/team`} 
+                  <Link
+                    to={`/project/${currentProject.id}/team`}
                     className="text-sm text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1"
                   >
                     View all
@@ -377,34 +380,41 @@ const ProjectDashboard: React.FC = () => {
                 )}
               </div>
               <div className="space-y-3">
-                {users.slice(0, 5).map(member => {
-                  const memberTasks = tasks.filter(t => t.assignee?.id === member.id);
-                  const completedCount = memberTasks.filter(t => t.status === 'done').length;
-                  
+                {users.slice(0, 5).map((member) => {
+                  const memberTasks = tasks.filter((t) => t.assignee?.id === member.id);
+                  const completedCount = memberTasks.filter((t) => t.status === 'done').length;
+
                   return (
-                    <div 
-                      key={member.id} 
+                    <div
+                      key={member.id}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <div className="relative">
                         {member.avatar ? (
-                          <img 
-                            src={member.avatar} 
-                            alt={member.name} 
-                            className="w-9 h-9 rounded-full" 
+                          <img
+                            src={member.avatar}
+                            alt={member.name}
+                            className="w-9 h-9 rounded-full"
                           />
                         ) : (
                           <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-xs font-medium text-brand-600 dark:text-brand-400">
-                            {member.name.split(' ').map(n => n[0]).join('')}
+                            {member.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
                           </div>
                         )}
                         <span
                           className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800"
                           style={{
-                            backgroundColor: 
-                              member.status === 'online' ? '#10B981' :
-                              member.status === 'busy' ? '#F59E0B' : 
-                              member.status === 'away' ? '#EAB308' : '#9CA3AF'
+                            backgroundColor:
+                              member.status === 'online'
+                                ? '#10B981'
+                                : member.status === 'busy'
+                                  ? '#F59E0B'
+                                  : member.status === 'away'
+                                    ? '#EAB308'
+                                    : '#9CA3AF',
                           }}
                           title={member.status}
                         />
@@ -421,9 +431,7 @@ const ProjectDashboard: React.FC = () => {
                         <p className="text-xs font-medium text-gray-900 dark:text-white">
                           {memberTasks.length}
                         </p>
-                        <p className="text-xs text-gray-400">
-                          {completedCount} done
-                        </p>
+                        <p className="text-xs text-gray-400">{completedCount} done</p>
                       </div>
                     </div>
                   );
@@ -452,7 +460,7 @@ const ProjectDashboard: React.FC = () => {
                     Board
                   </span>
                 </Link>
-                
+
                 <Link
                   to="/backlog"
                   className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 border border-transparent transition-all group"
@@ -462,7 +470,7 @@ const ProjectDashboard: React.FC = () => {
                     Backlog
                   </span>
                 </Link>
-                
+
                 <Link
                   to="/calendar"
                   className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 border border-transparent transition-all group"
@@ -472,7 +480,7 @@ const ProjectDashboard: React.FC = () => {
                     Calendar
                   </span>
                 </Link>
-                
+
                 <Link
                   to="/settings"
                   className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 border border-transparent transition-all group"
@@ -490,10 +498,7 @@ const ProjectDashboard: React.FC = () => {
 
       {/* Modals */}
       <TaskDetailModal />
-      <CreateTaskModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-      />
+      <CreateTaskModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
     </>
   );
 };

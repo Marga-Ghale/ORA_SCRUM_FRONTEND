@@ -1,11 +1,11 @@
 // src/components/ProjectSidebar.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { 
-  Home, 
-  CheckSquare, 
-  Search, 
-  Plus, 
+import {
+  Home,
+  CheckSquare,
+  Search,
+  Plus,
   ChevronRight,
   ChevronDown,
   Settings,
@@ -41,10 +41,10 @@ const ProjectSidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Fetch notification count (for Inbox)
   const { data: notificationCount } = useNotificationCount();
-  
+
   // Fetch chat unread counts (for Chat)
   const { data: chatUnreadCounts } = useUnreadCounts();
 
@@ -53,18 +53,19 @@ const ProjectSidebar: React.FC = () => {
   const [hoveredSpace, setHoveredSpace] = useState<string | null>(null);
 
   const showFull = isExpanded || isHovered || isMobileOpen;
-  
+
   // Check if path is active
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
-  
-  const isProjectActive = (projectId: string) => location.pathname.includes(`/project/${projectId}`);
+
+  const isProjectActive = (projectId: string) =>
+    location.pathname.includes(`/project/${projectId}`);
 
   // Calculate total chat unread count
-  const totalChatUnread = chatUnreadCounts 
-    ? Object.values(chatUnreadCounts).reduce((sum, count) => sum + count, 0) 
+  const totalChatUnread = chatUnreadCounts
+    ? Object.values(chatUnreadCounts).reduce((sum, count) => sum + count, 0)
     : 0;
 
   // Unread notification count
@@ -73,17 +74,22 @@ const ProjectSidebar: React.FC = () => {
   // Auto-expand current space
   useEffect(() => {
     if (currentSpace) {
-      setExpandedSpaces(prev => new Set([...prev, currentSpace.id]));
+      setExpandedSpaces((prev) => new Set([...prev, currentSpace.id]));
     }
   }, [currentSpace]);
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const toggleSpace = (spaceId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setExpandedSpaces(prev => {
+    setExpandedSpaces((prev) => {
       const next = new Set(prev);
       if (next.has(spaceId)) {
         next.delete(spaceId);
@@ -102,7 +108,9 @@ const ProjectSidebar: React.FC = () => {
   // Loading state
   if (isInitializing) {
     return (
-      <aside className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 bg-[#1a1d21] border-r border-[#2a2e33] transition-all duration-200 ${showFull ? 'w-[260px]' : 'w-[60px]'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside
+        className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 bg-[#1a1d21] border-r border-[#2a2e33] transition-all duration-200 ${showFull ? 'w-[260px]' : 'w-[60px]'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      >
         <div className="p-3 animate-pulse">
           <div className="flex items-center gap-3 p-2">
             <div className="w-8 h-8 rounded-lg bg-[#2a2e33]" />
@@ -110,7 +118,7 @@ const ProjectSidebar: React.FC = () => {
           </div>
         </div>
         <div className="px-2 space-y-1">
-          {[1,2,3,4,5].map(i => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-8 bg-[#2a2e33] rounded-md animate-pulse" />
           ))}
         </div>
@@ -122,13 +130,10 @@ const ProjectSidebar: React.FC = () => {
     <>
       {/* Mobile overlay */}
       {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={toggleMobileSidebar}
-        />
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={toggleMobileSidebar} />
       )}
 
-      <aside 
+      <aside
         className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 flex flex-col
           bg-[#1a1d21] border-r border-[#2a2e33] transition-all duration-200
           ${showFull ? 'w-[260px]' : 'w-[60px]'}
@@ -139,8 +144,10 @@ const ProjectSidebar: React.FC = () => {
       >
         {/* Workspace Header */}
         <div className="p-2 border-b border-[#2a2e33]">
-          <button className={`w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-[#2a2e33] transition-colors ${!showFull ? 'justify-center' : ''}`}>
-            <div 
+          <button
+            className={`w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-[#2a2e33] transition-colors ${!showFull ? 'justify-center' : ''}`}
+          >
+            <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)' }}
             >
@@ -165,7 +172,9 @@ const ProjectSidebar: React.FC = () => {
             <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md bg-[#25282c] hover:bg-[#2a2e33] text-[#6b7280] text-sm transition-colors">
               <Search className="w-4 h-4" />
               <span>Search</span>
-              <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-[#1a1d21] text-[#6b7280]">⌘K</kbd>
+              <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-[#1a1d21] text-[#6b7280]">
+                ⌘K
+              </kbd>
             </button>
           ) : (
             <button className="w-full p-2 rounded-md hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors flex justify-center">
@@ -178,22 +187,22 @@ const ProjectSidebar: React.FC = () => {
         <nav className="px-2 py-1 border-b border-[#2a2e33]">
           {[
             { icon: Home, label: 'Home', path: '/', badge: undefined },
-            { 
-              icon: BellElectricIcon, 
-              label: 'Notifications', 
-              path: '/notifications', 
-              badge: unreadNotifications > 0 ? unreadNotifications : undefined 
+            {
+              icon: BellElectricIcon,
+              label: 'Notifications',
+              path: '/notifications',
+              badge: unreadNotifications > 0 ? unreadNotifications : undefined,
             },
-            { 
-              icon: MessageSquare, 
-              label: 'Chat', 
-              path: '/chat', 
-              badge: totalChatUnread > 0 ? totalChatUnread : undefined 
+            {
+              icon: MessageSquare,
+              label: 'Chat',
+              path: '/chat',
+              badge: totalChatUnread > 0 ? totalChatUnread : undefined,
             },
             { icon: CheckSquare, label: 'My Tasks', path: '/my-tasks', badge: undefined },
             { icon: FileText, label: 'Docs', path: '/docs', badge: undefined },
             { icon: BarChart3, label: 'Dashboards', path: '/dashboards', badge: undefined },
-          ].map(item => {
+          ].map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -206,7 +215,9 @@ const ProjectSidebar: React.FC = () => {
                 title={!showFull ? item.label : undefined}
               >
                 <div className="relative">
-                  <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-[#a78bfa]' : ''}`} />
+                  <Icon
+                    className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-[#a78bfa]' : ''}`}
+                  />
                   {/* Badge dot for collapsed sidebar */}
                   {!showFull && item.badge && item.badge > 0 && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
@@ -233,7 +244,9 @@ const ProjectSidebar: React.FC = () => {
           <div className={`sticky top-0 bg-[#1a1d21] z-10 px-2 py-2 ${!showFull ? 'px-1.5' : ''}`}>
             {showFull ? (
               <div className="flex items-center justify-between px-2.5">
-                <span className="text-xs font-medium text-[#6b7280] uppercase tracking-wide">Spaces</span>
+                <span className="text-xs font-medium text-[#6b7280] uppercase tracking-wide">
+                  Spaces
+                </span>
                 <button
                   onClick={() => setIsCreateSpaceModalOpen(true)}
                   className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors"
@@ -255,10 +268,10 @@ const ProjectSidebar: React.FC = () => {
           {/* Spaces List */}
           <div className="px-2 pb-2">
             {allSpaces.length > 0 ? (
-              allSpaces.map(space => {
+              allSpaces.map((space) => {
                 const isSpaceExpanded = expandedSpaces.has(space.id);
                 const isHovered = hoveredSpace === space.id;
-                
+
                 return (
                   <div key={space.id} className="mb-0.5">
                     {/* Space Item */}
@@ -279,31 +292,33 @@ const ProjectSidebar: React.FC = () => {
                           onClick={(e) => toggleSpace(space.id, e)}
                           className="p-0.5 rounded hover:bg-[#2a2e33] text-[#6b7280]"
                         >
-                          <ChevronRight 
-                            className={`w-3.5 h-3.5 transition-transform duration-200 ${isSpaceExpanded ? 'rotate-90' : ''}`} 
+                          <ChevronRight
+                            className={`w-3.5 h-3.5 transition-transform duration-200 ${isSpaceExpanded ? 'rotate-90' : ''}`}
                           />
                         </button>
                       )}
-                      
+
                       {/* Space Icon */}
                       <div
                         className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0"
-                        style={{ 
+                        style={{
                           backgroundColor: `${space.color || '#7c3aed'}20`,
-                          color: space.color || '#7c3aed'
+                          color: space.color || '#7c3aed',
                         }}
                       >
                         {space.icon || <Folder className="w-3.5 h-3.5" />}
                       </div>
-                      
+
                       {showFull && (
                         <>
                           <span className="flex-1 text-sm text-[#e5e7eb] truncate">
                             {space.name}
                           </span>
-                          
+
                           {/* Actions on hover */}
-                          <div className={`flex items-center gap-0.5 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+                          <div
+                            className={`flex items-center gap-0.5 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+                          >
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -330,7 +345,7 @@ const ProjectSidebar: React.FC = () => {
                     {showFull && isSpaceExpanded && (
                       <div className="ml-5 pl-3 border-l border-[#2a2e33] mt-0.5">
                         {space.projects.length > 0 ? (
-                          space.projects.map(project => (
+                          space.projects.map((project) => (
                             <Link
                               key={project.id}
                               to={`/project/${project.id}/board`}
@@ -339,13 +354,20 @@ const ProjectSidebar: React.FC = () => {
                                 setCurrentProject(project);
                               }}
                               className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group
-                                ${isProjectActive(project.id) 
-                                  ? 'bg-[#7c3aed]/15 text-[#a78bfa]' 
-                                  : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}`}
+                                ${
+                                  isProjectActive(project.id)
+                                    ? 'bg-[#7c3aed]/15 text-[#a78bfa]'
+                                    : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
+                                }`}
                             >
-                              <Hash className="w-3.5 h-3.5 flex-shrink-0" style={{ color: project.color || space.color }} />
+                              <Hash
+                                className="w-3.5 h-3.5 flex-shrink-0"
+                                style={{ color: project.color || space.color }}
+                              />
                               <span className="truncate flex-1">{project.name}</span>
-                              <span className={`text-[10px] font-mono text-[#6b7280] opacity-0 group-hover:opacity-100 ${isProjectActive(project.id) ? 'opacity-100' : ''}`}>
+                              <span
+                                className={`text-[10px] font-mono text-[#6b7280] opacity-0 group-hover:opacity-100 ${isProjectActive(project.id) ? 'opacity-100' : ''}`}
+                              >
                                 {project.key}
                               </span>
                             </Link>
@@ -353,7 +375,7 @@ const ProjectSidebar: React.FC = () => {
                         ) : (
                           <p className="px-2 py-1.5 text-xs text-[#6b7280] italic">No projects</p>
                         )}
-                        
+
                         {/* Add Project */}
                         <button
                           onClick={() => {
@@ -396,7 +418,7 @@ const ProjectSidebar: React.FC = () => {
           {[
             { icon: Users, label: 'Team', path: '/team' },
             { icon: Settings, label: 'Settings', path: '/settings' },
-          ].map(item => {
+          ].map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -424,7 +446,11 @@ const ProjectSidebar: React.FC = () => {
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-full h-full rounded-full object-cover"
+                />
               ) : (
                 getInitials(user?.name || 'U')
               )}
@@ -435,7 +461,9 @@ const ProjectSidebar: React.FC = () => {
                   <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
                   <p className="text-xs text-[#6b7280] truncate">{user?.email || ''}</p>
                 </div>
-                <ChevronRight className={`w-4 h-4 text-[#6b7280] transition-transform ${showUserMenu ? 'rotate-90' : ''}`} />
+                <ChevronRight
+                  className={`w-4 h-4 text-[#6b7280] transition-transform ${showUserMenu ? 'rotate-90' : ''}`}
+                />
               </>
             )}
           </button>

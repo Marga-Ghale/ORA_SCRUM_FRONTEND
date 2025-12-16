@@ -1,12 +1,10 @@
-
-
 // ============================================
 // Message Input Component
 // ============================================
 
-import { useEffect, useRef, useState } from "react";
-import { ChatMessage } from "../../hooks/api/useChat";
-import { AtSign, Edit2, Paperclip, Send, Smile, X } from "lucide-react";
+import { useEffect, useRef, useState } from 'react';
+import { ChatMessage } from '../../hooks/api/useChat';
+import { AtSign, Edit2, Paperclip, Send, Smile, X } from 'lucide-react';
 
 interface MessageInputProps {
   channelName: string;

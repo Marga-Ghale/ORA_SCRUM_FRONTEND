@@ -45,7 +45,7 @@ export const showToast = {
   },
 
   // Promise toast - shows loading, success, or error based on promise result
-  promise: <T,>(
+  promise: <T>(
     promise: Promise<T>,
     messages: {
       loading: string;

@@ -28,7 +28,12 @@ import PageMeta from '../../components/common/PageMeta';
 
 type FilterType = 'all' | 'unread' | 'mentions' | 'assigned' | 'comments';
 
-const FILTER_OPTIONS: { id: FilterType; label: string; icon: React.ElementType; types?: string[] }[] = [
+const FILTER_OPTIONS: {
+  id: FilterType;
+  label: string;
+  icon: React.ElementType;
+  types?: string[];
+}[] = [
   { id: 'all', label: 'All', icon: Inbox },
   { id: 'unread', label: 'Unread', icon: Bell },
   { id: 'mentions', label: 'Mentions', icon: AtSign, types: ['MENTION'] },
@@ -50,9 +55,9 @@ const NotificationPage: React.FC = () => {
 
   // Filter notifications
   const filteredNotifications = useMemo(() => {
-    const filterConfig = FILTER_OPTIONS.find(f => f.id === activeFilter);
+    const filterConfig = FILTER_OPTIONS.find((f) => f.id === activeFilter);
     if (!filterConfig?.types) return notifications;
-    return notifications.filter(n => filterConfig.types!.includes(n.type));
+    return notifications.filter((n) => filterConfig.types!.includes(n.type));
   }, [notifications, activeFilter]);
 
   // Group by date
@@ -107,9 +112,7 @@ const NotificationPage: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-white">Inbox</h1>
-                <p className="text-sm text-[#6b7280]">
-                  {counts?.unread || 0} unread notifications
-                </p>
+                <p className="text-sm text-[#6b7280]">{counts?.unread || 0} unread notifications</p>
               </div>
             </div>
 
@@ -137,24 +140,25 @@ const NotificationPage: React.FC = () => {
 
           {/* Filters */}
           <div className="flex items-center gap-1 mt-4 overflow-x-auto pb-1">
-            {FILTER_OPTIONS.map(filter => {
+            {FILTER_OPTIONS.map((filter) => {
               const Icon = filter.icon;
               const isActive = activeFilter === filter.id;
               const count =
                 filter.id === 'unread'
                   ? counts?.unread
                   : filter.types
-                  ? notifications.filter(n => filter.types!.includes(n.type)).length
-                  : notifications.length;
+                    ? notifications.filter((n) => filter.types!.includes(n.type)).length
+                    : notifications.length;
 
               return (
                 <button
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap
-                    ${isActive
-                      ? 'bg-brand-500/20 text-brand-400'
-                      : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
+                    ${
+                      isActive
+                        ? 'bg-brand-500/20 text-brand-400'
+                        : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
                     }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -178,7 +182,7 @@ const NotificationPage: React.FC = () => {
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="p-6 space-y-4">
-              {[1, 2, 3, 4, 5].map(i => (
+              {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex gap-4 p-4 bg-[#1a1d21] rounded-xl animate-pulse">
                   <div className="w-10 h-10 rounded-full bg-[#2a2e33]" />
                   <div className="flex-1 space-y-2">
@@ -208,7 +212,7 @@ const NotificationPage: React.FC = () => {
                     {group}
                   </h3>
                   <div className="space-y-1">
-                    {items.map(notification => {
+                    {items.map((notification) => {
                       const config = getNotificationConfig(notification.type);
                       return (
                         <div
@@ -217,9 +221,10 @@ const NotificationPage: React.FC = () => {
                           onMouseEnter={() => setShowActions(notification.id)}
                           onMouseLeave={() => setShowActions(null)}
                           className={`relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all group
-                            ${notification.read
-                              ? 'bg-transparent hover:bg-[#1a1d21]'
-                              : 'bg-[#1a1d21] hover:bg-[#25282c]'
+                            ${
+                              notification.read
+                                ? 'bg-transparent hover:bg-[#1a1d21]'
+                                : 'bg-[#1a1d21] hover:bg-[#25282c]'
                             }`}
                         >
                           {/* Unread indicator */}
@@ -269,7 +274,7 @@ const NotificationPage: React.FC = () => {
                             <div className="flex items-center gap-1">
                               {!notification.read && (
                                 <button
-                                  onClick={e => {
+                                  onClick={(e) => {
                                     e.stopPropagation();
                                     markRead.mutate(notification.id);
                                   }}
@@ -280,7 +285,7 @@ const NotificationPage: React.FC = () => {
                                 </button>
                               )}
                               <button
-                                onClick={e => {
+                                onClick={(e) => {
                                   e.stopPropagation();
                                   deleteNotification.mutate(notification.id);
                                 }}
