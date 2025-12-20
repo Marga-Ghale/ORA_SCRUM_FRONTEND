@@ -37,7 +37,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
 
   return (
     <tr
-      onClick={() => openTaskModal(task)}
+      onClick={() => openTaskModal(task as any)}
       className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer border-b border-gray-100 dark:border-gray-800 transition-colors"
     >
       {/* Checkbox */}

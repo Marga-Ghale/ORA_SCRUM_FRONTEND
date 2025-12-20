@@ -39,7 +39,7 @@ const MyTasks: React.FC = () => {
         color: status.color,
         tasks: filteredTasks
           .filter((t) => t.status === status.id)
-          .sort((a, b) => a.order - b.order),
+          .sort((a, b) => a.position - b.position),
       })).filter((g) => g.tasks.length > 0);
     }
 
@@ -49,7 +49,9 @@ const MyTasks: React.FC = () => {
           id: key,
           title: config.name,
           color: config.color,
-          tasks: filteredTasks.filter((t) => t.priority === key).sort((a, b) => a.order - b.order),
+          tasks: filteredTasks
+            .filter((t) => t.priority === key)
+            .sort((a, b) => a.position - b.position),
         }))
         .filter((g) => g.tasks.length > 0);
     }
@@ -224,7 +226,7 @@ const MyTasks: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {group.tasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard key={task.id} task={task as any} />
                 ))}
               </div>
             </div>

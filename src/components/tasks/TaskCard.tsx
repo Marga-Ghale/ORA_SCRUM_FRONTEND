@@ -55,7 +55,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
   // ===============================
   return (
     <div
-      onClick={() => openTaskModal(task)}
+      onClick={() => openTaskModal(task as any)}
       className={`
         group relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700
         hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer transition-all duration-200
@@ -156,7 +156,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
             <button
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
               onClick={() => {
-                openTaskModal(task);
+                openTaskModal(task as any);
                 setMenuOpen(false);
               }}
             >
