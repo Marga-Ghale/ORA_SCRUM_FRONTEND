@@ -13,46 +13,6 @@ export const queryClient = new QueryClient({
 
 export const queryKeys = {
   // ============================================
-  // Tasks
-  // ============================================
-  tasks: {
-    all: ['tasks'] as const,
-    lists: () => [...queryKeys.tasks.all, 'list'] as const,
-    list: (projectId: string, filters?: object) =>
-      [...queryKeys.tasks.lists(), projectId, filters] as const,
-    backlog: (projectId: string) => [...queryKeys.tasks.all, 'backlog', projectId] as const,
-    bySprint: (sprintId: string) => [...queryKeys.tasks.all, 'sprint', sprintId] as const,
-    detail: (id: string) => [...queryKeys.tasks.all, 'detail', id] as const,
-    comments: (taskId: string) => [...queryKeys.tasks.all, 'comments', taskId] as const,
-    watchers: (taskId: string) => [...queryKeys.tasks.all, 'watchers', taskId] as const,
-  },
-
-  // ============================================
-  // Projects
-  // ============================================
-  projects: {
-    all: ['projects'] as const,
-    lists: () => [...queryKeys.projects.all, 'list'] as const,
-    list: () => [...queryKeys.projects.all, 'list'] as const,
-    bySpace: (spaceId: string) => [...queryKeys.projects.lists(), spaceId] as const,
-    detail: (id: string) => [...queryKeys.projects.all, 'detail', id] as const,
-    members: (projectId: string) => [...queryKeys.projects.all, 'members', projectId] as const,
-    invitations: (projectId: string) =>
-      [...queryKeys.projects.all, 'invitations', projectId] as const,
-  },
-
-  // ============================================
-  // Sprints
-  // ============================================
-  sprints: {
-    all: ['sprints'] as const,
-    lists: () => [...queryKeys.sprints.all, 'list'] as const,
-    list: (projectId: string) => [...queryKeys.sprints.lists(), projectId] as const,
-    active: (projectId: string) => [...queryKeys.sprints.all, 'active', projectId] as const,
-    detail: (id: string) => [...queryKeys.sprints.all, 'detail', id] as const,
-  },
-
-  // ============================================
   // Auth
   // ============================================
   auth: {
@@ -62,40 +22,79 @@ export const queryKeys = {
   },
 
   // ============================================
-  // Spaces
-  // ============================================
-  spaces: {
-    all: ['spaces'] as const,
-    lists: () => [...queryKeys.spaces.all, 'list'] as const,
-    list: (workspaceId: string) => [...queryKeys.spaces.lists(), workspaceId] as const,
-    detail: (id: string) => [...queryKeys.spaces.all, 'detail', id] as const,
-  },
-
-  // ============================================
   // Workspaces
   // ============================================
   workspaces: {
     all: ['workspaces'] as const,
-    lists: () => [...queryKeys.workspaces.all, 'list'] as const,
     list: () => [...queryKeys.workspaces.all, 'list'] as const,
     detail: (id: string) => [...queryKeys.workspaces.all, 'detail', id] as const,
-    members: (workspaceId: string) =>
-      [...queryKeys.workspaces.all, 'members', workspaceId] as const,
-    invitations: (workspaceId: string) =>
-      [...queryKeys.workspaces.all, 'invitations', workspaceId] as const,
+    spaces: (workspaceId: string) => [...queryKeys.workspaces.all, 'spaces', workspaceId] as const,
+    teams: (workspaceId: string) => [...queryKeys.workspaces.all, 'teams', workspaceId] as const,
+    channels: (workspaceId: string) =>
+      [...queryKeys.workspaces.all, 'channels', workspaceId] as const,
   },
 
   // ============================================
-  // Users
+  // Spaces
   // ============================================
-  users: {
-    all: ['users'] as const,
-    current: ['users', 'current'] as const,
-    detail: (id: string) => [...queryKeys.users.all, 'detail', id] as const,
-    search: (query: string) => [...queryKeys.users.all, 'search', query] as const,
-    byProject: (projectId: string) => [...queryKeys.users.all, 'project', projectId] as const,
+  spaces: {
+    all: ['spaces'] as const,
+    list: () => [...queryKeys.spaces.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.spaces.all, 'detail', id] as const,
     byWorkspace: (workspaceId: string) =>
-      [...queryKeys.users.all, 'workspace', workspaceId] as const,
+      [...queryKeys.spaces.all, 'workspace', workspaceId] as const,
+    folders: (spaceId: string) => [...queryKeys.spaces.all, 'folders', spaceId] as const,
+    projects: (spaceId: string) => [...queryKeys.spaces.all, 'projects', spaceId] as const,
+  },
+
+  // ============================================
+  // Folders
+  // ============================================
+  folders: {
+    all: ['folders'] as const,
+    list: () => [...queryKeys.folders.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.folders.all, 'detail', id] as const,
+    bySpace: (spaceId: string) => [...queryKeys.folders.all, 'space', spaceId] as const,
+    byUser: () => [...queryKeys.folders.all, 'user'] as const,
+    projects: (folderId: string) => [...queryKeys.folders.all, 'projects', folderId] as const,
+  },
+
+  // ============================================
+  // Projects
+  // ============================================
+  projects: {
+    all: ['projects'] as const,
+    list: () => [...queryKeys.projects.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.projects.all, 'detail', id] as const,
+    bySpace: (spaceId: string) => [...queryKeys.projects.all, 'space', spaceId] as const,
+    byFolder: (folderId: string) => [...queryKeys.projects.all, 'folder', folderId] as const,
+    tasks: (projectId: string) => [...queryKeys.projects.all, 'tasks', projectId] as const,
+    labels: (projectId: string) => [...queryKeys.projects.all, 'labels', projectId] as const,
+    activities: (projectId: string) =>
+      [...queryKeys.projects.all, 'activities', projectId] as const,
+  },
+
+  // ============================================
+  // Tasks
+  // ============================================
+  tasks: {
+    all: ['tasks'] as const,
+    list: () => [...queryKeys.tasks.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.tasks.all, 'detail', id] as const,
+    byProject: (projectId: string) => [...queryKeys.tasks.all, 'project', projectId] as const,
+    myTasks: () => [...queryKeys.tasks.all, 'my'] as const,
+    filtered: (filters: Record<string, unknown>) =>
+      [...queryKeys.tasks.all, 'filter', filters] as const,
+    subtasks: (taskId: string) => [...queryKeys.tasks.all, 'subtasks', taskId] as const,
+    comments: (taskId: string) => [...queryKeys.tasks.all, 'comments', taskId] as const,
+    attachments: (taskId: string) => [...queryKeys.tasks.all, 'attachments', taskId] as const,
+    dependencies: (taskId: string) => [...queryKeys.tasks.all, 'dependencies', taskId] as const,
+    blockedBy: (taskId: string) => [...queryKeys.tasks.all, 'blocked-by', taskId] as const,
+    checklists: (taskId: string) => [...queryKeys.tasks.all, 'checklists', taskId] as const,
+    activity: (taskId: string) => [...queryKeys.tasks.all, 'activity', taskId] as const,
+    timeEntries: (taskId: string) => [...queryKeys.tasks.all, 'time', taskId] as const,
+    totalTime: (taskId: string) => [...queryKeys.tasks.all, 'time-total', taskId] as const,
+    activeTimer: () => [...queryKeys.tasks.all, 'timer', 'active'] as const,
   },
 
   // ============================================
@@ -103,9 +102,38 @@ export const queryKeys = {
   // ============================================
   labels: {
     all: ['labels'] as const,
-    lists: () => [...queryKeys.labels.all, 'list'] as const,
-    list: (projectId: string) => [...queryKeys.labels.lists(), projectId] as const,
+    list: () => [...queryKeys.labels.all, 'list'] as const,
     detail: (id: string) => [...queryKeys.labels.all, 'detail', id] as const,
+    byProject: (projectId: string) => [...queryKeys.labels.all, 'project', projectId] as const,
+  },
+
+  // ============================================
+  // Teams
+  // ============================================
+  teams: {
+    all: ['teams'] as const,
+    list: () => [...queryKeys.teams.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.teams.all, 'detail', id] as const,
+    byWorkspace: (workspaceId: string) =>
+      [...queryKeys.teams.all, 'workspace', workspaceId] as const,
+    members: (teamId: string) => [...queryKeys.teams.all, 'members', teamId] as const,
+  },
+
+  // ============================================
+  // Members (Unified)
+  // ============================================
+  members: {
+    all: ['members'] as const,
+    direct: (entityType: string, entityId: string) =>
+      [...queryKeys.members.all, 'direct', entityType, entityId] as const,
+    effective: (entityType: string, entityId: string) =>
+      [...queryKeys.members.all, 'effective', entityType, entityId] as const,
+    access: (entityType: string, entityId: string) =>
+      [...queryKeys.members.all, 'access', entityType, entityId] as const,
+    accessLevel: (entityType: string, entityId: string) =>
+      [...queryKeys.members.all, 'access-level', entityType, entityId] as const,
+    myMemberships: () => [...queryKeys.members.all, 'my', 'memberships'] as const,
+    myAccess: () => [...queryKeys.members.all, 'my', 'access'] as const,
   },
 
   // ============================================
@@ -127,22 +155,11 @@ export const queryKeys = {
   invitations: {
     all: ['invitations'] as const,
     pending: () => [...queryKeys.invitations.all, 'pending'] as const,
-    workspace: (workspaceId: string) =>
-      [...queryKeys.invitations.all, 'workspace', workspaceId] as const,
-    project: (projectId: string) => [...queryKeys.invitations.all, 'project', projectId] as const,
-    detail: (id: string) => [...queryKeys.invitations.all, 'detail', id] as const,
-  },
-
-  // ============================================
-  // Teams
-  // ============================================
-  teams: {
-    all: ['teams'] as const,
-    lists: () => [...queryKeys.teams.all, 'list'] as const,
     byWorkspace: (workspaceId: string) =>
-      [...queryKeys.teams.all, 'workspace', workspaceId] as const,
-    detail: (id: string) => [...queryKeys.teams.all, 'detail', id] as const,
-    members: (teamId: string) => [...queryKeys.teams.all, 'members', teamId] as const,
+      [...queryKeys.invitations.all, 'workspace', workspaceId] as const,
+    byProject: (projectId: string) => [...queryKeys.invitations.all, 'project', projectId] as const,
+    stats: () => [...queryKeys.invitations.all, 'stats'] as const,
+    link: (token: string) => [...queryKeys.invitations.all, 'link', token] as const,
   },
 
   // ============================================
@@ -178,44 +195,17 @@ export const queryKeys = {
   // ============================================
   activities: {
     all: ['activities'] as const,
-    lists: () => [...queryKeys.activities.all, 'list'] as const,
-    byTask: (taskId: string) => [...queryKeys.activities.all, 'task', taskId] as const,
+    my: () => [...queryKeys.activities.all, 'my'] as const,
     byProject: (projectId: string) => [...queryKeys.activities.all, 'project', projectId] as const,
-    byUser: (userId?: string) => [...queryKeys.activities.all, 'user', userId] as const,
-    byWorkspace: (workspaceId: string) =>
-      [...queryKeys.activities.all, 'workspace', workspaceId] as const,
   },
 
   // ============================================
-  // Comments
+  // Users
   // ============================================
-  comments: {
-    all: ['comments'] as const,
-    byTask: (taskId: string) => [...queryKeys.comments.all, 'task', taskId] as const,
-    detail: (id: string) => [...queryKeys.comments.all, 'detail', id] as const,
-  },
-
-  // ============================================
-  // Search
-  // ============================================
-  search: {
-    all: ['search'] as const,
-    global: (query: string) => [...queryKeys.search.all, 'global', query] as const,
-    tasks: (query: string, projectId?: string) =>
-      [...queryKeys.search.all, 'tasks', query, projectId] as const,
-    users: (query: string, scope?: { workspaceId?: string; projectId?: string }) =>
-      [...queryKeys.search.all, 'users', query, scope] as const,
-  },
-
-  // ============================================
-  // Dashboard / Analytics
-  // ============================================
-  dashboard: {
-    all: ['dashboard'] as const,
-    stats: (projectId?: string) => [...queryKeys.dashboard.all, 'stats', projectId] as const,
-    recentActivity: () => [...queryKeys.dashboard.all, 'recent'] as const,
-    myTasks: () => [...queryKeys.dashboard.all, 'my-tasks'] as const,
-    upcomingDeadlines: () => [...queryKeys.dashboard.all, 'deadlines'] as const,
+  users: {
+    all: ['users'] as const,
+    me: () => [...queryKeys.users.all, 'me'] as const,
+    search: (query: string) => [...queryKeys.users.all, 'search', query] as const,
   },
 };
 
@@ -223,16 +213,10 @@ export const queryKeys = {
 // Helper Functions
 // ============================================
 
-/**
- * Invalidate all queries for a specific entity
- */
 export const invalidateEntity = (entity: keyof typeof queryKeys) => {
   queryClient.invalidateQueries({ queryKey: queryKeys[entity].all });
 };
 
-/**
- * Prefetch a query
- */
 export const prefetchQuery = async <T>(queryKey: readonly unknown[], queryFn: () => Promise<T>) => {
   await queryClient.prefetchQuery({
     queryKey,
@@ -241,9 +225,6 @@ export const prefetchQuery = async <T>(queryKey: readonly unknown[], queryFn: ()
   });
 };
 
-/**
- * Set query data directly (for optimistic updates)
- */
 export const setQueryData = <T>(
   queryKey: readonly unknown[],
   updater: T | ((old: T | undefined) => T)
@@ -251,16 +232,10 @@ export const setQueryData = <T>(
   queryClient.setQueryData(queryKey, updater);
 };
 
-/**
- * Get cached query data
- */
 export const getQueryData = <T>(queryKey: readonly unknown[]): T | undefined => {
   return queryClient.getQueryData(queryKey);
 };
 
-/**
- * Remove query from cache
- */
 export const removeQuery = (queryKey: readonly unknown[]) => {
   queryClient.removeQueries({ queryKey });
 };

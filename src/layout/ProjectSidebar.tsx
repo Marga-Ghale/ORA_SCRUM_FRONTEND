@@ -18,11 +18,13 @@ import {
   FileText,
   Zap,
   MessageSquare,
-  BellElectricIcon,
+  BellElectric,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
+import { useSpacesByWorkspace } from '../hooks/api/useSpaces';
+import { useProjectsBySpace } from '../hooks/api/useProjects';
 import { useNotificationCount } from '../hooks/api/useNotifications';
 import { useUnreadCounts } from '../hooks/api/useChat';
 
@@ -31,7 +33,6 @@ const ProjectSidebar: React.FC = () => {
   const {
     currentWorkspace,
     currentSpace,
-    allSpaces,
     setCurrentSpace,
     setCurrentProject,
     setIsCreateSpaceModalOpen,
@@ -42,11 +43,21 @@ const ProjectSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Fetch spaces for current workspace
+  const { data: spaces, isLoading: spacesLoading } = useSpacesByWorkspace(
+    currentWorkspace?.id || '',
+    { enabled: !!currentWorkspace?.id }
+  );
+
   // Fetch notification count (for Inbox)
-  const { data: notificationCount } = useNotificationCount();
+  const { data: notificationData } = useNotificationCount({
+    enabled: !!user,
+  });
 
   // Fetch chat unread counts (for Chat)
-  const { data: chatUnreadCounts } = useUnreadCounts();
+  const { data: chatUnreadData } = useUnreadCounts({
+    enabled: !!user,
+  });
 
   const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set());
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -64,12 +75,12 @@ const ProjectSidebar: React.FC = () => {
     location.pathname.includes(`/project/${projectId}`);
 
   // Calculate total chat unread count
-  const totalChatUnread = chatUnreadCounts
-    ? Object.values(chatUnreadCounts).reduce((sum, count) => sum + count, 0)
+  const totalChatUnread = chatUnreadData
+    ? Object.values(chatUnreadData).reduce((sum, count) => sum + count, 0)
     : 0;
 
   // Unread notification count
-  const unreadNotifications = notificationCount?.unread || 0;
+  const unreadNotifications = notificationData?.unread || 0;
 
   // Auto-expand current space
   useEffect(() => {
@@ -188,7 +199,7 @@ const ProjectSidebar: React.FC = () => {
           {[
             { icon: Home, label: 'Home', path: '/', badge: undefined },
             {
-              icon: BellElectricIcon,
+              icon: BellElectric,
               label: 'Notifications',
               path: '/notifications',
               badge: unreadNotifications > 0 ? unreadNotifications : undefined,
@@ -267,129 +278,33 @@ const ProjectSidebar: React.FC = () => {
 
           {/* Spaces List */}
           <div className="px-2 pb-2">
-            {allSpaces.length > 0 ? (
-              allSpaces.map((space) => {
+            {spacesLoading ? (
+              <div className="space-y-2 px-2 py-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-8 bg-[#2a2e33] rounded-md animate-pulse" />
+                ))}
+              </div>
+            ) : spaces && spaces.length > 0 ? (
+              spaces.map((space) => {
                 const isSpaceExpanded = expandedSpaces.has(space.id);
                 const isHovered = hoveredSpace === space.id;
 
                 return (
-                  <div key={space.id} className="mb-0.5">
-                    {/* Space Item */}
-                    <div
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors group
-                        ${currentSpace?.id === space.id ? 'bg-[#25282c]' : 'hover:bg-[#25282c]'}
-                        ${!showFull ? 'justify-center' : ''}`}
-                      onClick={() => {
-                        setCurrentSpace(space);
-                        if (showFull) toggleSpace(space.id);
-                      }}
-                      onMouseEnter={() => setHoveredSpace(space.id)}
-                      onMouseLeave={() => setHoveredSpace(null)}
-                    >
-                      {/* Expand Arrow */}
-                      {showFull && (
-                        <button
-                          onClick={(e) => toggleSpace(space.id, e)}
-                          className="p-0.5 rounded hover:bg-[#2a2e33] text-[#6b7280]"
-                        >
-                          <ChevronRight
-                            className={`w-3.5 h-3.5 transition-transform duration-200 ${isSpaceExpanded ? 'rotate-90' : ''}`}
-                          />
-                        </button>
-                      )}
-
-                      {/* Space Icon */}
-                      <div
-                        className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0"
-                        style={{
-                          backgroundColor: `${space.color || '#7c3aed'}20`,
-                          color: space.color || '#7c3aed',
-                        }}
-                      >
-                        {space.icon || <Folder className="w-3.5 h-3.5" />}
-                      </div>
-
-                      {showFull && (
-                        <>
-                          <span className="flex-1 text-sm text-[#e5e7eb] truncate">
-                            {space.name}
-                          </span>
-
-                          {/* Actions on hover */}
-                          <div
-                            className={`flex items-center gap-0.5 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`}
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setCurrentSpace(space);
-                                setIsCreateProjectModalOpen(true);
-                              }}
-                              className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white"
-                              title="Add project"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white"
-                              title="More options"
-                            >
-                              <MoreHorizontal className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Projects */}
-                    {showFull && isSpaceExpanded && (
-                      <div className="ml-5 pl-3 border-l border-[#2a2e33] mt-0.5">
-                        {space.projects.length > 0 ? (
-                          space.projects.map((project) => (
-                            <Link
-                              key={project.id}
-                              to={`/project/${project.id}/board`}
-                              onClick={() => {
-                                setCurrentSpace(space);
-                                setCurrentProject(project);
-                              }}
-                              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group
-                                ${
-                                  isProjectActive(project.id)
-                                    ? 'bg-[#7c3aed]/15 text-[#a78bfa]'
-                                    : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
-                                }`}
-                            >
-                              <Hash
-                                className="w-3.5 h-3.5 flex-shrink-0"
-                                style={{ color: project.color || space.color }}
-                              />
-                              <span className="truncate flex-1">{project.name}</span>
-                              <span
-                                className={`text-[10px] font-mono text-[#6b7280] opacity-0 group-hover:opacity-100 ${isProjectActive(project.id) ? 'opacity-100' : ''}`}
-                              >
-                                {project.key}
-                              </span>
-                            </Link>
-                          ))
-                        ) : (
-                          <p className="px-2 py-1.5 text-xs text-[#6b7280] italic">No projects</p>
-                        )}
-
-                        {/* Add Project */}
-                        <button
-                          onClick={() => {
-                            setCurrentSpace(space);
-                            setIsCreateProjectModalOpen(true);
-                          }}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-[#6b7280] hover:text-white hover:bg-[#25282c] transition-colors"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add Project</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <SpaceItem
+                    key={space.id}
+                    space={space}
+                    isSpaceExpanded={isSpaceExpanded}
+                    isHovered={isHovered}
+                    showFull={showFull}
+                    currentSpace={currentSpace}
+                    onToggle={toggleSpace}
+                    onMouseEnter={() => setHoveredSpace(space.id)}
+                    onMouseLeave={() => setHoveredSpace(null)}
+                    setCurrentSpace={setCurrentSpace}
+                    setCurrentProject={setCurrentProject}
+                    setIsCreateProjectModalOpen={setIsCreateProjectModalOpen}
+                    isProjectActive={isProjectActive}
+                  />
                 );
               })
             ) : (
@@ -485,6 +400,166 @@ const ProjectSidebar: React.FC = () => {
         </div>
       </aside>
     </>
+  );
+};
+
+// Separate SpaceItem component for better organization
+interface SpaceItemProps {
+  space: any;
+  isSpaceExpanded: boolean;
+  isHovered: boolean;
+  showFull: boolean;
+  currentSpace: any;
+  onToggle: (id: string, e?: React.MouseEvent) => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  setCurrentSpace: (space: any) => void;
+  setCurrentProject: (project: any) => void;
+  setIsCreateProjectModalOpen: (open: boolean) => void;
+  isProjectActive: (id: string) => boolean;
+}
+
+const SpaceItem: React.FC<SpaceItemProps> = ({
+  space,
+  isSpaceExpanded,
+  isHovered,
+  showFull,
+  currentSpace,
+  onToggle,
+  onMouseEnter,
+  onMouseLeave,
+  setCurrentSpace,
+  setCurrentProject,
+  setIsCreateProjectModalOpen,
+  isProjectActive,
+}) => {
+  // Fetch projects for this specific space
+  const { data: projects, isLoading: projectsLoading } = useProjectsBySpace(space.id, {
+    enabled: isSpaceExpanded,
+  });
+
+  return (
+    <div className="mb-0.5">
+      {/* Space Item */}
+      <div
+        className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors group
+          ${currentSpace?.id === space.id ? 'bg-[#25282c]' : 'hover:bg-[#25282c]'}
+          ${!showFull ? 'justify-center' : ''}`}
+        onClick={() => {
+          setCurrentSpace(space);
+          if (showFull) onToggle(space.id);
+        }}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
+        {/* Expand Arrow */}
+        {showFull && (
+          <button
+            onClick={(e) => onToggle(space.id, e)}
+            className="p-0.5 rounded hover:bg-[#2a2e33] text-[#6b7280]"
+          >
+            <ChevronRight
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${isSpaceExpanded ? 'rotate-90' : ''}`}
+            />
+          </button>
+        )}
+
+        {/* Space Icon */}
+        <div
+          className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0"
+          style={{
+            backgroundColor: `${space.color || '#7c3aed'}20`,
+            color: space.color || '#7c3aed',
+          }}
+        >
+          {space.icon ? <span>{space.icon}</span> : <Folder className="w-3.5 h-3.5" />}
+        </div>
+
+        {showFull && (
+          <>
+            <span className="flex-1 text-sm text-[#e5e7eb] truncate">{space.name}</span>
+
+            {/* Actions on hover */}
+            <div
+              className={`flex items-center gap-0.5 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentSpace(space);
+                  setIsCreateProjectModalOpen(true);
+                }}
+                className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white"
+                title="Add project"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+              <button
+                className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white"
+                title="More options"
+              >
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Projects */}
+      {showFull && isSpaceExpanded && (
+        <div className="ml-5 pl-3 border-l border-[#2a2e33] mt-0.5">
+          {projectsLoading ? (
+            <div className="space-y-2 py-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-7 bg-[#2a2e33] rounded-md animate-pulse" />
+              ))}
+            </div>
+          ) : projects && projects.length > 0 ? (
+            projects.map((project) => (
+              <Link
+                key={project.id}
+                to={`/project/${project.id}/board`}
+                onClick={() => {
+                  setCurrentSpace(space);
+                  setCurrentProject(project);
+                }}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group
+                  ${
+                    isProjectActive(project.id)
+                      ? 'bg-[#7c3aed]/15 text-[#a78bfa]'
+                      : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
+                  }`}
+              >
+                <Hash
+                  className="w-3.5 h-3.5 flex-shrink-0"
+                  style={{ color: project.color || space.color }}
+                />
+                <span className="truncate flex-1">{project.name}</span>
+                <span
+                  className={`text-[10px] font-mono text-[#6b7280] opacity-0 group-hover:opacity-100 ${isProjectActive(project.id) ? 'opacity-100' : ''}`}
+                >
+                  {project.key}
+                </span>
+              </Link>
+            ))
+          ) : (
+            <p className="px-2 py-1.5 text-xs text-[#6b7280] italic">No projects</p>
+          )}
+
+          {/* Add Project */}
+          <button
+            onClick={() => {
+              setCurrentSpace(space);
+              setIsCreateProjectModalOpen(true);
+            }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-[#6b7280] hover:text-white hover:bg-[#25282c] transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Project</span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 

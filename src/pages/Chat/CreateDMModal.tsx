@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Search, MessageSquare, Check, AlertCircle } from 'lucide-react';
 import { useCreateDirectChannel } from '../../hooks/api/useChat';
-import { useWorkspaceMembers } from '../../hooks/api/useMembers';
+import { useEffectiveMembers } from '../../hooks/api/useMembers';
 import { useProject } from '../../context/ProjectContext';
 import { useAuth } from '../../components/UserProfile/AuthContext';
 
@@ -15,8 +15,10 @@ interface CreateDMModalProps {
 export const CreateDMModal: React.FC<CreateDMModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { currentWorkspace } = useProject();
   const { user: currentUser } = useAuth();
-  const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers(
-    currentWorkspace?.id
+  const { data: members = [], isLoading: membersLoading } = useEffectiveMembers(
+    'workspace',
+    currentWorkspace?.id || '',
+    { enabled: !!currentWorkspace?.id }
   );
   const createDM = useCreateDirectChannel();
 

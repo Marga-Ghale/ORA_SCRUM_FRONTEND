@@ -1,8 +1,8 @@
 // src/hooks/api/useChat.ts
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { apiClient } from '../../lib/api-client';
 import { queryKeys } from '../../lib/query-client';
+import apiClient from '../../lib/api';
 
 // ============================================
 // Types
@@ -714,7 +714,7 @@ export function useMarkChannelRead() {
 /**
  * Get all unread counts
  */
-export function useUnreadCounts() {
+export function useUnreadCounts(p0: { enabled: boolean }) {
   return useQuery({
     queryKey: queryKeys.chat.unreadCounts(),
     queryFn: async () => {
@@ -725,6 +725,10 @@ export function useUnreadCounts() {
     refetchInterval: 30 * 1000,
   });
 }
+
+type UseUnreadCountsOptions = {
+  enabled?: boolean;
+};
 
 /**
  * Get total unread count across all channels

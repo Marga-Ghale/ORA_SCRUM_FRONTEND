@@ -8,7 +8,7 @@ import {
   ChatChannel,
   ChatChannelMember,
 } from '../../hooks/api/useChat';
-import { useWorkspaceMembers } from '../../hooks/api/useMembers';
+import { useEffectiveMembers } from '../../hooks/api/useMembers';
 
 interface ChannelMembersPanelProps {
   isOpen: boolean;
@@ -30,8 +30,12 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
   // Get channel members
   const { data: members = [], isLoading, refetch: refetchMembers } = useChannelMembers(channel?.id);
 
-  // Get workspace members for adding
-  const { data: workspaceMembers = [] } = useWorkspaceMembers(channel?.workspaceId);
+  // Get workspace members for adding - with proper parameters
+  const { data: workspaceMembers = [] } = useEffectiveMembers(
+    'workspace',
+    channel?.workspaceId || '',
+    { enabled: !!channel?.workspaceId }
+  );
 
   // Mutations
   const joinChannel = useJoinChannel();

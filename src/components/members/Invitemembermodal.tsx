@@ -1,19 +1,22 @@
 // src/components/modals/InviteMemberModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  useInviteToWorkspace,
-  useSearchUsers,
-  useAddWorkspaceMemberById,
-  SearchUserResult,
-} from '../../hooks/api/useMembers';
 import { useProject } from '../../context/ProjectContext';
+import { useAddMember, useInviteMemberByEmail } from '../../hooks/api/useMembers';
+import { useSearchUsers } from '../../hooks/useUser';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type InviteRole = 'admin' | 'member' | 'guest';
+type InviteRole = 'admin' | 'member' | 'viewer';
+
+interface SearchUserResult {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+}
 
 interface PendingInvite {
   email: string;
@@ -23,43 +26,36 @@ interface PendingInvite {
 const ROLE_OPTIONS: { value: InviteRole; label: string; description: string }[] = [
   { value: 'admin', label: 'Admin', description: 'Full access to all features and settings' },
   { value: 'member', label: 'Member', description: 'Can create and manage tasks and projects' },
-  { value: 'guest', label: 'Guest', description: 'Can view and comment only' },
+  { value: 'viewer', label: 'Viewer', description: 'Can view and comment only' },
 ];
 
 const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }) => {
-  // Get workspace from context - this is the PRIMARY invitation target
-  const { currentWorkspace, allSpaces } = useProject();
+  const { currentWorkspace } = useProject();
 
   const [email, setEmail] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<InviteRole>('member');
-  const [message, setMessage] = useState('');
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // Optional: Grant access to specific spaces/projects after workspace invite
-  const [grantAccessTo, setGrantAccessTo] = useState<string[]>([]);
-  const [showAccessDropdown, setShowAccessDropdown] = useState(false);
-
   const inputRef = useRef<HTMLInputElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
 
-  // Always invite to workspace
   const workspaceId = currentWorkspace?.id || '';
   const workspaceName = currentWorkspace?.name || 'Workspace';
 
-  const inviteToWorkspace = useInviteToWorkspace(workspaceId);
-  const addWorkspaceMember = useAddWorkspaceMemberById(workspaceId);
-
+  // Hooks
+  const inviteMemberMutation = useInviteMemberByEmail();
+  const addMemberMutation = useAddMember();
   const { data: searchResults, isLoading: isSearching } = useSearchUsers(searchQuery, {
-    workspaceId: workspaceId,
+    enabled: searchQuery.length >= 2,
   });
 
-  const isSubmitting = inviteToWorkspace.isPending || addWorkspaceMember.isPending;
+  const isSubmitting = inviteMemberMutation.isPending || addMemberMutation.isPending;
 
   // Focus input when modal opens
   useEffect(() => {
@@ -177,7 +173,6 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
     setError(null);
     setSuccess(null);
 
-    // Validate workspace ID
     if (!workspaceId) {
       setError('No workspace selected. Please select a workspace first.');
       return;
@@ -208,17 +203,24 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
         try {
           if (invite.user) {
             // Add existing user directly to workspace
-            await addWorkspaceMember.mutateAsync({
-              userId: invite.user.id,
-              role: selectedRole,
+            await addMemberMutation.mutateAsync({
+              entityType: 'workspace',
+              entityId: workspaceId,
+              data: {
+                userId: invite.user.id,
+                role: selectedRole,
+              },
             });
             addedCount++;
           } else {
             // Send workspace invitation
-            await inviteToWorkspace.mutateAsync({
-              email: invite.email,
-              role: selectedRole,
-              message: message.trim() || undefined,
+            await inviteMemberMutation.mutateAsync({
+              entityType: 'workspace',
+              entityId: workspaceId,
+              data: {
+                email: invite.email,
+                role: selectedRole,
+              },
             });
             invitedCount++;
           }
@@ -261,15 +263,12 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
   const resetForm = () => {
     setEmail('');
     setSearchQuery('');
-    setMessage('');
     setSelectedRole('member');
     setPendingInvites([]);
-    setGrantAccessTo([]);
     setError(null);
     setSuccess(null);
     setShowRoleDropdown(false);
     setShowSearchResults(false);
-    setShowAccessDropdown(false);
   };
 
   const handleClose = () => {
@@ -281,7 +280,6 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
 
   if (!isOpen) return null;
 
-  // Don't render if no workspace
   if (!currentWorkspace?.id) {
     return (
       <>
@@ -739,92 +737,6 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
               </div>
             </div>
 
-            {/* Optional: Grant Access to Spaces/Projects */}
-            {allSpaces.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Grant Access To <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowAccessDropdown(!showAccessDropdown)}
-                    disabled={isSubmitting}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-left transition-all hover:border-gray-300 dark:hover:border-gray-600 disabled:opacity-50"
-                  >
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {grantAccessTo.length === 0
-                        ? 'All spaces & projects (default)'
-                        : `${grantAccessTo.length} space${grantAccessTo.length > 1 ? 's' : ''} selected`}
-                    </span>
-                    <svg
-                      className={`w-5 h-5 text-gray-400 transition-transform ${showAccessDropdown ? 'rotate-180' : ''}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-
-                  {showAccessDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
-                      {allSpaces.map((space) => (
-                        <label
-                          key={space.id}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={grantAccessTo.includes(space.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setGrantAccessTo([...grantAccessTo, space.id]);
-                              } else {
-                                setGrantAccessTo(grantAccessTo.filter((id) => id !== space.id));
-                              }
-                            }}
-                            className="w-4 h-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
-                          />
-                          <span className="text-lg">{space.icon || '📁'}</span>
-                          <span className="text-sm text-gray-900 dark:text-white">
-                            {space.name}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-1.5">
-                  Leave empty to grant access to all spaces and projects
-                </p>
-              </div>
-            )}
-
-            {/* Personal Message */}
-            {(hasNewInvites || pendingInvites.length === 0) && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Personal Message <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Add a personal note to your invitation..."
-                  rows={3}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
-                  disabled={isSubmitting}
-                  maxLength={500}
-                />
-                <p className="text-xs text-gray-400 mt-1 text-right">{message.length}/500</p>
-              </div>
-            )}
-
             {/* Preview */}
             {pendingInvites.length > 0 && (
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
@@ -854,7 +766,6 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
                       <p>
                         <strong>{pendingInvites.filter((p) => !p.user).length}</strong> invitation
                         {pendingInvites.filter((p) => !p.user).length > 1 ? 's' : ''} will be sent
-                        (expires in 7 days)
                       </p>
                     )}
                     <p className="text-blue-600 dark:text-blue-400">
@@ -868,75 +779,57 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
           </form>
 
           {/* Footer */}
-          <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
             <button
               type="button"
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              onClick={handleClose}
               disabled={isSubmitting}
+              className="px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors disabled:opacity-50"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
-              Copy invite link
+              Cancel
             </button>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={(pendingInvites.length === 0 && !validateEmail(email)) || isSubmitting}
-                className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 min-w-[160px] justify-center"
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
-                    </svg>
-                    <span>
-                      {pendingInvites.length > 0
-                        ? `Send ${pendingInvites.length} Invite${pendingInvites.length > 1 ? 's' : ''}`
-                        : 'Send Invitation'}
-                    </span>
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={(pendingInvites.length === 0 && !validateEmail(email)) || isSubmitting}
+              className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 min-w-[160px] justify-center"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    />
+                  </svg>
+                  <span>
+                    {pendingInvites.length > 0
+                      ? `Send ${pendingInvites.length} Invite${pendingInvites.length > 1 ? 's' : ''}`
+                      : 'Send Invitation'}
+                  </span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>

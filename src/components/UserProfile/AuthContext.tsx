@@ -1,7 +1,7 @@
 // src/components/UserProfile/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import apiClient from '../../lib/api-client';
-import { useCurrentUser, useLogout } from '../../hooks/api';
+import apiClient from '../../lib/api';
+import { useCurrentUser, useLogout } from '../../hooks/api/useAuth';
 
 interface User {
   id: string;

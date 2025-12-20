@@ -2,8 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { apiClient } from '../../lib/api-client';
 import { queryKeys } from '../../lib/query-client';
+import apiClient from '../../lib/api';
 
 // ============================================
 // Types
@@ -383,7 +383,7 @@ export function useUnreadNotifications() {
 /**
  * Get notification counts
  */
-export function useNotificationCount() {
+export function useNotificationCount(p0: { enabled: boolean }) {
   return useQuery({
     queryKey: queryKeys.notifications.count(),
     queryFn: () => apiClient.get<NotificationCount>('/notifications/count'),

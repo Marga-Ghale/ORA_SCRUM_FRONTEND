@@ -1,436 +1,838 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// src/hooks/api/useTasks.ts
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
-import { apiClient } from '../../lib/api-client';
+// src/hooks/useTasks.ts
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
-import { TaskStatus, Priority as TaskPriority, TaskType } from '../../types/project';
 
-// Re-export for convenience
-export type { TaskStatus, TaskPriority, TaskType };
+// ============================================
+// Types
+// ============================================
 
-export interface Task {
+export interface TaskResponse {
   id: string;
-  key: string;
   title: string;
   description?: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  type: TaskType;
+  status: string;
+  priority: string;
+  type?: string;
   projectId: string;
   sprintId?: string;
-  assigneeId?: string;
-  reporterId: string;
-  parentId?: string;
+  parentTaskId?: string;
+  assigneeIds: string[];
+  watcherIds: string[];
+  labelIds: string[];
   storyPoints?: number;
+  estimatedHours?: number;
+  actualHours?: number;
+  startDate?: string;
   dueDate?: string;
-  labels: string[];
+  completedAt?: string;
+  blocked: boolean;
+  position: number;
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
-  assignee?: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  reporter?: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
 }
 
-export interface Comment {
+export interface CreateTaskRequest {
+  sprintId?: string;
+  parentTaskId?: string;
+  title: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  type?: string;
+  assigneeIds?: string[];
+  labelIds?: string[];
+  estimatedHours?: number;
+  storyPoints?: number;
+  startDate?: string;
+  dueDate?: string;
+}
+
+export interface UpdateTaskRequest {
+  title?: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  type?: string;
+  sprintId?: string;
+  assigneeIds?: string[];
+  labelIds?: string[];
+  estimatedHours?: number;
+  actualHours?: number;
+  storyPoints?: number;
+  startDate?: string;
+  dueDate?: string;
+}
+
+export interface CommentResponse {
   id: string;
   taskId: string;
   userId: string;
   content: string;
+  mentionedUsers: string[];
   createdAt: string;
   updatedAt: string;
-  user: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
 }
 
-export interface TaskFilters {
-  status?: TaskStatus[];
-  priority?: TaskPriority[];
-  type?: TaskType[];
-  assigneeId?: string[];
-  sprintId?: string;
-  labels?: string[];
-  search?: string;
+export interface CreateCommentRequest {
+  content: string;
+  mentionedUsers?: string[];
 }
 
-export interface CreateTaskData {
-  title: string;
+export interface UpdateCommentRequest {
+  content: string;
+}
+
+export interface AttachmentResponse {
+  id: string;
+  taskId: string;
+  userId: string;
+  filename: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+}
+
+export interface CreateAttachmentRequest {
+  filename: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+}
+
+export interface TimeEntryResponse {
+  id: string;
+  taskId: string;
+  userId: string;
+  startTime: string;
+  endTime?: string;
+  durationSeconds?: number;
   description?: string;
-  status?: TaskStatus;
-  priority?: TaskPriority;
-  type?: TaskType;
-  assigneeId?: string;
-  sprintId?: string;
-  parentId?: string;
-  storyPoints?: number;
-  dueDate?: string;
-  labels?: string[];
+  isManual: boolean;
+  createdAt: string;
 }
+
+export interface LogTimeRequest {
+  durationSeconds: number;
+  description?: string;
+}
+
+export interface DependencyResponse {
+  id: string;
+  taskId: string;
+  dependsOnTaskId: string;
+  dependencyType: string;
+  createdAt: string;
+}
+
+export interface CreateDependencyRequest {
+  dependsOnTaskId: string;
+  dependencyType: string;
+}
+
+export interface ChecklistItemResponse {
+  id: string;
+  checklistId: string;
+  content: string;
+  completed: boolean;
+  position: number;
+  assigneeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChecklistResponse {
+  id: string;
+  taskId: string;
+  title: string;
+  items: ChecklistItemResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateChecklistRequest {
+  title: string;
+}
+
+export interface CreateChecklistItemRequest {
+  content: string;
+  assigneeId?: string;
+}
+
+export interface ActivityResponse {
+  id: string;
+  taskId: string;
+  userId?: string;
+  action: string;
+  fieldName?: string;
+  oldValue?: string;
+  newValue?: string;
+  createdAt: string;
+}
+
+export interface TaskFiltersRequest {
+  projectId: string;
+  sprintId?: string;
+  assigneeIds?: string[];
+  statuses?: string[];
+  priorities?: string[];
+  labelIds?: string[];
+  searchQuery?: string;
+  dueBefore?: string;
+  dueAfter?: string;
+  overdue?: boolean;
+  blocked?: boolean;
+  limit: number;
+  offset: number;
+}
+
+export interface TaskFilterResponse {
+  tasks: TaskResponse[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface BulkUpdateStatusRequest {
+  taskIds: string[];
+  status: string;
+}
+
+export interface BulkAssignRequest {
+  taskIds: string[];
+  assigneeId: string;
+}
+
+export interface BulkMoveToSprintRequest {
+  taskIds: string[];
+  sprintId: string;
+}
+
+// ============================================
+// API Functions
+// ============================================
+
+const taskApi = {
+  // Task CRUD
+  listByProject: (projectId: string) =>
+    apiClient.get<TaskResponse[]>(`/projects/${projectId}/tasks`),
+
+  listMyTasks: () => apiClient.get<TaskResponse[]>('/tasks/my'),
+
+  filterTasks: (filters: TaskFiltersRequest) =>
+    apiClient.post<TaskFilterResponse>('/tasks/filter', filters),
+
+  getById: (id: string) => apiClient.get<TaskResponse>(`/tasks/${id}`),
+
+  create: (projectId: string, data: CreateTaskRequest) =>
+    apiClient.post<TaskResponse>(`/projects/${projectId}/tasks`, data),
+
+  update: (id: string, data: UpdateTaskRequest) =>
+    apiClient.put<TaskResponse>(`/tasks/${id}`, data),
+
+  delete: (id: string) => apiClient.delete(`/tasks/${id}`),
+
+  // Task operations
+  updateStatus: (id: string, status: string) =>
+    apiClient.patch<{ message: string }>(`/tasks/${id}/status`, { status }),
+
+  updatePriority: (id: string, priority: string) =>
+    apiClient.patch<{ message: string }>(`/tasks/${id}/priority`, { priority }),
+
+  assignTask: (id: string, assigneeId: string) =>
+    apiClient.post<{ message: string }>(`/tasks/${id}/assign`, { assigneeId }),
+
+  unassignTask: (id: string, assigneeId: string) =>
+    apiClient.delete(`/tasks/${id}/assign/${assigneeId}`),
+
+  addWatcher: (id: string, watcherId: string) =>
+    apiClient.post<{ message: string }>(`/tasks/${id}/watchers`, { watcherId }),
+
+  removeWatcher: (id: string, watcherId: string) =>
+    apiClient.delete(`/tasks/${id}/watchers/${watcherId}`),
+
+  markComplete: (id: string) => apiClient.post<{ message: string }>(`/tasks/${id}/complete`),
+
+  moveToSprint: (id: string, sprintId: string) =>
+    apiClient.post<{ message: string }>(`/tasks/${id}/move-sprint`, { sprintId }),
+
+  convertToSubtask: (id: string, parentTaskId: string) =>
+    apiClient.post<{ message: string }>(`/tasks/${id}/convert-subtask`, { parentTaskId }),
+
+  // Subtasks
+  listSubtasks: (taskId: string) => apiClient.get<TaskResponse[]>(`/tasks/${taskId}/subtasks`),
+
+  // Comments
+  listComments: (taskId: string) => apiClient.get<CommentResponse[]>(`/tasks/${taskId}/comments`),
+
+  addComment: (taskId: string, data: CreateCommentRequest) =>
+    apiClient.post<CommentResponse>(`/tasks/${taskId}/comments`, data),
+
+  updateComment: (commentId: string, data: UpdateCommentRequest) =>
+    apiClient.put<{ message: string }>(`/tasks/comments/${commentId}`, data),
+
+  deleteComment: (commentId: string) => apiClient.delete(`/tasks/comments/${commentId}`),
+
+  // Attachments
+  listAttachments: (taskId: string) =>
+    apiClient.get<AttachmentResponse[]>(`/tasks/${taskId}/attachments`),
+
+  addAttachment: (taskId: string, data: CreateAttachmentRequest) =>
+    apiClient.post<AttachmentResponse>(`/tasks/${taskId}/attachments`, data),
+
+  deleteAttachment: (attachmentId: string) =>
+    apiClient.delete(`/tasks/attachments/${attachmentId}`),
+
+  // Time tracking
+  startTimer: (taskId: string) => apiClient.post<TimeEntryResponse>(`/tasks/${taskId}/timer/start`),
+
+  stopTimer: () => apiClient.post<TimeEntryResponse>('/tasks/timer/stop'),
+
+  getActiveTimer: () => apiClient.get<TimeEntryResponse>('/tasks/timer/active'),
+
+  logTime: (taskId: string, data: LogTimeRequest) =>
+    apiClient.post<TimeEntryResponse>(`/tasks/${taskId}/time`, data),
+
+  getTimeEntries: (taskId: string) => apiClient.get<TimeEntryResponse[]>(`/tasks/${taskId}/time`),
+
+  getTotalTime: (taskId: string) =>
+    apiClient.get<{ taskId: string; totalSeconds: number; totalHours: number }>(
+      `/tasks/${taskId}/time/total`
+    ),
+
+  // Dependencies
+  listDependencies: (taskId: string) =>
+    apiClient.get<DependencyResponse[]>(`/tasks/${taskId}/dependencies`),
+
+  listBlockedBy: (taskId: string) =>
+    apiClient.get<DependencyResponse[]>(`/tasks/${taskId}/blocked-by`),
+
+  addDependency: (taskId: string, data: CreateDependencyRequest) =>
+    apiClient.post<{ message: string }>(`/tasks/${taskId}/dependencies`, data),
+
+  removeDependency: (taskId: string, dependsOnTaskId: string) =>
+    apiClient.delete(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`),
+
+  // Checklists
+  listChecklists: (taskId: string) =>
+    apiClient.get<ChecklistResponse[]>(`/tasks/${taskId}/checklists`),
+
+  createChecklist: (taskId: string, data: CreateChecklistRequest) =>
+    apiClient.post<ChecklistResponse>(`/tasks/${taskId}/checklists`, data),
+
+  addChecklistItem: (checklistId: string, data: CreateChecklistItemRequest) =>
+    apiClient.post<ChecklistItemResponse>(`/tasks/checklists/${checklistId}/items`, data),
+
+  toggleChecklistItem: (itemId: string) =>
+    apiClient.patch<{ message: string }>(`/tasks/checklists/items/${itemId}`),
+
+  deleteChecklistItem: (itemId: string) => apiClient.delete(`/tasks/checklists/items/${itemId}`),
+
+  // Activity
+  getActivity: (taskId: string, limit: number = 50) =>
+    apiClient.get<ActivityResponse[]>(`/tasks/${taskId}/activity?limit=${limit}`),
+
+  // Bulk operations
+  bulkUpdateStatus: (data: BulkUpdateStatusRequest) =>
+    apiClient.post<{ message: string }>('/tasks/bulk/status', data),
+
+  bulkAssign: (data: BulkAssignRequest) =>
+    apiClient.post<{ message: string }>('/tasks/bulk/assign', data),
+
+  bulkMoveToSprint: (data: BulkMoveToSprintRequest) =>
+    apiClient.post<{ message: string }>('/tasks/bulk/move-sprint', data),
+};
 
 // ============================================
 // Query Hooks
 // ============================================
 
-// Get tasks for a project
-export function useTasks(projectId: string, filters?: TaskFilters) {
+export const useTasksByProject = (projectId: string, options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: queryKeys.tasks.list(projectId, filters),
-    queryFn: () => {
-      const params = new URLSearchParams();
-      if (filters?.status?.length) params.append('status', filters.status.join(','));
-      if (filters?.priority?.length) params.append('priority', filters.priority.join(','));
-      if (filters?.type?.length) params.append('type', filters.type.join(','));
-      if (filters?.assigneeId?.length) params.append('assigneeId', filters.assigneeId.join(','));
-      if (filters?.sprintId) params.append('sprintId', filters.sprintId);
-      if (filters?.labels?.length) params.append('labels', filters.labels.join(','));
-      if (filters?.search) params.append('search', filters.search);
-
-      const queryString = params.toString();
-      return apiClient.get<Task[]>(
-        `/projects/${projectId}/tasks${queryString ? `?${queryString}` : ''}`
-      );
-    },
-    enabled: !!projectId,
+    queryKey: queryKeys.tasks.byProject(projectId),
+    queryFn: () => taskApi.listByProject(projectId),
+    enabled: options?.enabled ?? !!projectId,
   });
-}
+};
 
-// Get paginated tasks
-export function useTasksInfinite(projectId: string, filters?: TaskFilters) {
-  return useInfiniteQuery({
-    queryKey: [...queryKeys.tasks.list(projectId, filters), 'infinite'],
-    queryFn: ({ pageParam = 0 }) => {
-      const params = new URLSearchParams();
-      params.append('offset', String(pageParam));
-      params.append('limit', '50');
-      if (filters?.status?.length) params.append('status', filters.status.join(','));
-      if (filters?.search) params.append('search', filters.search);
-
-      return apiClient.get<{ tasks: Task[]; total: number; hasMore: boolean }>(
-        `/projects/${projectId}/tasks?${params.toString()}`
-      );
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => (lastPage.hasMore ? allPages.length * 50 : undefined),
-    enabled: !!projectId,
-  });
-}
-
-// Get backlog tasks (tasks without sprint)
-export function useBacklogTasks(projectId: string) {
+export const useMyTasks = (options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: queryKeys.tasks.backlog(projectId),
-    queryFn: () => apiClient.get<Task[]>(`/projects/${projectId}/tasks?sprintId=null`),
-    enabled: !!projectId,
+    queryKey: queryKeys.tasks.myTasks(),
+    queryFn: taskApi.listMyTasks,
+    enabled: options?.enabled ?? true,
   });
-}
+};
 
-// Get tasks by sprint
-export function useSprintTasks(sprintId: string) {
+export const useFilteredTasks = (filters: TaskFiltersRequest, options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: queryKeys.tasks.bySprint(sprintId),
-    queryFn: () => apiClient.get<Task[]>(`/sprints/${sprintId}/tasks`),
-    enabled: !!sprintId,
+    queryKey: queryKeys.tasks.filtered(filters as any),
+    queryFn: () => taskApi.filterTasks(filters),
+    enabled: options?.enabled ?? true,
   });
-}
+};
 
-// Get single task
-export function useTask(id: string, options?: { enabled?: boolean; refetchOnMount?: boolean }) {
+export const useTask = (id: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.tasks.detail(id),
-    queryFn: () => apiClient.get<Task>(`/tasks/${id}`),
-    enabled: options?.enabled !== false && !!id,
-    refetchOnMount: options?.refetchOnMount,
+    queryFn: () => taskApi.getById(id),
+    enabled: options?.enabled ?? !!id,
   });
-}
+};
 
-// Get task comments
-export function useTaskComments(taskId: string) {
+export const useSubtasks = (taskId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.subtasks(taskId),
+    queryFn: () => taskApi.listSubtasks(taskId),
+    enabled: options?.enabled ?? !!taskId,
+  });
+};
+
+export const useTaskComments = (taskId: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.tasks.comments(taskId),
-    queryFn: () => apiClient.get<Comment[]>(`/tasks/${taskId}/comments`),
-    enabled: !!taskId,
+    queryFn: () => taskApi.listComments(taskId),
+    enabled: options?.enabled ?? !!taskId,
   });
-}
+};
+
+export const useTaskAttachments = (taskId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.attachments(taskId),
+    queryFn: () => taskApi.listAttachments(taskId),
+    enabled: options?.enabled ?? !!taskId,
+  });
+};
+
+export const useTaskDependencies = (taskId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.dependencies(taskId),
+    queryFn: () => taskApi.listDependencies(taskId),
+    enabled: options?.enabled ?? !!taskId,
+  });
+};
+
+export const useTaskBlockedBy = (taskId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.blockedBy(taskId),
+    queryFn: () => taskApi.listBlockedBy(taskId),
+    enabled: options?.enabled ?? !!taskId,
+  });
+};
+
+export const useTaskChecklists = (taskId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.checklists(taskId),
+    queryFn: () => taskApi.listChecklists(taskId),
+    enabled: options?.enabled ?? !!taskId,
+  });
+};
+
+export const useTaskActivity = (
+  taskId: string,
+  limit: number = 50,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.activity(taskId),
+    queryFn: () => taskApi.getActivity(taskId, limit),
+    enabled: options?.enabled ?? !!taskId,
+  });
+};
+
+export const useTaskTimeEntries = (taskId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.timeEntries(taskId),
+    queryFn: () => taskApi.getTimeEntries(taskId),
+    enabled: options?.enabled ?? !!taskId,
+  });
+};
+
+export const useTaskTotalTime = (taskId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.totalTime(taskId),
+    queryFn: () => taskApi.getTotalTime(taskId),
+    enabled: options?.enabled ?? !!taskId,
+  });
+};
+
+export const useActiveTimer = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.tasks.activeTimer(),
+    queryFn: taskApi.getActiveTimer,
+    enabled: options?.enabled ?? true,
+    retry: false,
+  });
+};
 
 // ============================================
-// Mutation Hooks with Toast
+// Mutation Hooks
 // ============================================
 
-// Create task
-export function useCreateTask() {
+export const useCreateTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: string; data: CreateTaskData }) =>
-      apiClient.post<Task>(`/projects/${projectId}/tasks`, data),
-    onMutate: () => {
-      return { toastId: toast.loading('Creating task...') };
-    },
-    onSuccess: (task, _, context) => {
-      toast.dismiss(context?.toastId);
-      toast.success(`Task ${task.key} created successfully`);
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
-      if (task.sprintId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.tasks.bySprint(task.sprintId) });
-      }
-    },
-    onError: (error: Error, _, context) => {
-      toast.dismiss(context?.toastId);
-      toast.error(error.message || 'Failed to create task');
-    },
-  });
-}
-
-// Update task
-export function useUpdateTask() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTaskData> }) => {
-      // Convert status to uppercase if present (for backend compatibility)
-      const normalizedData = { ...data };
-      if (normalizedData.status) {
-        normalizedData.status = normalizedData.status.toUpperCase() as TaskStatus;
-      }
-      return apiClient.put<Task>(`/tasks/${id}`, normalizedData);
-    },
-    onSuccess: (task) => {
-      toast.success('Task updated');
-      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update task');
-    },
-  });
-}
-
-// Update task status (optimistic update for drag & drop)
-export function useUpdateTaskStatus() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => {
-      // Convert to uppercase for backend
-      const backendStatus = status.toUpperCase();
-      return apiClient.patch<Task>(`/tasks/${id}`, { status: backendStatus });
-    },
-    onMutate: async ({ id, status }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
-
-      // Snapshot previous value
-      const previousTask = queryClient.getQueryData<Task>(queryKeys.tasks.detail(id));
-
-      // Optimistically update
-      if (previousTask) {
-        queryClient.setQueryData(queryKeys.tasks.detail(id), {
-          ...previousTask,
-          status,
+    mutationFn: ({ projectId, data }: { projectId: string; data: CreateTaskRequest }) =>
+      taskApi.create(projectId, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.byProject(data.projectId) });
+      if (data.sprintId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.tasks.filtered({
+            projectId: data.projectId,
+            sprintId: data.sprintId,
+            limit: 0,
+            offset: 0,
+          }),
         });
       }
-
-      return { previousTask };
-    },
-    onSuccess: (task) => {
-      // Show subtle success for status changes (no toast for drag & drop to avoid spam)
-      // Only show if you want: toast.success(`Moved to ${task.status}`);
-    },
-    onError: (error: Error, variables, context) => {
-      // Rollback on error
-      if (context?.previousTask) {
-        queryClient.setQueryData(queryKeys.tasks.detail(variables.id), context.previousTask);
-      }
-      toast.error('Failed to update task status');
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
-    },
-  });
-}
-
-// Delete task
-export function useDeleteTask() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/tasks/${id}`),
-    onMutate: () => {
-      return { toastId: toast.loading('Deleting task...') };
-    },
-    onSuccess: (_, __, context) => {
-      toast.dismiss(context?.toastId);
-      toast.success('Task deleted');
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
-    onError: (error: Error, _, context) => {
-      toast.dismiss(context?.toastId);
-      toast.error(error.message || 'Failed to delete task');
-    },
   });
-}
+};
 
-// Add comment
-export function useAddComment() {
+export const useUpdateTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, content }: { taskId: string; content: string }) =>
-      apiClient.post<Comment>(`/tasks/${taskId}/comments`, { content }),
+    mutationFn: ({ id, data }: { id: string; data: UpdateTaskRequest }) => taskApi.update(id, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(data.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.byProject(data.projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useDeleteTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.delete,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.removeQueries({ queryKey: queryKeys.tasks.detail(id) });
+    },
+  });
+};
+
+export const useUpdateTaskStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      taskApi.updateStatus(id, status),
     onSuccess: (_, variables) => {
-      toast.success('Comment added');
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.tasks.comments(variables.taskId),
-      });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to add comment');
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
-}
+};
 
-// Delete comment
-export function useDeleteComment() {
+export const useUpdateTaskPriority = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, commentId }: { taskId: string; commentId: string }) =>
-      apiClient.delete(`/comments/${commentId}`),
+    mutationFn: ({ id, priority }: { id: string; priority: string }) =>
+      taskApi.updatePriority(id, priority),
     onSuccess: (_, variables) => {
-      toast.success('Comment deleted');
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.tasks.comments(variables.taskId),
-      });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to delete comment');
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
-}
+};
 
-// Bulk update tasks (for reordering)
-export function useBulkUpdateTasks() {
+export const useAssignTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      tasks: Array<{ id: string; order?: number; status?: TaskStatus; sprintId?: string | null }>
-    ) => apiClient.put('/tasks/bulk', { tasks }),
+    mutationFn: ({ id, assigneeId }: { id: string; assigneeId: string }) =>
+      taskApi.assignTask(id, assigneeId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useUnassignTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, assigneeId }: { id: string; assigneeId: string }) =>
+      taskApi.unassignTask(id, assigneeId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useAddWatcher = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, watcherId }: { id: string; watcherId: string }) =>
+      taskApi.addWatcher(id, watcherId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+    },
+  });
+};
+
+export const useRemoveWatcher = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, watcherId }: { id: string; watcherId: string }) =>
+      taskApi.removeWatcher(id, watcherId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+    },
+  });
+};
+
+export const useMarkTaskComplete = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.markComplete,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useMoveTaskToSprint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, sprintId }: { id: string; sprintId: string }) =>
+      taskApi.moveToSprint(id, sprintId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useConvertToSubtask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, parentTaskId }: { id: string; parentTaskId: string }) =>
+      taskApi.convertToSubtask(id, parentTaskId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.subtasks(variables.parentTaskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useAddComment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, data }: { taskId: string; data: CreateCommentRequest }) =>
+      taskApi.addComment(taskId, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.comments(data.taskId) });
+    },
+  });
+};
+
+export const useUpdateComment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ commentId, data }: { commentId: string; data: UpdateCommentRequest }) =>
+      taskApi.updateComment(commentId, data),
     onSuccess: () => {
-      // No toast for bulk updates (usually drag & drop reordering)
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update tasks');
-    },
   });
-}
+};
 
-// Move task to sprint
-export function useMoveTaskToSprint() {
+export const useDeleteComment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, sprintId }: { taskId: string; sprintId: string | null }) =>
-      apiClient.patch<Task>(`/tasks/${taskId}`, { sprintId }),
-    onSuccess: (task) => {
-      const message = task.sprintId ? `Task moved to sprint` : 'Task moved to backlog';
-      toast.success(message);
-
-      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
+    mutationFn: taskApi.deleteComment,
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.all });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to move task');
     },
   });
-}
+};
 
-// ============================================
-// Additional Hooks with Toast
-// ============================================
-
-// Assign task to user
-export function useAssignTask() {
+export const useAddAttachment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, assigneeId }: { taskId: string; assigneeId: string | null }) =>
-      apiClient.patch<Task>(`/tasks/${taskId}`, { assigneeId }),
-    onSuccess: (task) => {
-      const message = task.assigneeId
-        ? `Task assigned to ${task.assignee?.name || 'user'}`
-        : 'Task unassigned';
-      toast.success(message);
-
-      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to assign task');
+    mutationFn: ({ taskId, data }: { taskId: string; data: CreateAttachmentRequest }) =>
+      taskApi.addAttachment(taskId, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.attachments(data.taskId) });
     },
   });
-}
+};
 
-// Update task priority
-export function useUpdateTaskPriority() {
+export const useDeleteAttachment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, priority }: { taskId: string; priority: TaskPriority }) =>
-      apiClient.patch<Task>(`/tasks/${taskId}`, { priority: priority.toUpperCase() }),
-    onSuccess: (task) => {
-      toast.success(`Priority set to ${task.priority.toLowerCase()}`);
-      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update priority');
+    mutationFn: taskApi.deleteAttachment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
-}
+};
 
-// Duplicate task
-export function useDuplicateTask() {
+export const useStartTimer = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ task, projectId }: { task: Task; projectId: string }) => {
-      const duplicateData: CreateTaskData = {
-        title: `${task.title} (copy)`,
-        description: task.description,
-        status: 'backlog' as TaskStatus,
-        priority: task.priority,
-        type: task.type,
-        sprintId: task.sprintId,
-        storyPoints: task.storyPoints,
-        labels: task.labels,
-      };
-      return apiClient.post<Task>(`/projects/${projectId}/tasks`, duplicateData);
-    },
-    onMutate: () => {
-      return { toastId: toast.loading('Duplicating task...') };
-    },
-    onSuccess: (newTask, _, context) => {
-      toast.dismiss(context?.toastId);
-      toast.success(`Task duplicated as ${newTask.key}`);
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
-    },
-    onError: (error: Error, _, context) => {
-      toast.dismiss(context?.toastId);
-      toast.error(error.message || 'Failed to duplicate task');
+    mutationFn: taskApi.startTimer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activeTimer() });
     },
   });
-}
+};
+
+export const useStopTimer = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.stopTimer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activeTimer() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useLogTime = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, data }: { taskId: string; data: LogTimeRequest }) =>
+      taskApi.logTime(taskId, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.timeEntries(data.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.totalTime(data.taskId) });
+    },
+  });
+};
+
+export const useAddDependency = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, data }: { taskId: string; data: CreateDependencyRequest }) =>
+      taskApi.addDependency(taskId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.dependencies(variables.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.taskId) });
+    },
+  });
+};
+
+export const useRemoveDependency = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, dependsOnTaskId }: { taskId: string; dependsOnTaskId: string }) =>
+      taskApi.removeDependency(taskId, dependsOnTaskId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.dependencies(variables.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.taskId) });
+    },
+  });
+};
+
+export const useCreateChecklist = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, data }: { taskId: string; data: CreateChecklistRequest }) =>
+      taskApi.createChecklist(taskId, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.checklists(data.taskId) });
+    },
+  });
+};
+
+export const useAddChecklistItem = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      checklistId,
+      data,
+    }: {
+      checklistId: string;
+      data: CreateChecklistItemRequest;
+    }) => taskApi.addChecklistItem(checklistId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useToggleChecklistItem = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.toggleChecklistItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useDeleteChecklistItem = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.deleteChecklistItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useBulkUpdateStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.bulkUpdateStatus,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useBulkAssign = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.bulkAssign,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const useBulkMoveToSprint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.bulkMoveToSprint,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};

@@ -1,71 +1,99 @@
-import { useQuery } from '@tanstack/react-query';
+// src/hooks/useUsers.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import apiClient from '../lib/api';
 import { queryKeys } from '../lib/query-client';
-import apiClient from '../lib/api-client';
+
+// ============================================
+// Types
+// ============================================
+
+export type UserStatus = 'online' | 'offline' | 'away' | 'busy';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
-  role: 'admin' | 'member' | 'viewer'; // ← Required
-  status: 'online' | 'offline' | 'busy' | 'away'; // ← Required
+  status: UserStatus;
+  createdAt: string;
 }
 
-interface ProjectMemberResponse {
-  id?: string;
-  userId?: string; // ← API returns this
-  role?: string;
-  user?: {
-    // ← API returns nested user
-    id?: string;
-    name?: string;
-    email?: string;
-    avatar?: string;
-    status?: string;
-  };
-  // Fallback properties for backwards compatibility
+export interface UpdateUserRequest {
   name?: string;
-  email?: string;
   avatar?: string;
-  status?: string;
+  status?: UserStatus;
 }
 
-// Get users for a project
-export function useProjectUsers(projectId: string) {
-  return useQuery({
-    queryKey: queryKeys.users.byProject(projectId),
-    queryFn: () => apiClient.get<ProjectMemberResponse[]>(`/projects/${projectId}/members`), // ← Changed type
-    enabled: !!projectId,
-    select: (data): User[] =>
-      data.map((member) => ({
-        // ← Explicit return type
-        id: member.userId || member.user?.id || member.id || '',
-        name: member.user?.name || member.name || 'Unknown',
-        email: member.user?.email || member.email || '',
-        avatar: member.user?.avatar || member.avatar,
-        role: (member.role || 'member') as 'admin' | 'member' | 'viewer',
-        status: (member.user?.status || member.status || 'offline') as
-          | 'online'
-          | 'offline'
-          | 'busy'
-          | 'away',
-      })),
-  });
-}
+// ============================================
+// API Functions
+// ============================================
 
-// Get all users in workspace (for inviting)
-export function useWorkspaceUsers(workspaceId: string) {
-  return useQuery({
-    queryKey: queryKeys.users.byWorkspace(workspaceId),
-    queryFn: () => apiClient.get<User[]>(`/workspaces/${workspaceId}/members`),
-    enabled: !!workspaceId,
-  });
-}
+const userApi = {
+  getCurrentUser: () => apiClient.get<User>('/users/me'),
 
-// Get current user
-export function useCurrentUser() {
+  updateCurrentUser: (data: UpdateUserRequest) => apiClient.put<User>('/users/me', data),
+
+  searchUsers: (query: string) =>
+    apiClient.get<User[]>(`/users/search?q=${encodeURIComponent(query)}`),
+};
+
+// ============================================
+// Query Hooks
+// ============================================
+
+export const useCurrentUser = (options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: queryKeys.users.current,
-    queryFn: () => apiClient.get<User>('/users/me'),
+    queryKey: queryKeys.users.me(),
+    queryFn: userApi.getCurrentUser,
+    enabled: options?.enabled ?? true,
+    staleTime: 30000, // 30 seconds
   });
-}
+};
+
+export const useSearchUsers = (query: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.users.search(query),
+    queryFn: () => userApi.searchUsers(query),
+    enabled: options?.enabled ?? query.length >= 2,
+    staleTime: 60000, // 1 minute
+  });
+};
+
+// ============================================
+// Mutation Hooks
+// ============================================
+
+export const useUpdateCurrentUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userApi.updateCurrentUser,
+    onSuccess: (data) => {
+      // Update the current user cache
+      queryClient.setQueryData(queryKeys.users.me(), data);
+
+      // Invalidate search queries that might include this user
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    },
+  });
+};
+
+// ============================================
+// Status-specific hook (uses user update)
+// ============================================
+
+export const useUpdateStatus = () => {
+  const updateUser = useUpdateCurrentUser();
+
+  return {
+    mutate: (status: UserStatus) => {
+      updateUser.mutate({ status });
+    },
+    mutateAsync: async (status: UserStatus) => {
+      return updateUser.mutateAsync({ status });
+    },
+    isPending: updateUser.isPending,
+    isError: updateUser.isError,
+    error: updateUser.error,
+  };
+};

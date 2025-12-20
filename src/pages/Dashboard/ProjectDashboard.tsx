@@ -1,506 +1,686 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+// src/pages/Dashboard/Dashboard.tsx
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  ClipboardList,
-  Clock,
-  CheckCircle2,
   Users,
+  FolderKanban,
+  Activity,
   TrendingUp,
-  LayoutGrid,
-  ListTodo,
+  BarChart3,
   Calendar,
-  Settings,
+  Folder,
+  Layers,
+  Briefcase,
   ArrowRight,
-  Plus,
+  Target,
+  Award,
 } from 'lucide-react';
-import { useProject } from '../../context/ProjectContext';
-import { STATUS_COLUMNS } from '../../types/project';
+import { useMyMemberships, useEffectiveMembers } from '../../hooks/api/useMembers';
+import { useWorkspaces } from '../../hooks/api/useWorkspaces';
+import { useSpacesByWorkspace } from '../../hooks/api/useSpaces';
+import { useProjectsBySpace } from '../../hooks/api/useProjects';
+
 import PageMeta from '../../components/common/PageMeta';
-import TaskCard from '../../components/tasks/TaskCard';
-import TaskDetailModal from '../../components/tasks/TaskDetailModal';
-import CreateTaskModal from '../../components/tasks/CreateTaskModal';
-import { useAuth } from '../../components/UserProfile/AuthContext';
-import { useProjectUsers } from '../../hooks/useUser';
+import { useAutoStatus } from '../../hooks/api/useStatus';
+import { useCurrentUser } from '../../hooks/useUser';
+import { useMyFolders } from '../../hooks/api/useFolder';
 
-const ProjectDashboard: React.FC = () => {
-  const { tasks, currentProject, tasksLoading } = useProject();
-
-  const { user } = useAuth();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  // Fetch real users from project
-  const { data: projectUsers } = useProjectUsers(currentProject?.id || '');
-  const users = projectUsers || [];
-
-  // Get user's tasks (dynamic)
-  const myTasks = tasks.filter((t) => t.assignee?.id === user?.id);
-  const recentTasks = [...tasks]
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 5);
-
-  // Dynamic status counts
-  const statusCounts = STATUS_COLUMNS.reduce(
-    (acc, status) => {
-      acc[status.id] = tasks.filter((t) => t.status === status.id).length;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
-  // Get time of day greeting
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
+// Status Badge Component
+const StatusBadge: React.FC<{ status?: string }> = ({ status = 'offline' }) => {
+  const statusConfig = {
+    online: { color: 'bg-green-500', label: 'Online', ring: 'ring-green-200 dark:ring-green-900' },
+    away: { color: 'bg-yellow-500', label: 'Away', ring: 'ring-yellow-200 dark:ring-yellow-900' },
+    busy: { color: 'bg-red-500', label: 'Busy', ring: 'ring-red-200 dark:ring-red-900' },
+    offline: { color: 'bg-gray-400', label: 'Offline', ring: 'ring-gray-200 dark:ring-gray-700' },
   };
 
-  // Progress calculation (dynamic)
-  const completedTasks = tasks.filter((t) => t.status === 'done').length;
-  const progressPercentage =
-    tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.offline;
 
-  // Calculate trend (simplified - you could track this over time)
-  const lastWeekTasks = tasks.filter((t) => {
-    const taskDate = new Date(t.createdAt);
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    return taskDate >= weekAgo;
-  }).length;
-  const trend = lastWeekTasks > 0 ? `+${lastWeekTasks} this week` : 'No change';
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      <div className={`w-2.5 h-2.5 rounded-full ${config.color} ring-2 ${config.ring}`} />
+      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{config.label}</span>
+    </div>
+  );
+};
 
-  // Dynamic project board link
-  const boardLink = currentProject ? `/project/${currentProject.id}/board` : '/';
+// Stats Card Component
+interface StatsCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  trend?: string;
+  trendUp?: boolean;
+  onClick?: () => void;
+}
 
-  if (tasksLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
+const StatsCard: React.FC<StatsCardProps> = ({
+  title,
+  value,
+  icon: Icon,
+  trend,
+  trendUp,
+  onClick,
+}) => {
+  return (
+    <div
+      onClick={onClick}
+      className={`bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-brand-300 dark:hover:border-brand-700 transition-all ${onClick ? 'cursor-pointer' : ''}`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{title}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{value}</p>
+          {trend && (
+            <div
+              className={`flex items-center gap-1 text-sm font-medium ${trendUp ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}
+            >
+              {trendUp && <TrendingUp className="w-4 h-4" />}
+              <span>{trend}</span>
+            </div>
+          )}
+        </div>
+        <div className="w-14 h-14 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+          <Icon className="w-7 h-7 text-white" />
+        </div>
       </div>
+    </div>
+  );
+};
+
+// Team Member Card Component
+interface TeamMemberCardProps {
+  member: {
+    userId: string;
+    user?: {
+      name: string;
+      email: string;
+      avatar?: string;
+      status?: string;
+    };
+    role: string;
+    isInherited: boolean;
+  };
+  onViewProfile?: () => void;
+}
+
+const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, onViewProfile }) => {
+  const statusColors = {
+    online: 'bg-green-500',
+    away: 'bg-yellow-500',
+    busy: 'bg-red-500',
+    offline: 'bg-gray-400',
+  };
+
+  const status = (member.user?.status || 'offline') as keyof typeof statusColors;
+
+  return (
+    <div
+      onClick={onViewProfile}
+      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="relative flex-shrink-0">
+          {member.user?.avatar ? (
+            <img
+              src={member.user.avatar}
+              alt={member.user.name}
+              className="w-10 h-10 rounded-full ring-2 ring-white dark:ring-gray-800"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-sm font-bold text-white ring-2 ring-white dark:ring-gray-800">
+              {member.user?.name
+                ?.split(' ')
+                .map((n) => n[0])
+                .join('')
+                .toUpperCase() || '?'}
+            </div>
+          )}
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${statusColors[status]}`}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 dark:text-white truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+            {member.user?.name || 'Unknown User'}
+          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{member.role}</p>
+            {member.isInherited && (
+              <span className="text-xs text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded">
+                Inherited
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      <ArrowRight className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </div>
+  );
+};
+
+// Workspace Card Component
+interface WorkspaceCardProps {
+  workspace: {
+    id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+  };
+  spacesCount: number;
+  projectsCount: number;
+  onClick?: () => void;
+}
+
+const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
+  workspace,
+  spacesCount,
+  projectsCount,
+  onClick,
+}) => {
+  return (
+    <div
+      onClick={onClick}
+      className="p-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-brand-300 dark:hover:border-brand-700 transition-all cursor-pointer group"
+    >
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+          {workspace.icon ? (
+            <span className="text-2xl">{workspace.icon}</span>
+          ) : (
+            <Briefcase className="w-6 h-6 text-white" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-1 truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+            {workspace.name}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">
+            {workspace.description || 'No description'}
+          </p>
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+              <Layers className="w-3.5 h-3.5" />
+              <span className="font-medium">{spacesCount}</span>
+              <span>space{spacesCount !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+              <FolderKanban className="w-3.5 h-3.5" />
+              <span className="font-medium">{projectsCount}</span>
+              <span>project{projectsCount !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Project Card Component
+interface ProjectCardProps {
+  project: {
+    id: string;
+    name: string;
+    key: string;
+    description?: string;
+  };
+  onClick?: () => void;
+}
+
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
+  return (
+    <div
+      onClick={onClick}
+      className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+          <span className="text-xs font-bold text-white">{project.key}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-medium text-gray-900 dark:text-white truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+            {project.name}
+          </h4>
+        </div>
+      </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+        {project.description || 'No description'}
+      </p>
+    </div>
+  );
+};
+
+const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+
+  // Auto-manage user status
+  useAutoStatus();
+
+  // Fetch current user
+  const { data: currentUser, isLoading: userLoading } = useCurrentUser();
+
+  // Fetch user memberships
+  const { data: memberships, isLoading: membershipsLoading } = useMyMemberships();
+
+  // Fetch workspaces
+  const { data: workspaces, isLoading: workspacesLoading } = useWorkspaces();
+
+  // Fetch spaces for the first workspace
+  const firstWorkspaceId = workspaces?.[0]?.id;
+  const { data: spaces } = useSpacesByWorkspace(firstWorkspaceId || '', {
+    enabled: !!firstWorkspaceId,
+  });
+
+  // Fetch folders
+  const { data: folders } = useMyFolders();
+
+  // Fetch projects for the first space
+  const firstSpaceId = spaces?.[0]?.id;
+  const { data: projects, isLoading: projectsLoading } = useProjectsBySpace(firstSpaceId || '', {
+    enabled: !!firstSpaceId,
+  });
+
+  // Fetch team members for first project
+  const firstProjectId = projects?.[0]?.id;
+  const { data: projectMembers, isLoading: membersLoading } = useEffectiveMembers(
+    'project',
+    firstProjectId || '',
+    { enabled: !!firstProjectId }
+  );
+
+  // Calculate comprehensive stats
+  const stats = useMemo(() => {
+    const totalSpaces = spaces?.length || 0;
+    const totalProjects = projects?.length || 0;
+    const onlineMembers = projectMembers?.filter((m) => m.user?.status === 'online').length || 0;
+    const totalMembers = projectMembers?.length || 0;
+
+    return {
+      workspaces: workspaces?.length || 0,
+      spaces: totalSpaces,
+      folders: folders?.length || 0,
+      projects: totalProjects,
+      memberships: memberships?.length || 0,
+      onlineMembers,
+      totalMembers,
+    };
+  }, [workspaces, spaces, folders, projects, memberships, projectMembers]);
+
+  // Calculate status distribution
+  const statusDistribution = useMemo(() => {
+    if (!projectMembers) return { online: 0, away: 0, busy: 0, offline: 0 };
+
+    return projectMembers.reduce(
+      (acc, member) => {
+        const status = member.user?.status || 'offline';
+        acc[status as keyof typeof acc] = (acc[status as keyof typeof acc] || 0) + 1;
+        return acc;
+      },
+      { online: 0, away: 0, busy: 0, offline: 0 }
     );
-  }
+  }, [projectMembers]);
+
+  const isLoading = userLoading || workspacesLoading || membershipsLoading;
 
   return (
     <>
-      <PageMeta
-        title={`Dashboard - ${currentProject?.name || 'ORA SCRUM'}`}
-        description="Project management dashboard"
-      />
+      <PageMeta title="Dashboard | ORA SCRUM" description="Your project management dashboard" />
 
-      <div className="space-y-6">
-        {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-brand-500 to-brand-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
-                {getGreeting()}, {user?.name?.split(' ')[0] || 'User'}!
-                <span className="text-2xl">👋</span>
-              </h1>
-              <p className="text-brand-100">
-                {currentProject
-                  ? `Working on ${currentProject.name}`
-                  : "Here's what's happening with your projects today"}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                to={boardLink}
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Welcome back, {currentUser?.name || 'User'}! 👋
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Here's an overview of your projects and team activity
+            </p>
+          </div>
+          <StatusBadge status={currentUser?.status} />
+        </div>
+
+        {/* Stats Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 animate-pulse"
               >
-                <LayoutGrid className="w-4 h-4" />
-                View Board
-              </Link>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4" />
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatsCard
+              title="Workspaces"
+              value={stats.workspaces}
+              icon={Briefcase}
+              trend="Your workspaces"
+              onClick={() => navigate('/workspaces')}
+            />
+            <StatsCard
+              title="Active Projects"
+              value={stats.projects}
+              icon={FolderKanban}
+              trend="In progress"
+              trendUp={stats.projects > 0}
+              onClick={() => navigate('/projects')}
+            />
+            <StatsCard
+              title="Team Members"
+              value={stats.totalMembers}
+              icon={Users}
+              trend={`${stats.onlineMembers} online now`}
+              trendUp={stats.onlineMembers > 0}
+              onClick={() => navigate('/team')}
+            />
+            <StatsCard
+              title="Your Memberships"
+              value={stats.memberships}
+              icon={Award}
+              trend="Across all entities"
+            />
+          </div>
+        )}
+
+        {/* Team Status Overview */}
+        {stats.totalMembers > 0 && (
+          <div className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Activity className="w-6 h-6" />
+                <h3 className="text-lg font-semibold">Team Status</h3>
+              </div>
               <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="px-4 py-2 bg-white text-brand-600 hover:bg-brand-50 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                onClick={() => navigate('/team')}
+                className="text-sm font-medium text-white/90 hover:text-white flex items-center gap-1 hover:gap-2 transition-all"
               >
-                <Plus className="w-4 h-4" />
-                Create Task
+                View All <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Total Tasks */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <ClipboardList className="w-5 h-5 text-blue-500" />
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-green-400" />
+                  <span className="text-sm text-white/80">Online</span>
+                </div>
+                <p className="text-2xl font-bold">{statusDistribution.online}</p>
               </div>
-              <span className="text-xs text-gray-500 font-medium">{trend}</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{tasks.length}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
-          </div>
-
-          {/* In Progress */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-yellow-500" />
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                  <span className="text-sm text-white/80">Away</span>
+                </div>
+                <p className="text-2xl font-bold">{statusDistribution.away}</p>
               </div>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {statusCounts['in_progress'] || 0}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">In Progress</p>
-          </div>
-
-          {/* Completed */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                  <span className="text-sm text-white/80">Busy</span>
+                </div>
+                <p className="text-2xl font-bold">{statusDistribution.busy}</p>
               </div>
-              {progressPercentage > 0 && (
-                <span className="text-xs text-green-500 font-medium flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  {progressPercentage}%
-                </span>
-              )}
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {statusCounts['done'] || 0}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
-          </div>
-
-          {/* Team Members */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <Users className="w-5 h-5 text-purple-500" />
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-gray-400" />
+                  <span className="text-sm text-white/80">Offline</span>
+                </div>
+                <p className="text-2xl font-bold">{statusDistribution.offline}</p>
               </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{users.length}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Team Members</p>
           </div>
-        </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - My Tasks & Activity */}
+          {/* Workspaces & Projects - Takes 2 columns */}
           <div className="lg:col-span-2 space-y-6">
-            {/* My Tasks */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-brand-500" />
-                  My Tasks
-                  {myTasks.length > 0 && (
-                    <span className="px-2 py-0.5 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 text-xs font-medium rounded-full">
-                      {myTasks.length}
-                    </span>
-                  )}
-                </h2>
-                <Link
-                  to="/my-tasks"
-                  className="text-sm text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1"
-                >
-                  View all
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+            {/* Workspaces */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Your Workspaces
+                  </h2>
+                </div>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {stats.workspaces} total
+                </span>
               </div>
-              <div className="p-5 space-y-3">
-                {myTasks.slice(0, 4).map((task) => (
-                  <TaskCard key={task.id} task={task} compact />
-                ))}
-                {myTasks.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle2 className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <p className="text-gray-500 dark:text-gray-400 mb-2">
-                      No tasks assigned to you
-                    </p>
-                    <button
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className="text-sm text-brand-500 hover:text-brand-600 font-medium"
-                    >
-                      Create your first task
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            {/* Recent Activity */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-brand-500" />
-                  Recent Activity
-                </h2>
-              </div>
-              <div className="p-5">
-                <div className="space-y-4">
-                  {recentTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-start gap-3 group hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded-lg transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                        {task.reporter?.avatar ? (
-                          <img
-                            src={task.reporter.avatar}
-                            alt={task.reporter.name}
-                            className="w-8 h-8 rounded-full"
-                          />
-                        ) : (
-                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                            {task.reporter?.name
-                              ?.split(' ')
-                              .map((n) => n[0])
-                              .join('') || '?'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          <span className="font-medium">{task.reporter?.name || 'Unknown'}</span>
-                          {' updated '}
-                          <span className="font-medium text-brand-500">{task.key}</span>
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 truncate">
-                          {task.title}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(task.updatedAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
+              {workspacesLoading ? (
+                <div className="space-y-3">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-24 bg-gray-100 dark:bg-gray-700 rounded-xl" />
                     </div>
                   ))}
-                  {recentTasks.length === 0 && (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Clock className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <p className="text-gray-500 dark:text-gray-400">No recent activity</p>
-                    </div>
-                  )}
                 </div>
+              ) : workspaces && workspaces.length > 0 ? (
+                <div className="space-y-3">
+                  {workspaces.slice(0, 3).map((workspace) => (
+                    <WorkspaceCard
+                      key={workspace.id}
+                      workspace={workspace}
+                      spacesCount={workspace.id === firstWorkspaceId ? spaces?.length || 0 : 0}
+                      projectsCount={workspace.id === firstWorkspaceId ? projects?.length || 0 : 0}
+                      onClick={() => navigate(`/workspace/${workspace.id}`)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Briefcase className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">No workspaces yet</p>
+                  <button className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    Create Workspace
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Recent Projects */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Active Projects
+                  </h2>
+                </div>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {stats.projects} total
+                </span>
               </div>
+
+              {projectsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-20 bg-gray-50 dark:bg-gray-700/50 rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              ) : projects && projects.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {projects.slice(0, 6).map((project) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      onClick={() => navigate(`/project/${project.id}`)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Target className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">No projects yet</p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Column - Progress & Team */}
+          {/* Sidebar - Takes 1 column */}
           <div className="space-y-6">
-            {/* Project Progress */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-              <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-brand-500" />
-                Project Progress
-              </h2>
-
-              {/* Progress Circle */}
-              <div className="relative w-32 h-32 mx-auto mb-6">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="12"
-                    className="text-gray-200 dark:text-gray-700"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="12"
-                    strokeLinecap="round"
-                    strokeDasharray={`${progressPercentage * 3.52} 352`}
-                    className="text-brand-500 transition-all duration-500"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {progressPercentage}%
-                  </span>
-                  <span className="text-xs text-gray-500">Complete</span>
-                </div>
-              </div>
-
-              {/* Status Breakdown */}
-              <div className="space-y-2">
-                {STATUS_COLUMNS.filter((s) => s.id !== 'cancelled').map((status) => {
-                  const count = statusCounts[status.id] || 0;
-                  const percentage =
-                    tasks.length > 0 ? Math.round((count / tasks.length) * 100) : 0;
-
-                  return (
-                    <div key={status.id} className="flex items-center justify-between group">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: status.color }}
-                        />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {status.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">{percentage}%</span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white min-w-[2ch] text-right">
-                          {count}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Team Members */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-brand-500" />
-                  Team
-                </h2>
-                {currentProject && (
-                  <Link
-                    to={`/project/${currentProject.id}/team`}
-                    className="text-sm text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1"
-                  >
-                    View all
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                )}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Team</h2>
+                </div>
+                <button
+                  onClick={() => navigate('/team')}
+                  className="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 flex items-center gap-1"
+                >
+                  View All <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="space-y-3">
-                {users.slice(0, 5).map((member) => {
-                  const memberTasks = tasks.filter((t) => t.assignee?.id === member.id);
-                  const completedCount = memberTasks.filter((t) => t.status === 'done').length;
 
-                  return (
-                    <div
-                      key={member.id}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              {membersLoading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-14 bg-gray-50 dark:bg-gray-700/50 rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              ) : !firstProjectId ? (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Create a project to see team members
+                  </p>
+                </div>
+              ) : !projectMembers || projectMembers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No team members yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar">
+                  {projectMembers.slice(0, 8).map((member) => (
+                    <TeamMemberCard
+                      key={member.userId}
+                      member={member}
+                      onViewProfile={() => navigate('/team')}
+                    />
+                  ))}
+                  {projectMembers.length > 8 && (
+                    <button
+                      onClick={() => navigate('/team')}
+                      className="w-full py-2 text-sm font-medium text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
                     >
-                      <div className="relative">
-                        {member.avatar ? (
-                          <img
-                            src={member.avatar}
-                            alt={member.name}
-                            className="w-9 h-9 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-xs font-medium text-brand-600 dark:text-brand-400">
-                            {member.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')}
-                          </div>
-                        )}
-                        <span
-                          className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800"
-                          style={{
-                            backgroundColor:
-                              member.status === 'online'
-                                ? '#10B981'
-                                : member.status === 'busy'
-                                  ? '#F59E0B'
-                                  : member.status === 'away'
-                                    ? '#EAB308'
-                                    : '#9CA3AF',
-                          }}
-                          title={member.status}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {member.name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                          {member.role}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-medium text-gray-900 dark:text-white">
-                          {memberTasks.length}
-                        </p>
-                        <p className="text-xs text-gray-400">{completedCount} done</p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {users.length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <Users className="w-6 h-6 text-gray-400" />
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No team members</p>
-                  </div>
-                )}
-              </div>
+                      View {projectMembers.length - 8} more members
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Quick Links */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-              <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Link
-                  to={boardLink}
-                  className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 border border-transparent transition-all group"
-                >
-                  <LayoutGrid className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-brand-500" />
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">
-                    Board
+            {/* Quick Stats */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">Quick Stats</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600 dark:text-gray-400">Folders</span>
+                  </div>
+                  <span className="font-bold text-xl text-gray-900 dark:text-white">
+                    {stats.folders}
                   </span>
-                </Link>
-
-                <Link
-                  to="/backlog"
-                  className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 border border-transparent transition-all group"
-                >
-                  <ListTodo className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-brand-500" />
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">
-                    Backlog
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600 dark:text-gray-400">Spaces</span>
+                  </div>
+                  <span className="font-bold text-xl text-gray-900 dark:text-white">
+                    {stats.spaces}
                   </span>
-                </Link>
-
-                <Link
-                  to="/calendar"
-                  className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 border border-transparent transition-all group"
-                >
-                  <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-brand-500" />
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">
-                    Calendar
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600 dark:text-gray-400">Memberships</span>
+                  </div>
+                  <span className="font-bold text-xl text-gray-900 dark:text-white">
+                    {stats.memberships}
                   </span>
-                </Link>
-
-                <Link
-                  to="/settings"
-                  className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 border border-transparent transition-all group"
-                >
-                  <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-brand-500" />
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">
-                    Settings
-                  </span>
-                </Link>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Modals */}
-      <TaskDetailModal />
-      <CreateTaskModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+        {/* Activity Timeline */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Recent Activity
+              </h2>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {membershipsLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-start gap-3 animate-pulse">
+                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : memberships && memberships.length > 0 ? (
+              memberships.slice(0, 6).map((membership, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900 dark:text-white">
+                      Joined as{' '}
+                      <span className="font-medium capitalize text-brand-600 dark:text-brand-400">
+                        {membership.role}
+                      </span>
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 capitalize">
+                      {membership.entityType} · Entity ID: {membership.entityId.substring(0, 8)}...
+                    </p>
+                  </div>
+                  <span className="text-xs text-gray-400 flex-shrink-0">Recent</span>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <Activity className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">No recent activity</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </>
   );
 };
 
-export default ProjectDashboard;
+export default Dashboard;

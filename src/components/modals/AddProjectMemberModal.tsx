@@ -1,8 +1,8 @@
 // src/components/modals/AddProjectMemberModal.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, UserPlus, Search, Check, AlertCircle } from 'lucide-react';
-import { useAddProjectMemberById, useAvailableMembers } from '../../hooks/api/useMembers';
 import toast from 'react-hot-toast';
+import { useAddMember, useDirectMembers, useEffectiveMembers } from '../../hooks/api/useMembers';
 
 interface AddProjectMemberModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ interface AddProjectMemberModalProps {
 }
 
 const ROLE_OPTIONS = [
-  { value: 'lead', label: 'Lead', description: 'Can manage project settings and members' },
+  { value: 'admin', label: 'Admin', description: 'Can manage project settings and members' },
   { value: 'member', label: 'Member', description: 'Can create and edit tasks' },
   { value: 'viewer', label: 'Viewer', description: 'Can only view tasks' },
 ];
@@ -29,38 +29,52 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   const [selectedMembers, setSelectedMembers] = useState<Map<string, string>>(new Map());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Debug: Log the IDs
-  useEffect(() => {
-    if (isOpen) {
-      console.log('AddProjectMemberModal opened:', { workspaceId, projectId, projectName });
-    }
-  }, [isOpen, workspaceId, projectId, projectName]);
+  // Fetch workspace members (all potential members)
+  const { data: workspaceMembers, isLoading: isLoadingWorkspace } = useEffectiveMembers(
+    'workspace',
+    workspaceId || '',
+    { enabled: !!workspaceId && isOpen }
+  );
 
-  const { availableMembers, isLoading, error, workspaceMembers, projectMembers } =
-    useAvailableMembers(workspaceId || undefined, projectId || undefined);
+  // Fetch current project members
+  const { data: projectMembers, isLoading: isLoadingProject } = useDirectMembers(
+    'project',
+    projectId || '',
+    { enabled: !!projectId && isOpen }
+  );
 
-  const addMember = useAddProjectMemberById(projectId);
+  // Add member mutation
+  const addMemberMutation = useAddMember();
 
-  // Debug: Log the members data
-  useEffect(() => {
-    console.log('Members data:', {
-      availableMembers: availableMembers.length,
-      workspaceMembers: workspaceMembers.length,
-      projectMembers: projectMembers.length,
-      isLoading,
-      error,
-    });
-  }, [availableMembers, workspaceMembers, projectMembers, isLoading, error]);
+  const isLoading = isLoadingWorkspace || isLoadingProject;
+
+  // Get available members (workspace members who are NOT in the project)
+  const availableMembers = useMemo(() => {
+    if (!workspaceMembers) return [];
+    if (!projectMembers) return workspaceMembers;
+
+    const projectMemberIds = new Set(projectMembers.map((m) => m.userId));
+    return workspaceMembers.filter((member) => !projectMemberIds.has(member.userId));
+  }, [workspaceMembers, projectMembers]);
 
   // Filter members by search query
-  const filteredMembers = availableMembers.filter((member) => {
-    if (!searchQuery) return true;
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery) return availableMembers;
     const query = searchQuery.toLowerCase();
-    return (
-      member.user.name.toLowerCase().includes(query) ||
-      member.user.email.toLowerCase().includes(query)
+    return availableMembers.filter(
+      (member) =>
+        member.user?.name.toLowerCase().includes(query) ||
+        member.user?.email.toLowerCase().includes(query)
     );
-  });
+  }, [availableMembers, searchQuery]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedMembers(new Map());
+      setSearchQuery('');
+    }
+  }, [isOpen]);
 
   const handleToggleMember = (userId: string) => {
     setSelectedMembers((prev) => {
@@ -84,20 +98,24 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
 
   const handleSubmit = async () => {
     if (selectedMembers.size === 0) return;
+    if (!projectId) return;
 
     setIsSubmitting(true);
-
     const toastId = toast.loading(`Adding ${selectedMembers.size} member(s)...`);
 
     try {
       const promises = Array.from(selectedMembers.entries()).map(([userId, role]) =>
-        addMember.mutateAsync({ userId, role })
+        addMemberMutation.mutateAsync({
+          entityType: 'project',
+          entityId: projectId,
+          data: { userId, role },
+        })
       );
 
       await Promise.all(promises);
 
       toast.dismiss(toastId);
-      toast.success(`Added ${selectedMembers.size} member(s) to project`);
+      toast.success(`Added ${selectedMembers.size} member(s) to ${projectName || 'project'}`);
 
       setSelectedMembers(new Map());
       setSearchQuery('');
@@ -105,16 +123,18 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
     } catch (error) {
       toast.dismiss(toastId);
       console.error('Failed to add members:', error);
-      toast.error('Failed to add members');
+      toast.error(error instanceof Error ? error.message : 'Failed to add members');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    setSelectedMembers(new Map());
-    setSearchQuery('');
-    onClose();
+    if (!isSubmitting) {
+      setSelectedMembers(new Map());
+      setSearchQuery('');
+      onClose();
+    }
   };
 
   if (!isOpen) return null;
@@ -123,89 +143,98 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   const hasMissingIds = !workspaceId || !projectId;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={handleClose} />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999]" onClick={handleClose} />
 
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-xl">
+      <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-brand-100 dark:bg-brand-900/30 rounded-lg">
+              <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center">
                 <UserPlus className="w-5 h-5 text-brand-600 dark:text-brand-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Add Members</h2>
-                {projectName && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">to {projectName}</p>
-                )}
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Add Project Members
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Add members to{' '}
+                  <span className="font-medium">{projectName || 'this project'}</span>
+                </p>
               </div>
             </div>
             <button
               onClick={handleClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              disabled={isSubmitting}
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors disabled:opacity-50"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Error state for missing IDs */}
-          {hasMissingIds ? (
-            <div className="p-8 text-center">
-              <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 mb-2">Unable to load members</p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">
-                Missing {!workspaceId ? 'workspace' : ''} {!workspaceId && !projectId ? 'and' : ''}{' '}
-                {!projectId ? 'project' : ''} ID
-              </p>
-              <p className="text-xs text-gray-400 mt-2">
-                workspaceId: {workspaceId || 'null'}, projectId: {projectId || 'null'}
-              </p>
+          {/* Error State */}
+          {hasMissingIds && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <div>
+                  <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                    Missing Required Information
+                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    Workspace ID or Project ID is missing. Please try again.
+                  </p>
+                </div>
+              </div>
             </div>
-          ) : (
+          )}
+
+          {!hasMissingIds && (
             <>
-              {/* Search */}
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              {/* Search Bar */}
+              <div className="px-6 pt-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search workspace members..."
+                    placeholder="Search by name or email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
-                {/* Debug info */}
-                <p className="text-xs text-gray-400 mt-2">
-                  Workspace members: {workspaceMembers.length} | Project members:{' '}
-                  {projectMembers.length} | Available: {availableMembers.length}
-                </p>
               </div>
 
-              {/* Members List */}
-              <div className="p-4 max-h-80 overflow-y-auto">
+              {/* Member List */}
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                    <p className="text-red-500">Failed to load members</p>
-                    <p className="text-xs text-gray-400 mt-1">{String(error)}</p>
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                      <p className="text-sm text-gray-500">Loading members...</p>
+                    </div>
                   </div>
                 ) : filteredMembers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {availableMembers.length === 0
-                        ? workspaceMembers.length === 0
-                          ? 'No workspace members found. Add members to the workspace first.'
-                          : 'All workspace members are already in this project'
-                        : 'No members found matching your search'}
-                    </p>
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <UserPlus className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                        {availableMembers.length === 0
+                          ? 'All workspace members are already in this project'
+                          : 'No members found'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {availableMembers.length === 0
+                          ? 'Invite more people to the workspace first'
+                          : 'Try a different search query'}
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -216,60 +245,56 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                       return (
                         <div
                           key={member.userId}
-                          className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
                             isSelected
                               ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
-                              : 'border-transparent bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                           }`}
-                          onClick={() => handleToggleMember(member.userId)}
                         >
-                          <div className="flex items-center gap-3">
-                            {/* Avatar */}
-                            <div className="relative">
-                              {member.user.avatar ? (
-                                <img
-                                  src={member.user.avatar}
-                                  alt={member.user.name}
-                                  className="w-10 h-10 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center">
-                                  <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
-                                    {member.user.name
-                                      .split(' ')
-                                      .map((n) => n[0])
-                                      .join('')
-                                      .toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                              {isSelected && (
-                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center">
-                                  <Check className="w-3 h-3 text-white" />
-                                </div>
-                              )}
-                            </div>
+                          <div className="flex items-center gap-3 flex-1">
+                            <button
+                              onClick={() => handleToggleMember(member.userId)}
+                              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                isSelected
+                                  ? 'bg-brand-500 border-brand-500'
+                                  : 'border-gray-300 dark:border-gray-600'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 text-white" />}
+                            </button>
 
-                            {/* Info */}
+                            {member.user?.avatar ? (
+                              <img
+                                src={member.user.avatar}
+                                alt={member.user.name}
+                                className="w-10 h-10 rounded-full"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-sm font-medium text-brand-600 dark:text-brand-400">
+                                {member.user?.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .slice(0, 2) || '?'}
+                              </div>
+                            )}
+
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {member.user.name}
+                                {member.user?.name || 'Unknown User'}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                {member.user.email}
+                              <p className="text-xs text-gray-500 truncate">
+                                {member.user?.email || ''}
                               </p>
                             </div>
+                          </div>
 
-                            {/* Role Selector */}
-                            {isSelected && (
+                          {isSelected && (
+                            <div className="ml-4">
                               <select
                                 value={selectedRole}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  handleRoleChange(member.userId, e.target.value);
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                onChange={(e) => handleRoleChange(member.userId, e.target.value)}
+                                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
                               >
                                 {ROLE_OPTIONS.map((role) => (
                                   <option key={role.value} value={role.value}>
@@ -277,8 +302,8 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                                   </option>
                                 ))}
                               </select>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -287,27 +312,45 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedMembers.size > 0
-                    ? `${selectedMembers.size} member(s) selected`
-                    : 'Select members to add'}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                <p className="text-sm text-gray-500">
+                  {selectedMembers.size > 0 ? (
+                    <>
+                      <span className="font-medium text-brand-600 dark:text-brand-400">
+                        {selectedMembers.size}
+                      </span>{' '}
+                      member{selectedMembers.size > 1 ? 's' : ''} selected
+                    </>
+                  ) : (
+                    'Select members to add to project'
+                  )}
                 </p>
+
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleClose}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    disabled={isSubmitting}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSubmit}
                     disabled={selectedMembers.size === 0 || isSubmitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    className="px-4 py-2 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2"
                   >
-                    {isSubmitting
-                      ? 'Adding...'
-                      : `Add ${selectedMembers.size || ''} Member${selectedMembers.size !== 1 ? 's' : ''}`}
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        Add {selectedMembers.size > 0 ? selectedMembers.size : ''} Member
+                        {selectedMembers.size > 1 ? 's' : ''}
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -315,7 +358,7 @@ const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

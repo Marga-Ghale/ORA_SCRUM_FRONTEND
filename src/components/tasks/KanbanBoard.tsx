@@ -200,7 +200,13 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   const isActive = isOver && canDrop;
 
   const handleSortByPriority = () => {
-    const priorityOrder = { highest: 0, high: 1, medium: 2, low: 3, lowest: 4 };
+    const priorityOrder: Record<string, number> = {
+      urgent: 0,
+      high: 1,
+      medium: 2,
+      low: 3,
+      none: 4,
+    };
     const sorted = [...sortedTasks].sort(
       (a, b) => (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2)
     );

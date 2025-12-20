@@ -1,3 +1,4 @@
+// src/App.tsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/query-client';
@@ -19,6 +20,7 @@ import Team from './pages/Team/Team';
 import Settings from './pages/Settings/Settings';
 import UserProfiles from './pages/UserProfiles';
 import { AuthProvider } from './components/UserProfile/AuthContext';
+import { ProjectProvider } from './context/ProjectContext'; // ✅ Add this import
 import ProtectedRoute from './components/Protected/ProtectedRoute';
 import GuestRoute from './components/Protected/GuestRoute';
 import ToastProvider from './components/common/ToastProvider';
@@ -41,7 +43,10 @@ export default function App() {
             <Route
               element={
                 <ProtectedRoute>
-                  <AppLayout />
+                  {/* ✅ Wrap in ProjectProvider */}
+                  <ProjectProvider>
+                    <AppLayout />
+                  </ProjectProvider>
                 </ProtectedRoute>
               }
             >

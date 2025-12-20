@@ -47,6 +47,7 @@ export interface Task {
   priority: Priority;
   type: TaskType;
   assignee?: User;
+  assignees?: User[];
   reporter: User;
   labels: Label[];
   storyPoints?: number;

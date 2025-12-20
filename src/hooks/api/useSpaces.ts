@@ -1,81 +1,125 @@
+// src/hooks/useSpaces.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../../lib/api-client';
+import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
 
+// ============================================
 // Types
-export interface Space {
+// ============================================
+
+export interface CreateSpaceRequest {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface UpdateSpaceRequest {
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  visibility?: string;
+  allowed_users?: string[];
+  allowed_teams?: string[];
+}
+
+export interface SpaceResponse {
+  projects: boolean;
   id: string;
+  workspace_id: string;
   name: string;
   description?: string;
   icon?: string;
   color?: string;
-  workspaceId: string;
-  createdAt: string;
-  updatedAt: string;
+  owner_id: string;
+  visibility?: string;
+  allowed_users: string[];
+  allowed_teams: string[];
+  created_at: string;
+  updated_at: string;
 }
 
-export interface CreateSpaceData {
-  name: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-}
+// ============================================
+// API Functions
+// ============================================
 
-// Get spaces for a workspace
-export function useSpaces(workspaceId: string) {
+const spaceApi = {
+  listByWorkspace: (workspaceId: string) =>
+    apiClient.get<SpaceResponse[]>(`/workspaces/${workspaceId}/spaces`),
+
+  getById: (id: string) => apiClient.get<SpaceResponse>(`/spaces/${id}`),
+
+  create: (workspaceId: string, data: CreateSpaceRequest) =>
+    apiClient.post<SpaceResponse>(`/workspaces/${workspaceId}/spaces`, data),
+
+  update: (id: string, data: UpdateSpaceRequest) =>
+    apiClient.put<SpaceResponse>(`/spaces/${id}`, data),
+
+  delete: (id: string) => apiClient.delete(`/spaces/${id}`),
+};
+
+// ============================================
+// Query Hooks
+// ============================================
+
+export const useSpacesByWorkspace = (workspaceId: string, options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: queryKeys.spaces.list(workspaceId),
-    queryFn: () => apiClient.get<Space[]>(`/workspaces/${workspaceId}/spaces`),
-    enabled: !!workspaceId,
+    queryKey: queryKeys.spaces.byWorkspace(workspaceId),
+    queryFn: () => spaceApi.listByWorkspace(workspaceId),
+    enabled: options?.enabled ?? !!workspaceId,
   });
-}
+};
 
-// Get single space
-export function useSpace(id: string) {
+export const useSpace = (id: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.spaces.detail(id),
-    queryFn: () => apiClient.get<Space>(`/spaces/${id}`),
-    enabled: !!id,
+    queryFn: () => spaceApi.getById(id),
+    enabled: options?.enabled ?? !!id,
   });
-}
+};
 
-// Create space
-export function useCreateSpace() {
+// ============================================
+// Mutation Hooks
+// ============================================
+
+export const useCreateSpace = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ workspaceId, data }: { workspaceId: string; data: CreateSpaceData }) =>
-      apiClient.post<Space>(`/workspaces/${workspaceId}/spaces`, data),
+    mutationFn: ({ workspaceId, data }: { workspaceId: string; data: CreateSpaceRequest }) =>
+      spaceApi.create(workspaceId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.spaces.list(variables.workspaceId),
+        queryKey: queryKeys.spaces.byWorkspace(variables.workspaceId),
       });
-    },
-  });
-}
-
-// Update space
-export function useUpdateSpace() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateSpaceData> }) =>
-      apiClient.put<Space>(`/spaces/${id}`, data),
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.spaces.detail(data.id), data);
-      queryClient.invalidateQueries({ queryKey: queryKeys.spaces.lists() });
-    },
-  });
-}
-
-// Delete space
-export function useDeleteSpace() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/spaces/${id}`),
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
     },
   });
-}
+};
+
+export const useUpdateSpace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateSpaceRequest }) =>
+      spaceApi.update(id, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.spaces.detail(data.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spaces.byWorkspace(data.workspace_id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
+    },
+  });
+};
+
+export const useDeleteSpace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: spaceApi.delete,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
+      queryClient.removeQueries({ queryKey: queryKeys.spaces.detail(id) });
+    },
+  });
+};

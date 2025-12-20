@@ -28,7 +28,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(PROJECT_COLORS[0]);
-  const [spaceId, setSpaceId] = useState(currentSpace?.id || '');
+  const [spaceId, setSpaceId] = useState('');
   const [autoGenerateKey, setAutoGenerateKey] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +36,10 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
 
   // Set initial space when modal opens or currentSpace changes
   useEffect(() => {
-    if (isOpen && currentSpace?.id) {
+    if (isOpen && currentSpace?.id && !spaceId) {
       setSpaceId(currentSpace.id);
     }
-  }, [isOpen, currentSpace?.id]);
+  }, [isOpen, currentSpace?.id, spaceId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -72,7 +72,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
         .join('')
         .toUpperCase()
         .slice(0, 4);
-      // Ensure minimum 2 characters
       setKey(generated.length >= 2 ? generated : generated.padEnd(2, 'X'));
     }
   }, [name, autoGenerateKey]);
@@ -118,12 +117,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
         description: description.trim() || undefined,
       });
 
-      // Reset form
-      setName('');
-      setKey('');
-      setDescription('');
-      setColor(PROJECT_COLORS[0]);
-      setAutoGenerateKey(true);
+      resetForm();
       onClose();
     } catch (err) {
       console.error('Failed to create project:', err);
@@ -138,6 +132,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     setKey('');
     setDescription('');
     setColor(PROJECT_COLORS[0]);
+    setSpaceId('');
     setAutoGenerateKey(true);
     setError(null);
   };
@@ -236,7 +231,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                         ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 scale-110'
                         : 'hover:scale-110'
                     }`}
-                    style={{ backgroundColor: c, ringColor: c }}
+                    style={{ backgroundColor: c }}
                   />
                 ))}
               </div>

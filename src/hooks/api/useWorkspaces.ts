@@ -1,157 +1,118 @@
+// src/hooks/useWorkspaces.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../../lib/api-client';
+import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
 
+// ============================================
 // Types
-export interface Workspace {
+// ============================================
+
+export interface CreateWorkspaceRequest {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  visibility?: string;
+  allowed_users?: string[];
+  allowed_teams?: string[];
+}
+
+export interface UpdateWorkspaceRequest {
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  visibility?: string;
+  allowed_users?: string[];
+  allowed_teams?: string[];
+}
+
+export interface WorkspaceResponse {
   id: string;
   name: string;
   description?: string;
   icon?: string;
   color?: string;
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
+  owner_id: string;
+  visibility?: string;
+  allowed_users: string[];
+  allowed_teams: string[];
+  created_at: string;
+  updated_at: string;
 }
 
-export interface WorkspaceMember {
-  id: string;
-  userId: string;
-  workspaceId: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    avatar?: string;
-  };
-  joinedAt: string;
-}
+// ============================================
+// API Functions
+// ============================================
 
-export interface CreateWorkspaceData {
-  name: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-}
+const workspaceApi = {
+  list: () => apiClient.get<WorkspaceResponse[]>('/workspaces'),
 
-export interface InviteMemberData {
-  email: string;
-  role: 'admin' | 'member' | 'viewer';
-}
+  getById: (id: string) => apiClient.get<WorkspaceResponse>(`/workspaces/${id}`),
 
-// Get all workspaces
-export function useWorkspaces() {
+  create: (data: CreateWorkspaceRequest) => apiClient.post<WorkspaceResponse>('/workspaces', data),
+
+  update: (id: string, data: UpdateWorkspaceRequest) =>
+    apiClient.put<WorkspaceResponse>(`/workspaces/${id}`, data),
+
+  delete: (id: string) => apiClient.delete(`/workspaces/${id}`),
+};
+
+// ============================================
+// Query Hooks
+// ============================================
+
+export const useWorkspaces = () => {
   return useQuery({
-    queryKey: queryKeys.workspaces.lists(),
-    queryFn: () => apiClient.get<Workspace[]>('/workspaces'),
+    queryKey: queryKeys.workspaces.list(),
+    queryFn: workspaceApi.list,
   });
-}
+};
 
-// Get single workspace
-export function useWorkspace(id: string) {
+export const useWorkspace = (id: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.workspaces.detail(id),
-    queryFn: () => apiClient.get<Workspace>(`/workspaces/${id}`),
-    enabled: !!id,
+    queryFn: () => workspaceApi.getById(id),
+    enabled: options?.enabled ?? !!id,
   });
-}
+};
 
-// Get workspace members
-export function useWorkspaceMembers(workspaceId: string) {
-  return useQuery({
-    queryKey: queryKeys.workspaces.members(workspaceId),
-    queryFn: () => apiClient.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`),
-    enabled: !!workspaceId,
-  });
-}
+// ============================================
+// Mutation Hooks
+// ============================================
 
-// Create workspace
-export function useCreateWorkspace() {
+export const useCreateWorkspace = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateWorkspaceData) => apiClient.post<Workspace>('/workspaces', data),
+    mutationFn: workspaceApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
     },
   });
-}
+};
 
-// Update workspace
-export function useUpdateWorkspace() {
+export const useUpdateWorkspace = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateWorkspaceData> }) =>
-      apiClient.put<Workspace>(`/workspaces/${id}`, data),
-    onSuccess: (data, variables) => {
-      queryClient.setQueryData(queryKeys.workspaces.detail(variables.id), data);
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.lists() });
+    mutationFn: ({ id, data }: { id: string; data: UpdateWorkspaceRequest }) =>
+      workspaceApi.update(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() });
     },
   });
-}
+};
 
-// Delete workspace
-export function useDeleteWorkspace() {
+export const useDeleteWorkspace = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/workspaces/${id}`),
-    onSuccess: () => {
+    mutationFn: workspaceApi.delete,
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
+      queryClient.removeQueries({ queryKey: queryKeys.workspaces.detail(id) });
     },
   });
-}
-
-// Invite member to workspace
-export function useInviteWorkspaceMember() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ workspaceId, data }: { workspaceId: string; data: InviteMemberData }) =>
-      apiClient.post(`/workspaces/${workspaceId}/members`, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.workspaces.members(variables.workspaceId),
-      });
-    },
-  });
-}
-
-// Remove member from workspace
-export function useRemoveWorkspaceMember() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ workspaceId, userId }: { workspaceId: string; userId: string }) =>
-      apiClient.delete(`/workspaces/${workspaceId}/members/${userId}`),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.workspaces.members(variables.workspaceId),
-      });
-    },
-  });
-}
-
-// Update member role
-export function useUpdateWorkspaceMemberRole() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      workspaceId,
-      userId,
-      role,
-    }: {
-      workspaceId: string;
-      userId: string;
-      role: string;
-    }) => apiClient.put(`/workspaces/${workspaceId}/members/${userId}`, { role }),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.workspaces.members(variables.workspaceId),
-      });
-    },
-  });
-}
+};

@@ -1,145 +1,144 @@
+// src/hooks/useProjects.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../../lib/api-client';
+import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
 
+// ============================================
 // Types
-export interface Project {
+// ============================================
+
+export interface CreateProjectRequest {
+  name: string;
+  key: string;
+  folderId?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  leadId?: string;
+}
+
+export interface UpdateProjectRequest {
+  name?: string;
+  key?: string;
+  folderId?: string | null;
+  description?: string;
+  icon?: string;
+  color?: string;
+  leadId?: string;
+}
+
+export interface ProjectResponse {
   id: string;
+  spaceId: string;
+  folderId?: string;
   name: string;
   key: string;
   description?: string;
   icon?: string;
   color?: string;
-  spaceId: string;
   leadId?: string;
+  visibility?: string;
+  allowedUsers: string[];
+  allowedTeams: string[];
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ProjectMember {
-  id: string;
-  userId: string;
-  projectId: string;
-  role: 'lead' | 'member' | 'viewer';
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    avatar?: string;
-  };
-  joinedAt: string;
-}
+// ============================================
+// API Functions
+// ============================================
 
-export interface CreateProjectData {
-  name: string;
-  key: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-  leadId?: string;
-}
+const projectApi = {
+  listBySpace: (spaceId: string) => apiClient.get<ProjectResponse[]>(`/spaces/${spaceId}/projects`),
 
-// Get projects for a space
-export function useProjects(spaceId: string) {
+  listByFolder: (folderId: string) =>
+    apiClient.get<ProjectResponse[]>(`/folders/${folderId}/projects`),
+
+  getById: (id: string) => apiClient.get<ProjectResponse>(`/projects/${id}`),
+
+  create: (spaceId: string, data: CreateProjectRequest) =>
+    apiClient.post<ProjectResponse>(`/spaces/${spaceId}/projects`, data),
+
+  update: (id: string, data: UpdateProjectRequest) =>
+    apiClient.put<ProjectResponse>(`/projects/${id}`, data),
+
+  delete: (id: string) => apiClient.delete(`/projects/${id}`),
+};
+
+// ============================================
+// Query Hooks
+// ============================================
+
+export const useProjectsBySpace = (spaceId: string, options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: queryKeys.projects.list(spaceId),
-    queryFn: () => apiClient.get<Project[]>(`/spaces/${spaceId}/projects`),
-    enabled: !!spaceId,
+    queryKey: queryKeys.projects.bySpace(spaceId),
+    queryFn: () => projectApi.listBySpace(spaceId),
+    enabled: options?.enabled ?? !!spaceId,
   });
-}
+};
 
-// Get single project
-export function useProject(id: string) {
+export const useProjectsByFolder = (folderId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.projects.byFolder(folderId),
+    queryFn: () => projectApi.listByFolder(folderId),
+    enabled: options?.enabled ?? !!folderId,
+  });
+};
+
+export const useProject = (id: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.projects.detail(id),
-    queryFn: () => apiClient.get<Project>(`/projects/${id}`),
-    enabled: !!id,
+    queryFn: () => projectApi.getById(id),
+    enabled: options?.enabled ?? !!id,
   });
-}
+};
 
-// Get project members
-export function useProjectMembers(projectId: string) {
-  return useQuery({
-    queryKey: queryKeys.projects.members(projectId),
-    queryFn: () => apiClient.get<ProjectMember[]>(`/projects/${projectId}/members`),
-    enabled: !!projectId,
-  });
-}
+// ============================================
+// Mutation Hooks
+// ============================================
 
-// Create project
-export function useCreateProject() {
+export const useCreateProject = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ spaceId, data }: { spaceId: string; data: CreateProjectData }) =>
-      apiClient.post<Project>(`/spaces/${spaceId}/projects`, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.projects.list(variables.spaceId),
-      });
-    },
-  });
-}
-
-// Update project
-export function useUpdateProject() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateProjectData> }) =>
-      apiClient.put<Project>(`/projects/${id}`, data),
+    mutationFn: ({ spaceId, data }: { spaceId: string; data: CreateProjectRequest }) =>
+      projectApi.create(spaceId, data),
     onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.projects.detail(data.id), data);
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.lists() });
-    },
-  });
-}
-
-// Delete project
-export function useDeleteProject() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/projects/${id}`),
-    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.bySpace(data.spaceId) });
+      if (data.folderId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.byFolder(data.folderId) });
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
     },
   });
-}
+};
 
-// Add project member
-export function useAddProjectMember() {
+export const useUpdateProject = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      projectId,
-      userId,
-      role,
-    }: {
-      projectId: string;
-      userId: string;
-      role: string;
-    }) => apiClient.post(`/projects/${projectId}/members`, { userId, role }),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.projects.members(variables.projectId),
-      });
+    mutationFn: ({ id, data }: { id: string; data: UpdateProjectRequest }) =>
+      projectApi.update(id, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(data.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.bySpace(data.spaceId) });
+      if (data.folderId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.byFolder(data.folderId) });
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
     },
   });
-}
+};
 
-// Remove project member
-export function useRemoveProjectMember() {
+export const useDeleteProject = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ projectId, userId }: { projectId: string; userId: string }) =>
-      apiClient.delete(`/projects/${projectId}/members/${userId}`),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.projects.members(variables.projectId),
-      });
+    mutationFn: projectApi.delete,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      queryClient.removeQueries({ queryKey: queryKeys.projects.detail(id) });
     },
   });
-}
+};
