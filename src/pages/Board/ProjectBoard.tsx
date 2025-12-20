@@ -53,7 +53,7 @@ const ProjectBoard: React.FC = () => {
         const matchesSearch =
           task.title.toLowerCase().includes(searchLower) ||
           task.description?.toLowerCase().includes(searchLower) ||
-          task.key.toLowerCase().includes(searchLower);
+          task.id.toLowerCase().includes(searchLower);
         if (!matchesSearch) return false;
       }
 
@@ -209,14 +209,14 @@ const ProjectBoard: React.FC = () => {
                     onClick={() => {
                       setFilters((prev) => ({
                         ...prev,
-                        assignees: prev.assigneeIds.includes(user.id)
-                          ? prev.assigneeIds.filter((id) => id !== user.id)
+                        assignees: prev.assigneeIds.includes(user.id as any)
+                          ? prev.assigneeIds.filter((id) => id !== (user.id as any))
                           : [...prev.assigneeIds, user.id],
                       }));
                     }}
                     className={`w-8 h-8 rounded-full border-2 overflow-hidden transition-all hover:z-10
                       ${
-                        filters.assigneeIds.includes(user.id)
+                        filters.assigneeIds.includes(user.id as any)
                           ? 'border-brand-500 ring-2 ring-brand-200 dark:ring-brand-800 z-10'
                           : 'border-white dark:border-gray-800 hover:border-gray-300'
                       }
@@ -360,14 +360,14 @@ const ProjectBoard: React.FC = () => {
                       onClick={() => {
                         setFilters((prev) => ({
                           ...prev,
-                          assignees: prev.assigneeIds.includes(user.id)
-                            ? prev.assigneeIds.filter((id) => id !== user.id)
+                          assignees: prev.assigneeIds.includes(user.id as any)
+                            ? prev.assigneeIds.filter((id) => id !== (user.id as any))
                             : [...prev.assigneeIds, user.id],
                         }));
                       }}
                       className={`px-2.5 py-1 rounded text-xs font-medium transition-all flex items-center gap-1
                         ${
-                          filters.assigneeIds.includes(user.id)
+                          filters.assigneeIds.includes(user.id as any)
                             ? 'bg-brand-100 dark:bg-brand-900 text-brand-600 dark:text-brand-400 ring-2 ring-brand-200 dark:ring-brand-800'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }
@@ -457,8 +457,8 @@ const ProjectBoard: React.FC = () => {
           ) : (
             <>
               {viewMode === 'board' && <KanbanBoard tasks={displayTasks} />}
-              {viewMode === 'list' && <TaskListView tasks={displayTasks} groupBy="status" />}
-              {viewMode === 'table' && <TaskListView tasks={displayTasks} groupBy="none" />}
+              {viewMode === 'list' && <TaskListView tasks={displayTasks as any} groupBy="status" />}
+              {viewMode === 'table' && <TaskListView tasks={displayTasks as any} groupBy="none" />}
             </>
           )}
         </div>

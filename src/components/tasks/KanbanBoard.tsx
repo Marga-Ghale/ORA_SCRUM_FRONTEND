@@ -346,12 +346,15 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
       return false;
     if (
       filters.assigneeIds.length > 0 &&
-      (!task.assigneeIds || !filters.assigneeIds.includes(task.assigneeIds.id))
+      (!task.assigneeIds || !filters.assigneeIds.includes(task.assignee.name as any))
     )
       return false;
     if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) return false;
     if (filters.types.length > 0 && !filters.types.includes(task.type)) return false;
-    if (filters.labelIds.length > 0 && !task.labelIds.some((l) => filters.labelIds.includes(l.id)))
+    if (
+      filters.labelIds.length > 0 &&
+      !task.labelIds.some((l) => filters.labelIds.includes(task.label.color as any))
+    )
       return false;
     return true;
   });
@@ -405,7 +408,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
         {visibleColumns.map((column) => {
           const columnTasks = filteredTasks
             .filter((task) => task.status === column.id)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
+            .sort((a, b) => (a.position || 0) - (b.position || 0));
 
           return (
             <KanbanColumn
