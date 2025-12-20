@@ -29,7 +29,7 @@ const ROLE_OPTIONS: { value: InviteRole; label: string; description: string }[] 
   { value: 'viewer', label: 'Viewer', description: 'Can view and comment only' },
 ];
 
-const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }) => {
+const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }) => {
   const { currentWorkspace } = useProject();
 
   const [email, setEmail] = useState('');
@@ -837,4 +837,4 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
   );
 };
 
-export default InviteMemberModal;
+export default InviteMemberModalv1;

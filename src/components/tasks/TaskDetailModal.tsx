@@ -16,16 +16,21 @@ import {
   useDeleteTask,
   useTaskComments,
   useUpdateTask,
+  useTaskActivity,
+  ActivityResponse,
 } from '../../hooks/api/useTasks';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
-
-// Import the correct hooks
+import { dateToISO, isoToDate, formatRelativeTime } from '../../utils/dateUtils';
 
 const TaskDetailModal: React.FC = () => {
   const { selectedTask, isTaskModalOpen, closeTaskModal, currentProject } = useProject();
 
-  // Fetch dynamic data from API
+  // ✅ Fetch comments AND activity
   const { data: commentsData, refetch: refetchComments } = useTaskComments(selectedTask?.id || '', {
+    enabled: !!selectedTask?.id,
+  });
+
+  const { data: activityData } = useTaskActivity(selectedTask?.id || '', 50, {
     enabled: !!selectedTask?.id,
   });
 
@@ -49,7 +54,7 @@ const TaskDetailModal: React.FC = () => {
     assigneeIds: [] as string[],
     labelIds: [] as string[],
     storyPoints: undefined as number | undefined,
-    dueDate: '',
+    dueDate: '', // ✅ This will be YYYY-MM-DD for input field
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -57,10 +62,11 @@ const TaskDetailModal: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Map comments data
+  // ✅ Map data correctly
   const comments: CommentResponse[] = commentsData || [];
+  const activities: ActivityResponse[] = activityData || [];
 
-  // Map members data to users format
+  // ✅ Map members data with proper structure
   const users =
     membersData?.map((m) => ({
       id: m.userId,
@@ -69,7 +75,7 @@ const TaskDetailModal: React.FC = () => {
       avatar: m.user?.avatar,
     })) || [];
 
-  // Initialize form when task loads
+  // ✅ Initialize form when task loads - FIXED DATE HANDLING
   useEffect(() => {
     if (selectedTask) {
       setFormData({
@@ -77,13 +83,11 @@ const TaskDetailModal: React.FC = () => {
         description: selectedTask.description || '',
         status: selectedTask.status,
         priority: selectedTask.priority,
-        type: selectedTask.type,
-        assigneeIds: (selectedTask.assignee as any) || [],
-        labelIds: (selectedTask.labels as any) || [],
+        type: selectedTask.type || 'task',
+        assigneeIds: selectedTask.assigneeIds || [], // ✅ Use assigneeIds (array)
+        labelIds: selectedTask.labelIds || [],
         storyPoints: selectedTask.storyPoints,
-        dueDate: selectedTask.dueDate
-          ? new Date(selectedTask.dueDate).toISOString().split('T')[0]
-          : '',
+        dueDate: isoToDate(selectedTask.dueDate), // ✅ Convert ISO to YYYY-MM-DD
       });
       setHasChanges(false);
     }
@@ -129,7 +133,7 @@ const TaskDetailModal: React.FC = () => {
     setHasChanges(true);
   };
 
-  // Handle save
+  // ✅ Handle save - FIXED DATE CONVERSION
   const handleSave = async () => {
     if (!selectedTask) return;
 
@@ -138,14 +142,14 @@ const TaskDetailModal: React.FC = () => {
         id: selectedTask.id,
         data: {
           title: formData.title,
-          description: formData.description,
+          description: formData.description || undefined,
           status: formData.status,
           priority: formData.priority,
           type: formData.type,
           assigneeIds: formData.assigneeIds,
           labelIds: formData.labelIds,
           storyPoints: formData.storyPoints,
-          dueDate: formData.dueDate || undefined,
+          dueDate: dateToISO(formData.dueDate), // ✅ Convert to ISO format
         },
       });
 
@@ -181,13 +185,11 @@ const TaskDetailModal: React.FC = () => {
           description: selectedTask.description || '',
           status: selectedTask.status,
           priority: selectedTask.priority,
-          type: selectedTask.type,
-          assigneeIds: (selectedTask.assignees as any) || [],
-          labelIds: (selectedTask.labels as any) || [],
+          type: selectedTask.type || 'task',
+          assigneeIds: selectedTask.assigneeIds || [],
+          labelIds: selectedTask.labelIds || [],
           storyPoints: selectedTask.storyPoints,
-          dueDate: selectedTask.dueDate
-            ? new Date(selectedTask.dueDate).toISOString().split('T')[0]
-            : '',
+          dueDate: isoToDate(selectedTask.dueDate),
         });
         setHasChanges(false);
       }
@@ -239,10 +241,42 @@ const TaskDetailModal: React.FC = () => {
     setHasChanges(true);
   };
 
-  const typeConfig = TASK_TYPE_CONFIG[formData.type];
+  const typeConfig = TASK_TYPE_CONFIG[formData.type] || TASK_TYPE_CONFIG.task;
   const statusConfig = STATUS_COLUMNS.find((s) => s.id === formData.status);
   const isSaving = updateTaskMutation.isPending;
   const isDeleting = deleteTaskMutation.isPending;
+
+  // ✅ Format activity action for display
+  const formatActivityAction = (activity: ActivityResponse): string => {
+    const actionMap: Record<string, string> = {
+      created: 'created this task',
+      commented: 'added a comment',
+      status_changed: 'changed status',
+      priority_changed: 'changed priority',
+      assigned: 'assigned this task',
+      started_timer: 'started time tracking',
+      stopped_timer: 'stopped time tracking',
+      logged_time: 'logged time',
+      added_attachment: 'added an attachment',
+      deleted_attachment: 'removed an attachment',
+      created_checklist: 'created a checklist',
+      added_dependency: 'added a dependency',
+      removed_dependency: 'removed a dependency',
+    };
+
+    let text = actionMap[activity.action] || activity.action;
+
+    if (activity.fieldName) {
+      text += ` (${activity.fieldName})`;
+    }
+    if (activity.oldValue && activity.newValue) {
+      text += `: ${activity.oldValue} → ${activity.newValue}`;
+    } else if (activity.newValue) {
+      text += `: ${activity.newValue}`;
+    }
+
+    return text;
+  };
 
   return (
     <>
@@ -272,7 +306,7 @@ const TaskDetailModal: React.FC = () => {
             <div className="flex items-center gap-3">
               <span className="text-2xl">{typeConfig.icon}</span>
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                {selectedTask.key}
+                {selectedTask.id.slice(0, 8)}
               </span>
               {hasChanges && (
                 <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-medium rounded">
@@ -438,6 +472,9 @@ const TaskDetailModal: React.FC = () => {
                       {tab === 'comments' && comments.length > 0 && (
                         <span className="ml-1 text-xs">({comments.length})</span>
                       )}
+                      {tab === 'activity' && activities.length > 0 && (
+                        <span className="ml-1 text-xs">({activities.length})</span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -483,54 +520,74 @@ const TaskDetailModal: React.FC = () => {
                         <p className="text-center text-gray-400 mt-6">No comments yet</p>
                       ) : (
                         <div className="space-y-4">
-                          {comments.map((comment) => (
-                            <div key={comment.id} className="flex gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                  {comment.userId.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    User {comment.userId.slice(0, 6)}
-                                  </span>
-                                  <span className="text-xs text-gray-400">
-                                    {new Date(comment.createdAt).toLocaleString()}
+                          {comments.map((comment) => {
+                            const user = users.find((u) => u.id === comment.userId);
+                            return (
+                              <div key={comment.id} className="flex gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                                   </span>
                                 </div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                                  {comment.content}
-                                </p>
-                                <button
-                                  onClick={() => handleDeleteComment(comment.id)}
-                                  className="text-xs text-gray-400 hover:text-error-600 mt-1"
-                                >
-                                  Delete
-                                </button>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                      {user?.name || 'Unknown User'}
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      {formatRelativeTime(comment.createdAt)}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                                    {comment.content}
+                                  </p>
+                                  <button
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                    className="text-xs text-gray-400 hover:text-error-600 mt-1"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Activity Tab */}
+                  {/* Activity Tab - ✅ FIXED: Use real activity data */}
                   {activeTab === 'activity' && (
-                    <div className="text-sm text-gray-500">
-                      <div className="flex items-start gap-3 py-2">
-                        <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700" />
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            System
-                          </span>{' '}
-                          created this task
-                          <div className="text-xs text-gray-400 mt-0.5">
-                            {new Date(selectedTask.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
+                    <div className="text-sm text-gray-500 space-y-3">
+                      {activities.length === 0 ? (
+                        <p className="text-center text-gray-400 mt-6">No activity yet</p>
+                      ) : (
+                        activities.map((activity) => {
+                          const user = users.find((u) => u.id === activity.userId);
+                          return (
+                            <div key={activity.id} className="flex items-start gap-3 py-2">
+                              <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <div>
+                                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                                    {user?.name || 'System'}
+                                  </span>{' '}
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    {formatActivityAction(activity)}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-400 mt-0.5">
+                                  {formatRelativeTime(activity.createdAt)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   )}
                 </div>
@@ -616,8 +673,8 @@ const TaskDetailModal: React.FC = () => {
               {/* Created/Updated */}
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-6">
                 <div className="text-xs text-gray-400 space-y-1">
-                  <p>Created {new Date(selectedTask.createdAt).toLocaleDateString()}</p>
-                  <p>Updated {new Date(selectedTask.updatedAt).toLocaleDateString()}</p>
+                  <p>Created {formatRelativeTime(selectedTask.createdAt)}</p>
+                  <p>Updated {formatRelativeTime(selectedTask.updatedAt)}</p>
                 </div>
               </div>
             </div>

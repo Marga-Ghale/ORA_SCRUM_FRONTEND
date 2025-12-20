@@ -62,7 +62,7 @@ const workspaceApi = {
 // Query Hooks
 // ============================================
 
-export const useWorkspaces = () => {
+export const useWorkspaces = (p0?: { enabled: boolean; }) => {
   return useQuery({
     queryKey: queryKeys.workspaces.list(),
     queryFn: workspaceApi.list,

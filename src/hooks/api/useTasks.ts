@@ -200,9 +200,10 @@ export interface BulkUpdateStatusRequest {
   status: string;
 }
 
+// ✅ FIXED: Changed assigneeIds to assigneeId to match backend
 export interface BulkAssignRequest {
   taskIds: string[];
-  assigneeId: string;
+  assigneeId: string; // Backend expects singular assigneeId
 }
 
 export interface BulkMoveToSprintRequest {
@@ -435,7 +436,7 @@ export const useTaskActivity = (
   options?: { enabled?: boolean }
 ) => {
   return useQuery({
-    queryKey: queryKeys.tasks.activity(taskId),
+    queryKey: queryKeys.tasks.activity(taskId, limit),
     queryFn: () => taskApi.getActivity(taskId, limit),
     enabled: options?.enabled ?? !!taskId,
   });
@@ -488,6 +489,7 @@ export const useCreateTask = () => {
           }),
         });
       }
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
@@ -501,6 +503,7 @@ export const useUpdateTask = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.byProject(data.projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
@@ -513,6 +516,7 @@ export const useDeleteTask = () => {
     mutationFn: taskApi.delete,
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.removeQueries({ queryKey: queryKeys.tasks.detail(id) });
     },
   });
@@ -526,6 +530,7 @@ export const useUpdateTaskStatus = () => {
       taskApi.updateStatus(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
@@ -539,11 +544,13 @@ export const useUpdateTaskPriority = () => {
       taskApi.updatePriority(id, priority),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
 };
 
+// ✅ FIXED: Added notification invalidation
 export const useAssignTask = () => {
   const queryClient = useQueryClient();
 
@@ -551,8 +558,13 @@ export const useAssignTask = () => {
     mutationFn: ({ id, assigneeId }: { id: string; assigneeId: string }) =>
       taskApi.assignTask(id, assigneeId),
     onSuccess: (_, variables) => {
+      // Invalidate task queries
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+
+      // ✅ ADD: Invalidate notifications so the UI updates
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -565,6 +577,7 @@ export const useUnassignTask = () => {
       taskApi.unassignTask(id, assigneeId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
@@ -601,6 +614,7 @@ export const useMarkTaskComplete = () => {
     mutationFn: taskApi.markComplete,
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
@@ -614,6 +628,7 @@ export const useMoveTaskToSprint = () => {
       taskApi.moveToSprint(id, sprintId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
@@ -633,6 +648,7 @@ export const useConvertToSubtask = () => {
   });
 };
 
+// ✅ FIXED: Added notification invalidation for comments
 export const useAddComment = () => {
   const queryClient = useQueryClient();
 
@@ -641,6 +657,10 @@ export const useAddComment = () => {
       taskApi.addComment(taskId, data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.comments(data.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activity(data.taskId) });
+
+      // ✅ ADD: Invalidate notifications (for mentions and comment notifications)
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -676,6 +696,7 @@ export const useAddAttachment = () => {
       taskApi.addAttachment(taskId, data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.attachments(data.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activity(data.taskId) });
     },
   });
 };
@@ -696,8 +717,9 @@ export const useStartTimer = () => {
 
   return useMutation({
     mutationFn: taskApi.startTimer,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activeTimer() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activity(data.taskId) });
     },
   });
 };
@@ -707,9 +729,11 @@ export const useStopTimer = () => {
 
   return useMutation({
     mutationFn: taskApi.stopTimer,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activeTimer() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.timeEntries(data.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.totalTime(data.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(data.taskId) });
     },
   });
 };
@@ -723,6 +747,8 @@ export const useLogTime = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.timeEntries(data.taskId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.totalTime(data.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(data.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activity(data.taskId) });
     },
   });
 };
@@ -736,6 +762,7 @@ export const useAddDependency = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.dependencies(variables.taskId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activity(variables.taskId) });
     },
   });
 };
@@ -749,6 +776,7 @@ export const useRemoveDependency = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.dependencies(variables.taskId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activity(variables.taskId) });
     },
   });
 };
@@ -761,6 +789,7 @@ export const useCreateChecklist = () => {
       taskApi.createChecklist(taskId, data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.checklists(data.taskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activity(data.taskId) });
     },
   });
 };
@@ -811,10 +840,12 @@ export const useBulkUpdateStatus = () => {
     mutationFn: taskApi.bulkUpdateStatus,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
     },
   });
 };
 
+// ✅ FIXED: Added notification invalidation for bulk assign
 export const useBulkAssign = () => {
   const queryClient = useQueryClient();
 
@@ -822,6 +853,10 @@ export const useBulkAssign = () => {
     mutationFn: taskApi.bulkAssign,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
+
+      // ✅ ADD: Invalidate notifications
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -833,6 +868,7 @@ export const useBulkMoveToSprint = () => {
     mutationFn: taskApi.bulkMoveToSprint,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
     },
   });
 };

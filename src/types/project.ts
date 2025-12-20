@@ -40,27 +40,30 @@ export interface Attachment {
 
 export interface Task {
   id: string;
-  key: string; // e.g., "ORA-123"
   title: string;
   description?: string;
-  status: TaskStatus;
-  priority: Priority;
-  type: TaskType;
-  assignee?: User;
-  assignees?: User[];
-  reporter: User;
-  labels: Label[];
-  storyPoints?: number;
-  dueDate?: Date;
-  startDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  comments: Comment[];
-  attachments: Attachment[];
-  subtasks: Task[];
-  parentId?: string;
+  status: TaskStatus; // e.g., "todo", "in_progress", "done"
+  priority: Priority; // e.g., "low", "medium", "high"
+  type?: TaskType; // ✅ match Go response
+  projectId: string;
   sprintId?: string;
-  order: number;
+  parentTaskId?: string;
+  assignee: User | null;
+  label: Label | null;
+  assigneeIds?: string[];
+  watcherIds?: string[] | null;
+  labelIds: string[];
+  storyPoints?: number;
+  estimatedHours?: number;
+  actualHours?: number;
+  startDate?: string; // ISO string
+  dueDate?: string; // ISO string
+  completedAt?: string; // ISO string
+  blocked?: boolean;
+  position: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Sprint {

@@ -30,7 +30,7 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index }) =>
       style={{ opacity: isDragging ? 0.5 : 1 }}
       className="mb-3"
     >
-      <TaskCard task={task} isDragging={isDragging} />
+      <TaskCard task={task as any} isDragging={isDragging} />
     </div>
   );
 };
@@ -345,13 +345,13 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
     if (filters.search && !task.title.toLowerCase().includes(filters.search.toLowerCase()))
       return false;
     if (
-      filters.assignees.length > 0 &&
-      (!task.assignee || !filters.assignees.includes(task.assignee.id))
+      filters.assigneeIds.length > 0 &&
+      (!task.assigneeIds || !filters.assigneeIds.includes(task.assigneeIds.id))
     )
       return false;
     if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) return false;
     if (filters.types.length > 0 && !filters.types.includes(task.type)) return false;
-    if (filters.labels.length > 0 && !task.labels.some((l) => filters.labels.includes(l.id)))
+    if (filters.labelIds.length > 0 && !task.labelIds.some((l) => filters.labelIds.includes(l.id)))
       return false;
     return true;
   });

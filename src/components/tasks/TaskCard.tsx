@@ -1,9 +1,12 @@
+// src/components/TaskCard/TaskCard.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Task, PRIORITY_CONFIG, TASK_TYPE_CONFIG, Priority, TaskType } from '../../types/project';
+import { PRIORITY_CONFIG, TASK_TYPE_CONFIG, Priority, TaskType } from '../../types/project';
 import { useProject } from '../../context/ProjectContext';
+import { TaskResponse } from '../../hooks/api/useTasks';
+import { formatDateDisplay } from '../../utils/dateUtils';
 
 interface TaskCardProps {
-  task: Task;
+  task: TaskResponse; // ✅ Use TaskResponse from API
   isDragging?: boolean;
   compact?: boolean;
 }
@@ -24,18 +27,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
   const typeConfig = TASK_TYPE_CONFIG[typeKey] ?? TASK_TYPE_CONFIG.task;
 
   // ===============================
-  // ASSIGNEES (FIXED)
-  // ===============================
-  const assignees =
-    task.assignees && task.assignees.length > 0
-      ? task.assignees
-      : task.assignee
-        ? [task.assignee]
-        : [];
-
-  const primaryAssignee = assignees[0];
-
-  // ===============================
   // CLOSE MENU ON OUTSIDE CLICK
   // ===============================
   useEffect(() => {
@@ -49,46 +40,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
   }, []);
 
   // ===============================
-  // DATE FORMAT (SAFE STRING → DATE)
+  // DATE FORMAT (Using utility)
   // ===============================
-  const formatDate = (date?: string | Date | null) => {
-    if (!date) return null;
-
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return null;
-
-    const now = new Date();
-    const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-      return { text: `${Math.abs(diffDays)}d overdue`, color: 'text-error-500' };
-    }
-    if (diffDays === 0) {
-      return { text: 'Today', color: 'text-warning-500' };
-    }
-    if (diffDays === 1) {
-      return { text: 'Tomorrow', color: 'text-warning-500' };
-    }
-    if (diffDays <= 7) {
-      return { text: `${diffDays}d`, color: 'text-gray-500' };
-    }
-
-    return {
-      text: d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      }),
-      color: 'text-gray-500',
-    };
-  };
-
-  const dueInfo = formatDate(task.dueDate);
+  const dueInfo = formatDateDisplay(task.dueDate);
 
   // ===============================
-  // SUBTASK COMPLETION (FIXED)
+  // ASSIGNEES - ✅ FIXED: Use assigneeIds array
   // ===============================
-  const completedSubtasks =
-    task.subtasks?.filter((s) => s.status?.toLowerCase() === 'done').length ?? 0;
+  const hasAssignees = task.assigneeIds && task.assigneeIds.length > 0;
+  const assigneeCount = task.assigneeIds?.length || 0;
 
   // ===============================
   // UI
@@ -112,7 +72,9 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
           {typeConfig.icon}
         </span>
 
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{task.key}</span>
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          {task.id.slice(0, 8)}
+        </span>
 
         <div className="flex-1" />
 
@@ -128,21 +90,20 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
         {task.title}
       </h4>
 
-      {/* Labels */}
-      {task.labels?.length > 0 && !compact && (
+      {/* Labels - ✅ FIXED: Use labelIds array */}
+      {task.labelIds?.length > 0 && !compact && (
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {task.labels.slice(0, 3).map((label) => (
+          {task.labelIds.slice(0, 3).map((labelId) => (
             <span
-              key={label.id}
-              className="px-2 py-0.5 rounded text-xs font-medium"
-              style={{ backgroundColor: `${label.color}20`, color: label.color }}
+              key={labelId}
+              className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
             >
-              {label.name}
+              Label
             </span>
           ))}
-          {task.labels.length > 3 && (
+          {task.labelIds.length > 3 && (
             <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500">
-              +{task.labels.length - 3}
+              +{task.labelIds.length - 3}
             </span>
           )}
         </div>
@@ -160,33 +121,16 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
           {dueInfo && (
             <span className={`text-xs font-medium ${dueInfo.color}`}>{dueInfo.text}</span>
           )}
-
-          {task.subtasks?.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-gray-500">
-              {completedSubtasks}/{task.subtasks.length}
-            </span>
-          )}
-
-          {task.comments?.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-gray-500">
-              {task.comments.length}
-            </span>
-          )}
         </div>
 
-        {/* Assignee */}
-        {primaryAssignee ? (
-          <div className="w-7 h-7 rounded-full overflow-hidden ring-2 ring-white dark:ring-gray-800">
-            {primaryAssignee.avatar ? (
-              <img
-                src={primaryAssignee.avatar}
-                alt={primaryAssignee.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-brand-500 flex items-center justify-center text-xs font-bold text-white">
-                {primaryAssignee.name?.charAt(0)?.toUpperCase() || '?'}
-              </div>
+        {/* Assignee Indicator - ✅ FIXED: Show count instead of avatar */}
+        {hasAssignees ? (
+          <div className="flex items-center gap-1">
+            <div className="w-7 h-7 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-xs font-bold text-brand-600 dark:text-brand-400 ring-2 ring-white dark:ring-gray-800">
+              {assigneeCount}
+            </div>
+            {assigneeCount > 1 && (
+              <span className="text-xs text-gray-500">+{assigneeCount - 1}</span>
             )}
           </div>
         ) : (
@@ -220,9 +164,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact =
             </button>
 
             <button
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-error-600"
               onClick={() => {
-                deleteTask(task.id);
+                if (window.confirm('Are you sure you want to delete this task?')) {
+                  deleteTask(task.id);
+                }
                 setMenuOpen(false);
               }}
             >

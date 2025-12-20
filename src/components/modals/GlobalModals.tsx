@@ -3,7 +3,7 @@ import { useProject } from '../../context/ProjectContext';
 import CreateSpaceModal from './CreateSpaceModal';
 import CreateProjectModal from './CreateProjectModal';
 import CreateSprintModal from './CreateSprintModal';
-import InviteMemberModal from './InviteMemberModal';
+import InviteMemberModal from './InviteMemberModalv1';
 import CreateTaskModal from '../tasks/CreateTaskModal';
 
 const GlobalModals: React.FC = () => {

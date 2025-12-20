@@ -29,7 +29,7 @@ const ROLE_OPTIONS: { value: InviteRole; label: string; description: string }[] 
   { value: 'viewer', label: 'Viewer', description: 'Can view and comment only' },
 ];
 
-const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }) => {
+const InviteMemberModalv2: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }) => {
   const { currentWorkspace } = useProject();
 
   const [email, setEmail] = useState('');
@@ -48,7 +48,7 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
   const workspaceId = currentWorkspace?.id || '';
   const workspaceName = currentWorkspace?.name || 'Workspace';
 
-  // Hooks
+  // Hooks - Fixed to use workspace entity type
   const inviteMemberMutation = useInviteMemberByEmail();
   const addMemberMutation = useAddMember();
   const { data: searchResults, isLoading: isSearching } = useSearchUsers(searchQuery, {
@@ -168,6 +168,98 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
     setPendingInvites((prev) => prev.filter((p) => p.email !== emailToRemove));
   };
 
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setError(null);
+  //   setSuccess(null);
+
+  //   if (!workspaceId) {
+  //     setError('No workspace selected. Please select a workspace first.');
+  //     return;
+  //   }
+
+  //   // Add current email if not empty
+  //   const allInvites = [...pendingInvites];
+  //   const trimmedEmail = email.toLowerCase().trim();
+
+  //   if (trimmedEmail && validateEmail(trimmedEmail)) {
+  //     const matchingUser = searchResults?.find((u) => u.email.toLowerCase() === trimmedEmail);
+  //     if (!allInvites.some((p) => p.email === trimmedEmail)) {
+  //       allInvites.push({ email: trimmedEmail, user: matchingUser });
+  //     }
+  //   }
+
+  //   if (allInvites.length === 0) {
+  //     setError('Please add at least one email address');
+  //     return;
+  //   }
+
+  //   try {
+  //     let addedCount = 0;
+  //     let invitedCount = 0;
+  //     const errors: string[] = [];
+
+  //     for (const invite of allInvites) {
+  //       try {
+  //         if (invite.user) {
+  //           // Add existing user directly to workspace
+  //           await addMemberMutation.mutateAsync({
+  //             entityType: 'workspace',
+  //             entityId: workspaceId,
+  //             data: {
+  //               userId: invite.user.id,
+  //               role: selectedRole,
+  //             },
+  //           });
+  //           addedCount++;
+  //         } else {
+  //           // Send workspace invitation
+  //           await inviteMemberMutation.mutateAsync({
+  //             entityType: 'workspace',
+  //             entityId: workspaceId,
+  //             data: {
+  //               email: invite.email,
+  //               role: selectedRole,
+  //             },
+  //           });
+  //           invitedCount++;
+  //         }
+  //       } catch (err: any) {
+  //         const errorMsg = err?.response?.data?.error || err?.message || 'Unknown error';
+  //         errors.push(`${invite.email}: ${errorMsg}`);
+  //       }
+  //     }
+
+  //     const successParts: string[] = [];
+  //     if (addedCount > 0) {
+  //       successParts.push(`${addedCount} member${addedCount > 1 ? 's' : ''} added`);
+  //     }
+  //     if (invitedCount > 0) {
+  //       successParts.push(`${invitedCount} invitation${invitedCount > 1 ? 's' : ''} sent`);
+  //     }
+
+  //     if (successParts.length > 0) {
+  //       setSuccess(successParts.join(', '));
+  //     }
+
+  //     if (errors.length > 0) {
+  //       setError(`Some invites failed: ${errors.join('; ')}`);
+  //     }
+
+  //     if (errors.length === 0) {
+  //       setTimeout(() => {
+  //         resetForm();
+  //         onClose();
+  //       }, 1500);
+  //     } else {
+  //       setPendingInvites([]);
+  //       setEmail('');
+  //     }
+  //   } catch (err: any) {
+  //     setError(err?.response?.data?.error || err?.message || 'Failed to send invitations');
+  //   }
+  // };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -178,85 +270,57 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
       return;
     }
 
-    // Add current email if not empty
-    const allInvites = [...pendingInvites];
-    const trimmedEmail = email.toLowerCase().trim();
-
-    if (trimmedEmail && validateEmail(trimmedEmail)) {
-      const matchingUser = searchResults?.find((u) => u.email.toLowerCase() === trimmedEmail);
-      if (!allInvites.some((p) => p.email === trimmedEmail)) {
-        allInvites.push({ email: trimmedEmail, user: matchingUser });
-      }
-    }
-
-    if (allInvites.length === 0) {
-      setError('Please add at least one email address');
+    if (pendingInvites.length === 0) {
+      setError('Please add at least one user');
       return;
     }
 
     try {
       let addedCount = 0;
-      let invitedCount = 0;
       const errors: string[] = [];
 
-      for (const invite of allInvites) {
+      for (const invite of pendingInvites) {
+        if (!invite.user) {
+          // Skip if no existing user (we're not handling email invites now)
+          errors.push(`${invite.email} is not an existing user`);
+          continue;
+        }
+
         try {
-          if (invite.user) {
-            // Add existing user directly to workspace
-            await addMemberMutation.mutateAsync({
-              entityType: 'workspace',
-              entityId: workspaceId,
-              data: {
-                userId: invite.user.id,
-                role: selectedRole,
-              },
-            });
-            addedCount++;
-          } else {
-            // Send workspace invitation
-            await inviteMemberMutation.mutateAsync({
-              entityType: 'workspace',
-              entityId: workspaceId,
-              data: {
-                email: invite.email,
-                role: selectedRole,
-              },
-            });
-            invitedCount++;
-          }
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-          errors.push(`${invite.email}: ${errorMsg}`);
+          await addMemberMutation.mutateAsync({
+            entityType: 'workspace', // or dynamically: 'space' | 'folder' | 'project'
+            entityId: workspaceId,
+            data: {
+              userId: invite.user.id,
+              role: selectedRole,
+            },
+          });
+          addedCount++;
+        } catch (err: any) {
+          const errorMsg = err?.response?.data?.error || err?.message || 'Unknown error';
+          errors.push(`${invite.user.name}: ${errorMsg}`);
         }
       }
 
-      const successParts: string[] = [];
       if (addedCount > 0) {
-        successParts.push(`${addedCount} member${addedCount > 1 ? 's' : ''} added`);
-      }
-      if (invitedCount > 0) {
-        successParts.push(`${invitedCount} invitation${invitedCount > 1 ? 's' : ''} sent`);
-      }
-
-      if (successParts.length > 0) {
-        setSuccess(successParts.join(', '));
+        setSuccess(`${addedCount} member${addedCount > 1 ? 's' : ''} added successfully`);
       }
 
       if (errors.length > 0) {
-        setError(`Some invites failed: ${errors.join('; ')}`);
+        setError(`Some users failed: ${errors.join('; ')}`);
       }
 
       if (errors.length === 0) {
         setTimeout(() => {
           resetForm();
           onClose();
-        }, 1500);
+        }, 1000);
       } else {
-        setPendingInvites([]);
-        setEmail('');
+        // Keep form open so user can fix issues
+        setPendingInvites(pendingInvites.filter((p) => p.user));
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send invitations');
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || 'Failed to add members');
     }
   };
 
@@ -706,18 +770,24 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
                           setShowRoleDropdown(false);
                         }}
                         className={`w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                          selectedRole === role.value ? 'bg-brand-50 dark:bg-brand-900/20' : ''
+                          selectedRole === role.value ? 'bg-brand-50 dark:bg-brand-900/30' : ''
                         }`}
                       >
-                        <div className="text-left">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        <div>
+                          <span
+                            className={`text-sm font-medium ${
+                              selectedRole === role.value
+                                ? 'text-brand-600 dark:text-brand-400'
+                                : 'text-gray-900 dark:text-white'
+                            }`}
+                          >
                             {role.label}
                           </span>
                           <p className="text-xs text-gray-500 mt-0.5">{role.description}</p>
                         </div>
                         {selectedRole === role.value && (
                           <svg
-                            className="w-5 h-5 text-brand-500"
+                            className="w-5 h-5 text-brand-600 dark:text-brand-400"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -726,7 +796,7 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M5 13l4 4L19 7"
+                              d="M9 12l2 2 4-4"
                             />
                           </svg>
                         )}
@@ -736,99 +806,25 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
                 )}
               </div>
             </div>
-
-            {/* Preview */}
-            {pendingInvites.length > 0 && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                <div className="flex gap-3">
-                  <svg
-                    className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                    {hasExistingUsers && (
-                      <p>
-                        <strong>{pendingInvites.filter((p) => p.user).length}</strong> existing user
-                        {pendingInvites.filter((p) => p.user).length > 1 ? 's' : ''} will be added
-                        immediately
-                      </p>
-                    )}
-                    {hasNewInvites && (
-                      <p>
-                        <strong>{pendingInvites.filter((p) => !p.user).length}</strong> invitation
-                        {pendingInvites.filter((p) => !p.user).length > 1 ? 's' : ''} will be sent
-                      </p>
-                    )}
-                    <p className="text-blue-600 dark:text-blue-400">
-                      All will join <strong>{workspaceName}</strong> as{' '}
-                      <strong className="capitalize">{selectedRole}</strong>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </form>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
+              type="submit"
               onClick={handleSubmit}
-              disabled={(pendingInvites.length === 0 && !validateEmail(email)) || isSubmitting}
-              className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 min-w-[160px] justify-center"
+              disabled={isSubmitting || (pendingInvites.length === 0 && email.trim() === '')}
+              className="px-5 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors disabled:opacity-50"
             >
-              {isSubmitting ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                    />
-                  </svg>
-                  <span>
-                    {pendingInvites.length > 0
-                      ? `Send ${pendingInvites.length} Invite${pendingInvites.length > 1 ? 's' : ''}`
-                      : 'Send Invitation'}
-                  </span>
-                </>
-              )}
+              {isSubmitting ? 'Sending...' : 'Send Invites'}
             </button>
           </div>
         </div>
@@ -837,4 +833,4 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }
   );
 };
 
-export default InviteMemberModal;
+export default InviteMemberModalv2;

@@ -79,19 +79,40 @@ export const queryKeys = {
   // ============================================
   tasks: {
     all: ['tasks'] as const,
-    list: () => [...queryKeys.tasks.all, 'list'] as const,
-    detail: (id: string) => [...queryKeys.tasks.all, 'detail', id] as const,
+    lists: () => [...queryKeys.tasks.all, 'list'] as const,
+    list: (filters: string) => [...queryKeys.tasks.lists(), { filters }] as const,
+    details: () => [...queryKeys.tasks.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.tasks.details(), id] as const,
+
+    // Project-based queries
     byProject: (projectId: string) => [...queryKeys.tasks.all, 'project', projectId] as const,
+
+    // User-based queries
     myTasks: () => [...queryKeys.tasks.all, 'my'] as const,
+
+    // Filtered queries
     filtered: (filters: Record<string, unknown>) =>
       [...queryKeys.tasks.all, 'filter', filters] as const,
+
+    // Task relationships
     subtasks: (taskId: string) => [...queryKeys.tasks.all, 'subtasks', taskId] as const,
+
+    // Task interactions
     comments: (taskId: string) => [...queryKeys.tasks.all, 'comments', taskId] as const,
     attachments: (taskId: string) => [...queryKeys.tasks.all, 'attachments', taskId] as const,
+
+    // Task dependencies
     dependencies: (taskId: string) => [...queryKeys.tasks.all, 'dependencies', taskId] as const,
     blockedBy: (taskId: string) => [...queryKeys.tasks.all, 'blocked-by', taskId] as const,
+
+    // Task checklists
     checklists: (taskId: string) => [...queryKeys.tasks.all, 'checklists', taskId] as const,
-    activity: (taskId: string) => [...queryKeys.tasks.all, 'activity', taskId] as const,
+
+    // Task activity - ✅ FIXED: Added limit parameter
+    activity: (taskId: string, limit?: number) =>
+      [...queryKeys.tasks.all, 'activity', taskId, { limit: limit ?? 50 }] as const,
+
+    // Time tracking
     timeEntries: (taskId: string) => [...queryKeys.tasks.all, 'time', taskId] as const,
     totalTime: (taskId: string) => [...queryKeys.tasks.all, 'time-total', taskId] as const,
     activeTimer: () => [...queryKeys.tasks.all, 'timer', 'active'] as const,

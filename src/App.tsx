@@ -12,7 +12,6 @@ import { ScrollToTop } from './components/common/ScrollToTop';
 import setupLocatorUI from '@locator/runtime';
 
 // Project Management Pages
-import ProjectDashboard from './pages/Dashboard/ProjectDashboard';
 import ProjectBoard from './pages/Board/ProjectBoard';
 import Backlog from './pages/Board/Backlog';
 import MyTasks from './pages/MyTasks/MyTasks';
@@ -26,6 +25,7 @@ import GuestRoute from './components/Protected/GuestRoute';
 import ToastProvider from './components/common/ToastProvider';
 import ChatPage from './pages/Chat/ChatPage';
 import NotificationPage from './pages/Notification/NotificationPage';
+import HomeDashboard from './pages/Dashboard/HomeDashboard';
 
 if (process.env.NODE_ENV === 'development') {
   setupLocatorUI();
@@ -51,8 +51,8 @@ export default function App() {
               }
             >
               {/* Main Pages */}
-              <Route index path="/" element={<ProjectDashboard />} />
-              <Route path="/dashboard" element={<ProjectDashboard />} />
+              <Route index path="/" element={<HomeDashboard />} />
+              <Route path="/dashboard" element={<HomeDashboard />} />
               <Route path="/notifications" element={<NotificationPage />} />
 
               <Route path="/chat" element={<ChatPage />} />

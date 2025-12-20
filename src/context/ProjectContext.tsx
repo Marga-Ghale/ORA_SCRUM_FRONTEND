@@ -29,6 +29,8 @@ import {
   useUpdateTask,
   useUpdateTaskStatus,
 } from '../hooks/api/useTasks';
+import { User } from '../hooks/useUser';
+import { Label } from '../hooks/api/useLabels';
 
 // ============================================
 // Context Type
@@ -91,9 +93,9 @@ interface ProjectContextType {
   // Filters
   filters: {
     search: string;
-    assignees: string[];
+    assigneeIds: User[];
     priorities: string[];
-    labels: string[];
+    labelIds: Label[];
     types: string[];
   };
   setFilters: React.Dispatch<React.SetStateAction<ProjectContextType['filters']>>;
@@ -128,12 +130,10 @@ const mapStatusFromBackend = (status: string): TaskStatus => {
     in_review: 'in_review',
     done: 'done',
   };
-  return statusMap[status] || 'todo';
+  return statusMap[status] || 'backlog';
 };
 
-const mapStatusToBackend = (status: TaskStatus): string => {
-  return status;
-};
+import { dateToISO } from '../utils/dateUtils';
 
 const mapTask = (task: any): Task => {
   const priorityMap: Record<string, Task['priority']> = {
@@ -154,23 +154,27 @@ const mapTask = (task: any): Task => {
 
   return {
     id: task.id,
-    key: `TASK-${task.id.slice(0, 6)}`,
     title: task.title,
     description: task.description,
     status: mapStatusFromBackend(task.status),
     priority: priorityMap[task.priority?.toLowerCase()] || 'medium',
     type: typeMap[task.type?.toLowerCase()] || 'task',
-    assignee: undefined,
-    reporter: undefined,
-    labels: task.labelIds?.map((id: string) => ({ id, name: id, color: '#6366f1' })) || [],
+    assigneeIds: task.assigneeIds || [],
+    labelIds: task.labelIds || [],
     storyPoints: task.storyPoints,
-    dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-    comments: [],
-    attachments: [],
-    subtasks: [],
-    order: task.position || 0,
-    createdAt: new Date(task.createdAt),
-    updatedAt: new Date(task.updatedAt),
+    estimatedHours: task.estimatedHours,
+    actualHours: task.actualHours,
+    blocked: task.blocked,
+    position: task.position || 0,
+    startDate: dateToISO(task.startDate), // ✅ convert to string
+    dueDate: dateToISO(task.dueDate), // ✅ convert to string
+    completedAt: dateToISO(task.completedAt), // ✅ convert to string
+    sprintId: task.sprintId,
+    parentTaskId: task.parentTaskId,
+    watcherIds: task.watcherIds || [],
+    createdBy: task.createdBy,
+    createdAt: dateToISO(task.createdAt), // ✅ convert to string
+    updatedAt: dateToISO(task.updatedAt), // ✅ convert to string
   };
 };
 
@@ -224,9 +228,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [viewMode, setViewMode] = useState<'board' | 'list' | 'table' | 'timeline'>('board');
   const [filters, setFilters] = useState({
     search: '',
-    assignees: [] as string[],
+    assigneeIds: [] as User[],
     priorities: [] as string[],
-    labels: [] as string[],
+    labelIds: [] as Label[],
     types: [] as string[],
   });
 
@@ -245,11 +249,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // ============================================
 
   // Fetch workspaces
-  const {
-    data: workspacesData,
-    isLoading: workspacesLoading,
-    refetch: refetchWorkspaces,
-  } = useWorkspaces({ enabled: isAuthenticated });
+  const { data: workspacesData, isLoading: workspacesLoading } = useWorkspaces({
+    enabled: isAuthenticated,
+  });
 
   // Fetch spaces for current workspace
   const { data: spacesData, refetch: refetchSpaces } = useSpacesByWorkspace(
@@ -371,15 +373,15 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // ============================================
   const updateTaskStatus = useCallback(
     (taskId: string, newStatus: TaskStatus) => {
-      const backendStatus = mapStatusToBackend(newStatus);
+      const backendStatus = mapStatusFromBackend(newStatus);
       updateTaskStatusMutation.mutate({ id: taskId, status: backendStatus });
     },
     [updateTaskStatusMutation]
   );
 
   const moveTask = useCallback(
-    (taskId: string, toStatus: TaskStatus, toIndex: number) => {
-      const backendStatus = mapStatusToBackend(toStatus);
+    (taskId: string, toStatus: TaskStatus) => {
+      const backendStatus = mapStatusFromBackend(toStatus);
 
       // Update task status and position
       updateTaskMutation.mutate(

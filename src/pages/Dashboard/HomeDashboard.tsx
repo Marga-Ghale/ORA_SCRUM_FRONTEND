@@ -1,4 +1,4 @@
-// src/pages/Dashboard/Dashboard.tsx
+// src/pages/HomeDashboard/HomeDashboard.tsx
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -250,11 +250,11 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
   );
 };
 
-const Dashboard: React.FC = () => {
+const HomeDashboard: React.FC = () => {
   const navigate = useNavigate();
 
-  // Auto-manage user status
-  useAutoStatus();
+  // // Auto-manage user status
+  // useAutoStatus();
 
   // Fetch current user
   const { data: currentUser, isLoading: userLoading } = useCurrentUser();
@@ -683,4 +683,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard;
+export default HomeDashboard;

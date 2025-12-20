@@ -25,7 +25,7 @@ interface CreateTaskModalProps {
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   isOpen,
   onClose,
-  initialStatus = 'todo',
+  initialStatus = 'backlog',
 }) => {
   const { currentProject } = useProject();
   const createTask = useCreateTask();

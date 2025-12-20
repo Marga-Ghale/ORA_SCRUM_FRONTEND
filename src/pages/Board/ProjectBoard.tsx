@@ -58,8 +58,8 @@ const ProjectBoard: React.FC = () => {
       }
 
       // Assignee filter
-      if (filters.assignees.length > 0) {
-        const hasAssignee = task.assignees?.some((id) => filters.assignees.includes(id as any));
+      if (filters.assigneeIds.length > 0) {
+        const hasAssignee = task.assigneeIds?.some((id) => filters.assigneeIds.includes(id as any));
         if (!hasAssignee) return false;
       }
 
@@ -74,8 +74,8 @@ const ProjectBoard: React.FC = () => {
       }
 
       // Label filter
-      if (filters.labels.length > 0) {
-        const hasLabel = task.labels?.some((id) => filters.labels.includes(id as any));
+      if (filters.labelIds.length > 0) {
+        const hasLabel = task.labelIds?.some((id) => filters.labelIds.includes(id as any));
         if (!hasLabel) return false;
       }
 
@@ -94,10 +94,10 @@ const ProjectBoard: React.FC = () => {
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.search) count++;
-    if (filters.assignees.length) count += filters.assignees.length;
+    if (filters.assigneeIds.length) count += filters.assigneeIds.length;
     if (filters.priorities.length) count += filters.priorities.length;
     if (filters.types.length) count += filters.types.length;
-    if (filters.labels.length) count += filters.labels.length;
+    if (filters.labelIds.length) count += filters.labelIds.length;
     return count;
   }, [filters]);
 
@@ -145,7 +145,7 @@ const ProjectBoard: React.FC = () => {
             {/* Add Task Button */}
             <button
               onClick={() => {
-                setCreateTaskInitialStatus('todo');
+                setCreateTaskInitialStatus('backlog');
                 setIsCreateTaskModalOpen(true);
               }}
               className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow"
@@ -209,14 +209,14 @@ const ProjectBoard: React.FC = () => {
                     onClick={() => {
                       setFilters((prev) => ({
                         ...prev,
-                        assignees: prev.assignees.includes(user.id)
-                          ? prev.assignees.filter((id) => id !== user.id)
-                          : [...prev.assignees, user.id],
+                        assignees: prev.assigneeIds.includes(user.id)
+                          ? prev.assigneeIds.filter((id) => id !== user.id)
+                          : [...prev.assigneeIds, user.id],
                       }));
                     }}
                     className={`w-8 h-8 rounded-full border-2 overflow-hidden transition-all hover:z-10
                       ${
-                        filters.assignees.includes(user.id)
+                        filters.assigneeIds.includes(user.id)
                           ? 'border-brand-500 ring-2 ring-brand-200 dark:ring-brand-800 z-10'
                           : 'border-white dark:border-gray-800 hover:border-gray-300'
                       }
@@ -360,14 +360,14 @@ const ProjectBoard: React.FC = () => {
                       onClick={() => {
                         setFilters((prev) => ({
                           ...prev,
-                          assignees: prev.assignees.includes(user.id)
-                            ? prev.assignees.filter((id) => id !== user.id)
-                            : [...prev.assignees, user.id],
+                          assignees: prev.assigneeIds.includes(user.id)
+                            ? prev.assigneeIds.filter((id) => id !== user.id)
+                            : [...prev.assigneeIds, user.id],
                         }));
                       }}
                       className={`px-2.5 py-1 rounded text-xs font-medium transition-all flex items-center gap-1
                         ${
-                          filters.assignees.includes(user.id)
+                          filters.assigneeIds.includes(user.id)
                             ? 'bg-brand-100 dark:bg-brand-900 text-brand-600 dark:text-brand-400 ring-2 ring-brand-200 dark:ring-brand-800'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }
@@ -398,7 +398,13 @@ const ProjectBoard: React.FC = () => {
               <div className="flex items-end">
                 <button
                   onClick={() =>
-                    setFilters({ search: '', assignees: [], priorities: [], labels: [], types: [] })
+                    setFilters({
+                      search: '',
+                      assigneeIds: [],
+                      priorities: [],
+                      labelIds: [],
+                      types: [],
+                    })
                   }
                   disabled={activeFilterCount === 0}
                   className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
