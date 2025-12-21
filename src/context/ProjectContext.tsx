@@ -31,6 +31,7 @@ import {
 } from '../hooks/api/useTasks';
 import { User } from '../hooks/useUsers';
 import { Label } from '../hooks/api/useLabels';
+import { dateToISO } from '../utils/dateUtils';
 
 // ============================================
 // Context Type
@@ -100,6 +101,9 @@ interface ProjectContextType {
   };
   setFilters: React.Dispatch<React.SetStateAction<ProjectContextType['filters']>>;
 
+  managementEntity: ManagementEntity;
+  setManagementEntity: (managementEntity: ManagementEntity | null) => void;
+
   // Task detail modal
   isTaskModalOpen: boolean;
   openTaskModal: (task: Task) => void;
@@ -115,6 +119,12 @@ interface ProjectContextType {
   createTaskInitialStatus: TaskStatus;
   setCreateTaskInitialStatus: (status: TaskStatus) => void;
 }
+
+type ManagementEntity = {
+  entityType: 'workspace' | 'space' | 'folder' | 'project';
+  entityId: string;
+  entityName: string;
+} | null;
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -132,8 +142,6 @@ const mapStatusFromBackend = (status: string): TaskStatus => {
   };
   return statusMap[status] || 'backlog';
 };
-
-import { dateToISO } from '../utils/dateUtils';
 
 const mapTask = (task: any): Task => {
   const priorityMap: Record<string, Task['priority']> = {
@@ -224,6 +232,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [currentSpace, setCurrentSpace] = useState<Space | null>(null);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  const [managementEntity, setManagementEntity] = useState<ManagementEntity>(null);
 
   // ============================================
   // UI State
@@ -558,6 +568,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsCreateTaskModalOpen,
     createTaskInitialStatus,
     setCreateTaskInitialStatus,
+    managementEntity,
+    setManagementEntity,
   };
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

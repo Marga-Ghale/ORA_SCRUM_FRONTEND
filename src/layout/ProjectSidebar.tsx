@@ -19,6 +19,7 @@ import {
   MessageSquare,
   BellElectric,
   UserPlus,
+  PersonStandingIcon,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useProject } from '../context/ProjectContext';
@@ -53,6 +54,8 @@ const ProjectSidebar: React.FC = () => {
     setIsCreateSpaceModalOpen,
     setIsCreateProjectModalOpen,
     isInitializing,
+    managementEntity,
+    setManagementEntity,
   } = useProject();
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -276,7 +279,7 @@ const ProjectSidebar: React.FC = () => {
         {/* Main Navigation */}
         <nav className="px-2 py-1 border-b border-[#2a2e33]">
           {[
-            { icon: Home, label: 'Home', path: '/', badge: undefined },
+            { icon: Home, label: 'Home', path: '/' },
             {
               icon: BellElectric,
               label: 'Notifications',
@@ -289,39 +292,63 @@ const ProjectSidebar: React.FC = () => {
               path: '/chat',
               badge: totalChatUnread > 0 ? totalChatUnread : undefined,
             },
-            { icon: CheckSquare, label: 'My Tasks', path: '/my-tasks', badge: undefined },
-            { icon: FileText, label: 'Docs', path: '/docs', badge: undefined },
-            { icon: BarChart3, label: 'Dashboards', path: '/dashboards', badge: undefined },
+            { icon: CheckSquare, label: 'My Tasks', path: '/my-tasks' },
+
+            // ✅ MEMBER MANAGEMENT (BUTTON, NOT LINK)
+            {
+              icon: PersonStandingIcon,
+              label: 'Member Management',
+              onClick: () => {
+                if (!currentWorkspace) return;
+
+                // Set context (optional, for state management)
+                setManagementEntity({
+                  entityType: 'workspace',
+                  entityId: currentWorkspace.id,
+                  entityName: currentWorkspace.name,
+                });
+
+                // ✅ FIXED: Navigate with URL parameters
+                navigate(`/member-management/workspace/${currentWorkspace.id}`);
+              },
+            },
+
+            { icon: FileText, label: 'Docs', path: '/docs' },
+            { icon: BarChart3, label: 'Dashboards', path: '/dashboards' },
           ].map((item) => {
             const Icon = item.icon;
+
+            // ✅ BUTTON ITEM
+            if ('onClick' in item) {
+              return (
+                <button
+                  key={item.label}
+                  onClick={item.onClick}
+                  className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5
+            text-[#9ca3af] hover:bg-[#25282c] hover:text-white
+            ${!showFull ? 'justify-center px-2' : ''}`}
+                  title={!showFull ? item.label : undefined}
+                >
+                  <Icon className="w-[18px] h-[18px]" />
+                  {showFull && <span>{item.label}</span>}
+                </button>
+              );
+            }
+
+            // ✅ LINK ITEM
             const active = isActive(item.path);
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5 group
-                  ${active ? 'bg-[#7c3aed]/20 text-[#a78bfa]' : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}
-                  ${!showFull ? 'justify-center px-2' : ''}`}
+                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5
+          ${active ? 'bg-[#7c3aed]/20 text-[#a78bfa]' : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}
+          ${!showFull ? 'justify-center px-2' : ''}`}
                 title={!showFull ? item.label : undefined}
               >
-                <div className="relative">
-                  <Icon
-                    className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-[#a78bfa]' : ''}`}
-                  />
-                  {!showFull && item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-                  )}
-                </div>
-                {showFull && (
-                  <>
-                    <span className="flex-1">{item.label}</span>
-                    {item.badge && item.badge > 0 && (
-                      <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-red-500 text-white min-w-[20px] text-center">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
+                <Icon className="w-[18px] h-[18px]" />
+                {showFull && <span className="flex-1">{item.label}</span>}
               </Link>
             );
           })}

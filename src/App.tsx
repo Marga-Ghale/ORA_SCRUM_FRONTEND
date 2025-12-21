@@ -26,6 +26,7 @@ import ToastProvider from './components/common/ToastProvider';
 import ChatPage from './pages/Chat/ChatPage';
 import NotificationPage from './pages/Notification/NotificationPage';
 import HomeDashboard from './pages/Dashboard/HomeDashboard';
+import MembersManagementPage from './pages/Member/MembersManagementPage';
 
 if (process.env.NODE_ENV === 'development') {
   setupLocatorUI();
@@ -58,6 +59,10 @@ export default function App() {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/chat/:channelId" element={<ChatPage />} />
 
+              <Route
+                path="/member-management/:entityType/:entityId"
+                element={<MembersManagementPage />}
+              />
               <Route path="/my-tasks" element={<MyTasks />} />
 
               {/* Project Board Views */}

@@ -1,5 +1,5 @@
 // src/pages/MembersManagementPage.tsx
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,9 +15,9 @@ import {
   ChevronDown,
   Trash2,
   Filter,
+  AlertCircle,
 } from 'lucide-react';
 import {
-  EntityType,
   useAddMember,
   useEffectiveMembers,
   useRemoveMember,
@@ -27,7 +27,7 @@ import { useSearchUsers } from '../../hooks/useUsers';
 import { useWorkspace } from '../../hooks/api/useWorkspaces';
 import { useSpace } from '../../hooks/api/useSpaces';
 import { useFolder } from '../../hooks/api/useFolder';
-import { useProject } from '../../context/ProjectContext';
+import { useProject } from '../../hooks/api/useProjects';
 
 const ROLE_OPTIONS = [
   {
@@ -314,7 +314,10 @@ const AddMemberSection = ({
 };
 
 export default function MembersManagementPage() {
-  const { entityType, entityId } = useParams<{ entityType: EntityType; entityId: string }>();
+  const { entityType, entityId } = useParams<{
+    entityType: 'workspace' | 'space' | 'folder' | 'project';
+    entityId: string;
+  }>();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -323,11 +326,31 @@ export default function MembersManagementPage() {
   const [showAccessInfo, setShowAccessInfo] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'direct' | 'inherited'>('all');
 
-  const { data: members = [], isLoading: membersLoading } = useEffectiveMembers(
-    entityType!,
-    entityId!,
-    { enabled: !!(entityType && entityId) }
-  );
+  // ✅ DEBUG: Log params
+  useEffect(() => {
+    console.log('🔍 MembersManagementPage - Params:', { entityType, entityId });
+  }, [entityType, entityId]);
+
+  // ✅ FIX: Proper enabled condition with debug logging
+  const {
+    data: members = [],
+    isLoading: membersLoading,
+    error: membersError,
+    isError: hasMembersError,
+  } = useEffectiveMembers(entityType!, entityId!, {
+    enabled: Boolean(entityType && entityId),
+  });
+
+  // ✅ DEBUG: Log members data
+  useEffect(() => {
+    console.log('👥 Members Data:', {
+      members,
+      count: members.length,
+      loading: membersLoading,
+      error: membersError,
+      hasError: hasMembersError,
+    });
+  }, [members, membersLoading, membersError, hasMembersError]);
 
   const { data: searchResults = [], isLoading: searchLoading } = useSearchUsers(searchQuery, {
     enabled: searchQuery.length >= 2,
@@ -337,16 +360,21 @@ export default function MembersManagementPage() {
   const updateRole = useUpdateMemberRole();
   const removeMember = useRemoveMember();
 
-  // Fetch entity details
-  const { data: workspace } = useWorkspace(entityId!, {
-    enabled: entityType === 'workspace' && !!entityId,
+  // ✅ FIX: Fetch entity details with proper conditions
+  const { data: workspace, isLoading: workspaceLoading } = useWorkspace(entityId!, {
+    enabled: entityType === 'workspace' && Boolean(entityId),
   });
-  const { data: space } = useSpace(entityId!, { enabled: entityType === 'space' && !!entityId });
-  const { data: folder } = useFolder(entityId!, {
-    enabled: entityType === 'folder' && !!entityId,
+
+  const { data: space, isLoading: spaceLoading } = useSpace(entityId!, {
+    enabled: entityType === 'space' && Boolean(entityId),
   });
-  const { data: project } = useProject(entityId!, {
-    enabled: entityType === 'project' && !!entityId,
+
+  const { data: folder, isLoading: folderLoading } = useFolder(entityId!, {
+    enabled: entityType === 'folder' && Boolean(entityId),
+  });
+
+  const { data: project, isLoading: projectLoading } = useProject(entityId!, {
+    enabled: entityType === 'project' && Boolean(entityId),
   });
 
   const entityData =
@@ -357,6 +385,16 @@ export default function MembersManagementPage() {
         : entityType === 'folder'
           ? folder
           : project;
+
+  const entityLoading =
+    entityType === 'workspace'
+      ? workspaceLoading
+      : entityType === 'space'
+        ? spaceLoading
+        : entityType === 'folder'
+          ? folderLoading
+          : projectLoading;
+
   const entityName = entityData?.name || 'Loading...';
 
   const directMembers = members.filter((m: any) => !m.isInherited);
@@ -369,43 +407,51 @@ export default function MembersManagementPage() {
   const availableUsers = searchResults.filter((user: any) => !memberUserIds.has(user.id));
 
   const handleAddMembers = async () => {
-    if (selectedUsers.size === 0) return;
+    if (selectedUsers.size === 0 || !entityType || !entityId) return;
 
     try {
-      for (const userId of selectedUsers) {
-        await addMember.mutateAsync({
-          entityType: entityType!,
-          entityId: entityId!,
+      const promises = Array.from(selectedUsers).map((userId) =>
+        addMember.mutateAsync({
+          entityType,
+          entityId,
           data: { userId, role: selectedRole },
-        });
-      }
+        })
+      );
+
+      await Promise.all(promises);
       setSelectedUsers(new Set());
       setSearchQuery('');
-    } catch (error) {
-      console.error('Failed to add members:', error);
+    } catch (error: any) {
+      console.error('❌ Failed to add members:', error);
+      alert(`Failed to add members: ${error?.message || 'Unknown error'}`);
     }
   };
 
   const handleRemoveMember = async (userId: string, userName: string) => {
+    if (!entityType || !entityId) return;
     if (!confirm(`Remove ${userName} from this ${entityType}?`)) return;
 
     try {
-      await removeMember.mutateAsync({ entityType: entityType!, entityId: entityId!, userId });
-    } catch (error) {
-      console.error('Failed to remove member:', error);
+      await removeMember.mutateAsync({ entityType, entityId, userId });
+    } catch (error: any) {
+      console.error('❌ Failed to remove member:', error);
+      alert(`Failed to remove member: ${error?.message || 'Unknown error'}`);
     }
   };
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
+    if (!entityType || !entityId) return;
+
     try {
       await updateRole.mutateAsync({
-        entityType: entityType!,
-        entityId: entityId!,
+        entityType,
+        entityId,
         userId,
         data: { role: newRole },
       });
-    } catch (error) {
-      console.error('Failed to update role:', error);
+    } catch (error: any) {
+      console.error('❌ Failed to update role:', error);
+      alert(`Failed to update role: ${error?.message || 'Unknown error'}`);
     }
   };
 
@@ -443,6 +489,82 @@ export default function MembersManagementPage() {
   const entityConfig = entityType
     ? ENTITY_TYPE_LABELS[entityType]
     : { singular: 'Entity', icon: '📁', color: '#7c3aed' };
+
+  // ✅ ERROR STATE - Show if members API fails
+  if (hasMembersError) {
+    return (
+      <div className="min-h-screen bg-[#111315] flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center p-8 bg-[#1a1d21] rounded-xl border border-red-500/20">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-white mb-2">Failed to Load Members</h2>
+          <p className="text-sm text-[#9ca3af] mb-4">
+            {membersError instanceof Error ? membersError.message : 'Unknown error occurred'}
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-4 py-2 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-lg font-medium transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="w-full px-4 py-2 bg-[#25282c] hover:bg-[#2a2e33] text-white rounded-lg font-medium transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+          <div className="mt-4 p-3 bg-[#25282c] rounded-lg text-left">
+            <p className="text-xs text-[#6b7280] font-mono">
+              Debug Info:
+              <br />
+              Entity: {entityType} / {entityId}
+              <br />
+              Error: {membersError instanceof Error ? membersError.message : 'Unknown'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ LOADING STATE - Show while fetching entity or members
+  if (entityLoading || membersLoading) {
+    return (
+      <div className="min-h-screen bg-[#111315] flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-8 h-8 text-[#7c3aed] animate-spin mx-auto mb-3" />
+          <p className="text-sm text-[#9ca3af]">
+            {entityLoading ? 'Loading entity details...' : 'Loading members...'}
+          </p>
+          <p className="text-xs text-[#6b7280] mt-1">
+            {entityType} / {entityId}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ INVALID PARAMS - Show if params are missing
+  if (!entityType || !entityId) {
+    return (
+      <div className="min-h-screen bg-[#111315] flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center p-8 bg-[#1a1d21] rounded-xl border border-[#2a2e33]">
+          <AlertCircle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-white mb-2">Invalid URL</h2>
+          <p className="text-sm text-[#9ca3af] mb-4">
+            Missing entity type or ID in the URL parameters.
+          </p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-lg font-medium transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#111315]">
@@ -543,13 +665,7 @@ export default function MembersManagementPage() {
 
             {/* Members List */}
             <div className="space-y-3">
-              {membersLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-20 bg-[#1a1d21] rounded-lg animate-pulse" />
-                  ))}
-                </div>
-              ) : filteredMembers.length > 0 ? (
+              {filteredMembers.length > 0 ? (
                 filteredMembers.map((member: any) => (
                   <MemberRow
                     key={member.userId}
@@ -566,6 +682,11 @@ export default function MembersManagementPage() {
                 <div className="text-center py-12 bg-[#1a1d21] rounded-xl border border-[#2a2e33]">
                   <Users className="w-12 h-12 text-[#6b7280] mx-auto mb-3" />
                   <p className="text-sm text-[#9ca3af]">No members found</p>
+                  <p className="text-xs text-[#6b7280] mt-1">
+                    {filterType === 'direct' && 'No direct members yet'}
+                    {filterType === 'inherited' && 'No inherited members'}
+                    {filterType === 'all' && 'Add members to get started'}
+                  </p>
                 </div>
               )}
             </div>
