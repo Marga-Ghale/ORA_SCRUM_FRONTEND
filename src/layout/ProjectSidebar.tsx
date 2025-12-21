@@ -7,7 +7,6 @@ import {
   Search,
   Plus,
   ChevronRight,
-  ChevronDown,
   Settings,
   Users,
   LogOut,
@@ -19,20 +18,26 @@ import {
   Zap,
   MessageSquare,
   BellElectric,
+  UserPlus,
+  Edit,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
+import { useMyWorkspaces } from '../hooks/api/useWorkspaces';
 import { useSpacesByWorkspace } from '../hooks/api/useSpaces';
 import { useProjectsBySpace } from '../hooks/api/useProjects';
 import { useNotificationCount } from '../hooks/api/useNotifications';
 import { useUnreadCounts } from '../hooks/api/useChat';
+import MemberManagementModal from '../components/modals/MemberManagementModal';
+import WorkspaceSelector from '../components/workspace/WorkspaceSelector';
 
 const ProjectSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const {
     currentWorkspace,
     currentSpace,
+    setCurrentWorkspace,
     setCurrentSpace,
     setCurrentProject,
     setIsCreateSpaceModalOpen,
@@ -43,29 +48,51 @@ const ProjectSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Fetch user's workspaces (only those where user is a member)
+  const { data: workspaces, isLoading: workspacesLoading } = useMyWorkspaces();
+
   // Fetch spaces for current workspace
   const { data: spaces, isLoading: spacesLoading } = useSpacesByWorkspace(
     currentWorkspace?.id || '',
     { enabled: !!currentWorkspace?.id }
   );
 
-  // Fetch notification count (for Inbox)
-  const { data: notificationData } = useNotificationCount({
-    enabled: !!user,
-  });
+  // Fetch notification count
+  const { data: notificationData } = useNotificationCount({ enabled: !!user });
 
-  // Fetch chat unread counts (for Chat)
-  const { data: chatUnreadData } = useUnreadCounts({
-    enabled: !!user,
-  });
+  // Fetch chat unread counts
+  const { data: chatUnreadData } = useUnreadCounts({ enabled: !!user });
 
   const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set());
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [hoveredSpace, setHoveredSpace] = useState<string | null>(null);
 
+  const [IsCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
+
+  // Member management modal state
+  const [memberModal, setMemberModal] = useState<{
+    isOpen: boolean;
+    entityType: 'workspace' | 'space' | 'folder' | 'project';
+    entityId: string;
+    entityName: string;
+  } | null>(null);
+
   const showFull = isExpanded || isHovered || isMobileOpen;
 
-  // Check if path is active
+  // Auto-select first workspace if none selected
+  useEffect(() => {
+    if (workspaces && workspaces.length > 0 && !currentWorkspace) {
+      setCurrentWorkspace(workspaces[0] as any);
+    }
+  }, [workspaces, currentWorkspace, setCurrentWorkspace]);
+
+  // Auto-expand current space
+  useEffect(() => {
+    if (currentSpace) {
+      setExpandedSpaces((prev) => new Set([...prev, currentSpace.id]));
+    }
+  }, [currentSpace]);
+
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname === path || location.pathname.startsWith(path + '/');
@@ -74,20 +101,11 @@ const ProjectSidebar: React.FC = () => {
   const isProjectActive = (projectId: string) =>
     location.pathname.includes(`/project/${projectId}`);
 
-  // Calculate total chat unread count
   const totalChatUnread = chatUnreadData
     ? Object.values(chatUnreadData).reduce((sum, count) => sum + count, 0)
     : 0;
 
-  // Unread notification count
   const unreadNotifications = notificationData?.unread || 0;
-
-  // Auto-expand current space
-  useEffect(() => {
-    if (currentSpace) {
-      setExpandedSpaces((prev) => new Set([...prev, currentSpace.id]));
-    }
-  }, [currentSpace]);
 
   const getInitials = (name: string) => {
     return name
@@ -116,8 +134,18 @@ const ProjectSidebar: React.FC = () => {
     navigate('/signin');
   };
 
+  const openMemberModal = (
+    entityType: 'workspace' | 'space' | 'folder' | 'project',
+    entityId: string,
+    entityName: string,
+    e?: React.MouseEvent
+  ) => {
+    e?.stopPropagation();
+    setMemberModal({ isOpen: true, entityType, entityId, entityName });
+  };
+
   // Loading state
-  if (isInitializing) {
+  if (isInitializing || workspacesLoading) {
     return (
       <aside
         className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 bg-[#1a1d21] border-r border-[#2a2e33] transition-all duration-200 ${showFull ? 'w-[260px]' : 'w-[60px]'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
@@ -153,29 +181,39 @@ const ProjectSidebar: React.FC = () => {
         onMouseEnter={() => !isExpanded && setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Workspace Header */}
-        <div className="p-2 border-b border-[#2a2e33]">
-          <button
-            className={`w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-[#2a2e33] transition-colors ${!showFull ? 'justify-center' : ''}`}
-          >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)' }}
-            >
-              {currentWorkspace?.name?.[0]?.toUpperCase() || 'W'}
+        {/* Workspace Selector */}
+        <WorkspaceSelector
+          currentWorkspace={currentWorkspace}
+          onWorkspaceChange={setCurrentWorkspace}
+          onCreateNew={() => setIsCreateWorkspaceModalOpen(true)}
+          showFull={showFull}
+        />
+
+        {/* Workspace Actions */}
+        {currentWorkspace && showFull && (
+          <div className="px-2 py-1 border-b border-[#2a2e33]">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) =>
+                  openMemberModal('workspace', currentWorkspace.id, currentWorkspace.name, e)
+                }
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs text-[#9ca3af] hover:bg-[#25282c] hover:text-white transition-colors"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Invite</span>
+              </button>
+              <button
+                onClick={() => {
+                  /* TODO: Open workspace settings */
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs text-[#9ca3af] hover:bg-[#25282c] hover:text-white transition-colors"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </button>
             </div>
-            {showFull && (
-              <>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
-                    {currentWorkspace?.name || 'Workspace'}
-                  </p>
-                </div>
-                <ChevronDown className="w-4 h-4 text-[#6b7280]" />
-              </>
-            )}
-          </button>
-        </div>
+          </div>
+        )}
 
         {/* Search */}
         <div className={`p-2 ${!showFull ? 'px-1.5' : ''}`}>
@@ -229,7 +267,6 @@ const ProjectSidebar: React.FC = () => {
                   <Icon
                     className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-[#a78bfa]' : ''}`}
                   />
-                  {/* Badge dot for collapsed sidebar */}
                   {!showFull && item.badge && item.badge > 0 && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                   )}
@@ -251,81 +288,103 @@ const ProjectSidebar: React.FC = () => {
 
         {/* Spaces Section */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          {/* Section Header */}
-          <div className={`sticky top-0 bg-[#1a1d21] z-10 px-2 py-2 ${!showFull ? 'px-1.5' : ''}`}>
-            {showFull ? (
-              <div className="flex items-center justify-between px-2.5">
-                <span className="text-xs font-medium text-[#6b7280] uppercase tracking-wide">
-                  Spaces
-                </span>
-                <button
-                  onClick={() => setIsCreateSpaceModalOpen(true)}
-                  className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsCreateSpaceModalOpen(true)}
-                className="w-full p-2 rounded-md hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors flex justify-center"
-                title="Add Space"
+          {currentWorkspace ? (
+            <>
+              {/* Section Header */}
+              <div
+                className={`sticky top-0 bg-[#1a1d21] z-10 px-2 py-2 ${!showFull ? 'px-1.5' : ''}`}
               >
-                <Plus className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-
-          {/* Spaces List */}
-          <div className="px-2 pb-2">
-            {spacesLoading ? (
-              <div className="space-y-2 px-2 py-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-8 bg-[#2a2e33] rounded-md animate-pulse" />
-                ))}
-              </div>
-            ) : spaces && spaces.length > 0 ? (
-              spaces.map((space) => {
-                const isSpaceExpanded = expandedSpaces.has(space.id);
-                const isHovered = hoveredSpace === space.id;
-
-                return (
-                  <SpaceItem
-                    key={space.id}
-                    space={space}
-                    isSpaceExpanded={isSpaceExpanded}
-                    isHovered={isHovered}
-                    showFull={showFull}
-                    currentSpace={currentSpace}
-                    onToggle={toggleSpace}
-                    onMouseEnter={() => setHoveredSpace(space.id)}
-                    onMouseLeave={() => setHoveredSpace(null)}
-                    setCurrentSpace={setCurrentSpace}
-                    setCurrentProject={setCurrentProject}
-                    setIsCreateProjectModalOpen={setIsCreateProjectModalOpen}
-                    isProjectActive={isProjectActive}
-                  />
-                );
-              })
-            ) : (
-              <div className="px-2 py-6 text-center">
-                <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center mx-auto mb-2">
-                  <Zap className="w-5 h-5 text-[#6b7280]" />
-                </div>
-                {showFull && (
-                  <>
-                    <p className="text-sm text-[#6b7280] mb-2">No spaces yet</p>
+                {showFull ? (
+                  <div className="flex items-center justify-between px-2.5">
+                    <span className="text-xs font-medium text-[#6b7280] uppercase tracking-wide">
+                      Spaces
+                    </span>
                     <button
                       onClick={() => setIsCreateSpaceModalOpen(true)}
-                      className="text-sm text-[#7c3aed] hover:text-[#a78bfa] font-medium transition-colors"
+                      className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors"
                     >
-                      Create a space
+                      <Plus className="w-4 h-4" />
                     </button>
-                  </>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsCreateSpaceModalOpen(true)}
+                    className="w-full p-2 rounded-md hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors flex justify-center"
+                    title="Add Space"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
                 )}
               </div>
-            )}
-          </div>
+
+              {/* Spaces List */}
+              <div className="px-2 pb-2">
+                {spacesLoading ? (
+                  <div className="space-y-2 px-2 py-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-8 bg-[#2a2e33] rounded-md animate-pulse" />
+                    ))}
+                  </div>
+                ) : spaces && spaces.length > 0 ? (
+                  spaces.map((space) => {
+                    const isSpaceExpanded = expandedSpaces.has(space.id);
+                    const isHovered = hoveredSpace === space.id;
+
+                    return (
+                      <SpaceItem
+                        key={space.id}
+                        space={space}
+                        isSpaceExpanded={isSpaceExpanded}
+                        isHovered={isHovered}
+                        showFull={showFull}
+                        currentSpace={currentSpace}
+                        onToggle={toggleSpace}
+                        onMouseEnter={() => setHoveredSpace(space.id)}
+                        onMouseLeave={() => setHoveredSpace(null)}
+                        setCurrentSpace={setCurrentSpace}
+                        setCurrentProject={setCurrentProject}
+                        setIsCreateProjectModalOpen={setIsCreateProjectModalOpen}
+                        isProjectActive={isProjectActive}
+                        onManageMembers={openMemberModal}
+                      />
+                    );
+                  })
+                ) : (
+                  <div className="px-2 py-6 text-center">
+                    <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center mx-auto mb-2">
+                      <Zap className="w-5 h-5 text-[#6b7280]" />
+                    </div>
+                    {showFull && (
+                      <>
+                        <p className="text-sm text-[#6b7280] mb-2">No spaces yet</p>
+                        <button
+                          onClick={() => setIsCreateSpaceModalOpen(true)}
+                          className="text-sm text-[#7c3aed] hover:text-[#a78bfa] font-medium transition-colors"
+                        >
+                          Create a space
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="px-4 py-8 text-center">
+              {showFull && (
+                <>
+                  <Zap className="w-12 h-12 text-[#6b7280] mx-auto mb-3" />
+                  <p className="text-sm text-[#6b7280] mb-3">No workspace selected</p>
+                  <button
+                    onClick={() => setIsCreateWorkspaceModalOpen(true)}
+                    className="text-sm text-[#7c3aed] hover:text-[#a78bfa] font-medium transition-colors"
+                  >
+                    Create your first workspace
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bottom Navigation */}
@@ -399,11 +458,22 @@ const ProjectSidebar: React.FC = () => {
           )}
         </div>
       </aside>
+
+      {/* Member Management Modal */}
+      {memberModal && (
+        <MemberManagementModal
+          isOpen={memberModal.isOpen}
+          onClose={() => setMemberModal(null)}
+          entityType={memberModal.entityType}
+          entityId={memberModal.entityId}
+          entityName={memberModal.entityName}
+        />
+      )}
     </>
   );
 };
 
-// Separate SpaceItem component for better organization
+// SpaceItem Component
 interface SpaceItemProps {
   space: any;
   isSpaceExpanded: boolean;
@@ -417,6 +487,12 @@ interface SpaceItemProps {
   setCurrentProject: (project: any) => void;
   setIsCreateProjectModalOpen: (open: boolean) => void;
   isProjectActive: (id: string) => boolean;
+  onManageMembers: (
+    entityType: 'space' | 'project',
+    entityId: string,
+    entityName: string,
+    e?: React.MouseEvent
+  ) => void;
 }
 
 const SpaceItem: React.FC<SpaceItemProps> = ({
@@ -432,8 +508,8 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
   setCurrentProject,
   setIsCreateProjectModalOpen,
   isProjectActive,
+  onManageMembers,
 }) => {
-  // Fetch projects for this specific space
   const { data: projects, isLoading: projectsLoading } = useProjectsBySpace(space.id, {
     enabled: isSpaceExpanded,
   });
@@ -452,7 +528,6 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
-        {/* Expand Arrow */}
         {showFull && (
           <button
             onClick={(e) => onToggle(space.id, e)}
@@ -464,7 +539,6 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
           </button>
         )}
 
-        {/* Space Icon */}
         <div
           className="w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0"
           style={{
@@ -479,10 +553,16 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
           <>
             <span className="flex-1 text-sm text-[#e5e7eb] truncate">{space.name}</span>
 
-            {/* Actions on hover */}
             <div
               className={`flex items-center gap-0.5 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`}
             >
+              <button
+                onClick={(e) => onManageMembers('space', space.id, space.name, e)}
+                className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white"
+                title="Manage members"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -516,37 +596,20 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
             </div>
           ) : projects && projects.length > 0 ? (
             projects.map((project) => (
-              <Link
+              <ProjectItem
                 key={project.id}
-                to={`/project/${project.id}/board`}
-                onClick={() => {
-                  setCurrentSpace(space);
-                  setCurrentProject(project);
-                }}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors group
-                  ${
-                    isProjectActive(project.id)
-                      ? 'bg-[#7c3aed]/15 text-[#a78bfa]'
-                      : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
-                  }`}
-              >
-                <Hash
-                  className="w-3.5 h-3.5 flex-shrink-0"
-                  style={{ color: project.color || space.color }}
-                />
-                <span className="truncate flex-1">{project.name}</span>
-                <span
-                  className={`text-[10px] font-mono text-[#6b7280] opacity-0 group-hover:opacity-100 ${isProjectActive(project.id) ? 'opacity-100' : ''}`}
-                >
-                  {project.key}
-                </span>
-              </Link>
+                project={project}
+                space={space}
+                isProjectActive={isProjectActive}
+                setCurrentSpace={setCurrentSpace}
+                setCurrentProject={setCurrentProject}
+                onManageMembers={onManageMembers}
+              />
             ))
           ) : (
             <p className="px-2 py-1.5 text-xs text-[#6b7280] italic">No projects</p>
           )}
 
-          {/* Add Project */}
           <button
             onClick={() => {
               setCurrentSpace(space);
@@ -558,6 +621,77 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
             <span>Add Project</span>
           </button>
         </div>
+      )}
+    </div>
+  );
+};
+
+// ProjectItem Component
+interface ProjectItemProps {
+  project: any;
+  space: any;
+  isProjectActive: (id: string) => boolean;
+  setCurrentSpace: (space: any) => void;
+  setCurrentProject: (project: any) => void;
+  onManageMembers: (
+    entityType: 'project',
+    entityId: string,
+    entityName: string,
+    e?: React.MouseEvent
+  ) => void;
+}
+
+const ProjectItem: React.FC<ProjectItemProps> = ({
+  project,
+  space,
+  isProjectActive,
+  setCurrentSpace,
+  setCurrentProject,
+  onManageMembers,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      className="relative group"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <Link
+        to={`/project/${project.id}/board`}
+        onClick={() => {
+          setCurrentSpace(space);
+          setCurrentProject(project);
+        }}
+        className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
+          ${
+            isProjectActive(project.id)
+              ? 'bg-[#7c3aed]/15 text-[#a78bfa]'
+              : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
+          }`}
+      >
+        <Hash
+          className="w-3.5 h-3.5 flex-shrink-0"
+          style={{ color: project.color || space.color }}
+        />
+        <span className="truncate flex-1">{project.name}</span>
+        <span
+          className={`text-[10px] font-mono text-[#6b7280] transition-opacity ${
+            isHovered || isProjectActive(project.id) ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {project.key}
+        </span>
+      </Link>
+
+      {isHovered && (
+        <button
+          onClick={(e) => onManageMembers('project', project.id, project.name, e)}
+          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded bg-[#25282c] hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors"
+          title="Manage members"
+        >
+          <UserPlus className="w-3 h-3" />
+        </button>
       )}
     </div>
   );

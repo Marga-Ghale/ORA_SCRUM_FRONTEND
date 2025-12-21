@@ -19,6 +19,7 @@ export const queryKeys = {
     all: ['auth'] as const,
     user: () => [...queryKeys.auth.all, 'user'] as const,
     session: () => [...queryKeys.auth.all, 'session'] as const,
+    detail: (id: string) => [...queryKeys.workspaces.all, 'detail', id] as const,
   },
 
   // ============================================
@@ -32,6 +33,7 @@ export const queryKeys = {
     teams: (workspaceId: string) => [...queryKeys.workspaces.all, 'teams', workspaceId] as const,
     channels: (workspaceId: string) =>
       [...queryKeys.workspaces.all, 'channels', workspaceId] as const,
+    my: () => [...queryKeys.workspaces.all, 'workspaces'] as const, // NEW
   },
 
   // ============================================
@@ -45,6 +47,7 @@ export const queryKeys = {
       [...queryKeys.spaces.all, 'workspace', workspaceId] as const,
     folders: (spaceId: string) => [...queryKeys.spaces.all, 'folders', spaceId] as const,
     projects: (spaceId: string) => [...queryKeys.spaces.all, 'projects', spaceId] as const,
+    byUser: () => [...queryKeys.spaces.all, 'user'] as const,
   },
 
   // ============================================

@@ -1,4 +1,4 @@
-// src/hooks/useWorkspaces.ts
+// src/hooks/api/useWorkspaces.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
@@ -46,7 +46,11 @@ export interface WorkspaceResponse {
 // ============================================
 
 const workspaceApi = {
+  // Get all workspaces (backend should filter by membership)
   list: () => apiClient.get<WorkspaceResponse[]>('/workspaces'),
+
+  // Get workspaces where user is a member (direct membership)
+  listMyWorkspaces: () => apiClient.get<WorkspaceResponse[]>('/workspaces/my'),
 
   getById: (id: string) => apiClient.get<WorkspaceResponse>(`/workspaces/${id}`),
 
@@ -62,10 +66,26 @@ const workspaceApi = {
 // Query Hooks
 // ============================================
 
-export const useWorkspaces = (p0?: { enabled: boolean; }) => {
+/**
+ * Get all workspaces (should be filtered by backend based on user's access)
+ */
+export const useWorkspaces = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.workspaces.list(),
     queryFn: workspaceApi.list,
+    enabled: options?.enabled ?? true,
+  });
+};
+
+/**
+ * Get only workspaces where user has direct membership
+ * This is the PRIMARY hook to use in ProjectSidebar
+ */
+export const useMyWorkspaces = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.workspaces.list(),
+    queryFn: workspaceApi.list,
+    enabled: options?.enabled ?? true,
   });
 };
 
@@ -88,6 +108,7 @@ export const useCreateWorkspace = () => {
     mutationFn: workspaceApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.my() });
     },
   });
 };
@@ -101,6 +122,7 @@ export const useUpdateWorkspace = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.my() });
     },
   });
 };
@@ -112,6 +134,7 @@ export const useDeleteWorkspace = () => {
     mutationFn: workspaceApi.delete,
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.my() });
       queryClient.removeQueries({ queryKey: queryKeys.workspaces.detail(id) });
     },
   });
