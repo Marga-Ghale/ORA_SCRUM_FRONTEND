@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy Frontend
 
 on:
   push:
@@ -38,9 +38,13 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:latest
+            ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ github.sha }}
           build-args: |
             VITE_API_URL=https://scrum-api.oratechnologies.io/api
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to Server
@@ -60,21 +64,52 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
             cd /root/ORA_SCRUM
-            
+
+            # Login to registry
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
+
+            # Pull latest frontend image
             docker pull ghcr.io/${{ steps.repo.outputs.name }}:latest
-            
-            docker compose up -d frontend
-            
+
+            # Restart frontend and nginx
+            docker compose up -d frontend nginx
+
+            # Wait for frontend to be ready
+            sleep 15
+
+            # Show status
+            echo ""
+            echo "=== Container Status ==="
+            docker compose ps
+
+            echo ""
+            echo "=== Frontend Logs (last 20 lines) ==="
+            docker logs ora_scrum_frontend 2>&1 | tail -20
+
+            echo ""
+            echo "=== Nginx Logs (last 20 lines) ==="
+            docker logs ora_scrum_nginx 2>&1 | tail -20
+
+            # Cleanup
             docker image prune -f
 
       - name: Verify deployment
         run: |
-          sleep 10
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://scrum.oratechnologies.io)
-          if [ "$response" = "200" ]; then
-            echo "✅ Frontend deployed!"
-          else
-            echo "⚠️ Status: $response"
-          fi
+          echo "⏳ Waiting for frontend to be ready..."
+          sleep 20
+
+          for i in {1..10}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://scrum.oratechnologies.io 2>/dev/null || echo "000")
+            
+            if [ "$response" = "200" ]; then
+              echo "✅ Frontend deployment successful!"
+              exit 0
+            fi
+            
+            echo "Attempt $i/10: Frontend returned status $response, retrying..."
+            sleep 5
+          done
+
+          echo "❌ Deployment verification failed"
+          echo "⚠️  Check the container logs above for details"
+          exit 1
