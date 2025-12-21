@@ -1,5 +1,5 @@
-// src/components/ProjectSidebar.tsx
-import React, { useState, useEffect } from 'react';
+// src/components/ProjectSidebar.tsx - FIXED VERSION
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Home,
@@ -19,18 +19,28 @@ import {
   MessageSquare,
   BellElectric,
   UserPlus,
-  Edit,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
-import { useMyWorkspaces } from '../hooks/api/useWorkspaces';
-import { useSpacesByWorkspace } from '../hooks/api/useSpaces';
-import { useProjectsBySpace } from '../hooks/api/useProjects';
 import { useNotificationCount } from '../hooks/api/useNotifications';
 import { useUnreadCounts } from '../hooks/api/useChat';
-import MemberManagementModal from '../components/modals/MemberManagementModal';
+import {
+  useEffectiveMembers,
+  useAddMember,
+  useUpdateMemberRole,
+  useRemoveMember,
+} from '../hooks/api/useMembers';
 import WorkspaceSelector from '../components/workspace/WorkspaceSelector';
+import { useSearchUsers } from '../hooks/useUsers';
+import MemberManagementModal from '../components/modals/MemberManagementModal';
+
+// ✅ FIXED: Import accessible entities hooks
+import {
+  useAccessibleWorkspaces,
+  useAccessibleSpaces,
+  useAccessibleProjects,
+} from '../hooks/api/useAccessibleEntities';
 
 const ProjectSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
@@ -48,14 +58,16 @@ const ProjectSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Fetch user's workspaces (only those where user is a member)
-  const { data: workspaces, isLoading: workspacesLoading } = useMyWorkspaces();
-
-  // Fetch spaces for current workspace
-  const { data: spaces, isLoading: spacesLoading } = useSpacesByWorkspace(
-    currentWorkspace?.id || '',
-    { enabled: !!currentWorkspace?.id }
-  );
+  // ✅ FIXED: Use accessible entities instead of direct membership
+  const { data: workspaces, isLoading: workspacesLoading } = useAccessibleWorkspaces({
+    enabled: !!user,
+  });
+  const { data: allSpaces, isLoading: spacesLoading } = useAccessibleSpaces({
+    enabled: !!user,
+  });
+  const { data: allProjects, isLoading: projectsLoading } = useAccessibleProjects({
+    enabled: !!user,
+  });
 
   // Fetch notification count
   const { data: notificationData } = useNotificationCount({ enabled: !!user });
@@ -66,7 +78,6 @@ const ProjectSidebar: React.FC = () => {
   const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set());
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [hoveredSpace, setHoveredSpace] = useState<string | null>(null);
-
   const [IsCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
 
   // Member management modal state
@@ -78,6 +89,26 @@ const ProjectSidebar: React.FC = () => {
   } | null>(null);
 
   const showFull = isExpanded || isHovered || isMobileOpen;
+
+  // ✅ FIXED: Filter spaces and projects for current workspace
+  const spacesForCurrentWorkspace = useMemo(() => {
+    if (!currentWorkspace || !allSpaces) return [];
+    return allSpaces.filter((space) => space.workspaceId === currentWorkspace.id);
+  }, [allSpaces, currentWorkspace]);
+
+  const projectsBySpaceId = useMemo(() => {
+    if (!allProjects) return {};
+    return allProjects.reduce(
+      (map, project) => {
+        if (!map[project.spaceId]) {
+          map[project.spaceId] = [];
+        }
+        map[project.spaceId].push(project);
+        return map;
+      },
+      {} as Record<string, typeof allProjects>
+    );
+  }, [allProjects]);
 
   // Auto-select first workspace if none selected
   useEffect(() => {
@@ -100,6 +131,18 @@ const ProjectSidebar: React.FC = () => {
 
   const isProjectActive = (projectId: string) =>
     location.pathname.includes(`/project/${projectId}`);
+
+  useEffect(() => {
+    console.log('Workspaces:', workspaces);
+  }, [workspaces]);
+
+  useEffect(() => {
+    console.log('Spaces:', allSpaces);
+  }, [allSpaces]);
+
+  useEffect(() => {
+    console.log('Projects:', allProjects);
+  }, [allProjects]);
 
   const totalChatUnread = chatUnreadData
     ? Object.values(chatUnreadData).reduce((sum, count) => sum + count, 0)
@@ -203,13 +246,11 @@ const ProjectSidebar: React.FC = () => {
                 <span>Invite</span>
               </button>
               <button
-                onClick={() => {
-                  /* TODO: Open workspace settings */
-                }}
+                onClick={() => navigate(`/members/workspace/${currentWorkspace.id}`)}
                 className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs text-[#9ca3af] hover:bg-[#25282c] hover:text-white transition-colors"
               >
-                <Edit className="w-3.5 h-3.5" />
-                <span>Edit</span>
+                <Users className="w-3.5 h-3.5" />
+                <span>Manage</span>
               </button>
             </div>
           </div>
@@ -325,19 +366,22 @@ const ProjectSidebar: React.FC = () => {
                       <div key={i} className="h-8 bg-[#2a2e33] rounded-md animate-pulse" />
                     ))}
                   </div>
-                ) : spaces && spaces.length > 0 ? (
-                  spaces.map((space) => {
+                ) : spacesForCurrentWorkspace && spacesForCurrentWorkspace.length > 0 ? (
+                  spacesForCurrentWorkspace.map((space) => {
                     const isSpaceExpanded = expandedSpaces.has(space.id);
                     const isHovered = hoveredSpace === space.id;
+                    const spaceProjects = projectsBySpaceId[space.id] || [];
 
                     return (
                       <SpaceItem
                         key={space.id}
                         space={space}
+                        projects={spaceProjects}
                         isSpaceExpanded={isSpaceExpanded}
                         isHovered={isHovered}
                         showFull={showFull}
                         currentSpace={currentSpace}
+                        projectsLoading={projectsLoading}
                         onToggle={toggleSpace}
                         onMouseEnter={() => setHoveredSpace(space.id)}
                         onMouseLeave={() => setHoveredSpace(null)}
@@ -467,19 +511,26 @@ const ProjectSidebar: React.FC = () => {
           entityType={memberModal.entityType}
           entityId={memberModal.entityId}
           entityName={memberModal.entityName}
+          useEffectiveMembers={useEffectiveMembers}
+          useSearchUsers={useSearchUsers}
+          useAddMember={useAddMember}
+          useUpdateMemberRole={useUpdateMemberRole}
+          useRemoveMember={useRemoveMember}
         />
       )}
     </>
   );
 };
 
-// SpaceItem Component
+// ✅ FIXED: SpaceItem now receives projects as prop
 interface SpaceItemProps {
   space: any;
+  projects: any[];
   isSpaceExpanded: boolean;
   isHovered: boolean;
   showFull: boolean;
   currentSpace: any;
+  projectsLoading: boolean;
   onToggle: (id: string, e?: React.MouseEvent) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -497,10 +548,12 @@ interface SpaceItemProps {
 
 const SpaceItem: React.FC<SpaceItemProps> = ({
   space,
+  projects,
   isSpaceExpanded,
   isHovered,
   showFull,
   currentSpace,
+  projectsLoading,
   onToggle,
   onMouseEnter,
   onMouseLeave,
@@ -510,10 +563,6 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
   isProjectActive,
   onManageMembers,
 }) => {
-  const { data: projects, isLoading: projectsLoading } = useProjectsBySpace(space.id, {
-    enabled: isSpaceExpanded,
-  });
-
   return (
     <div className="mb-0.5">
       {/* Space Item */}
@@ -626,7 +675,7 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
   );
 };
 
-// ProjectItem Component
+// ProjectItem Component (unchanged)
 interface ProjectItemProps {
   project: any;
   space: any;
@@ -658,7 +707,7 @@ const ProjectItem: React.FC<ProjectItemProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link
-        to={`/project/${project.id}/board`}
+        to={`/project/${project.id || (project as any).ID}/board`}
         onClick={() => {
           setCurrentSpace(space);
           setCurrentProject(project);

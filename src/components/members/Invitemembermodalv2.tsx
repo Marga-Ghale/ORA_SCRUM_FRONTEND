@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { useAddMember, useInviteMemberByEmail } from '../../hooks/api/useMembers';
-import { useSearchUsers } from '../../hooks/useUser';
+import { useSearchUsers } from '../../hooks/useUsers';
 
 interface InviteMemberModalProps {
   isOpen: boolean;

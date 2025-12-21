@@ -29,7 +29,7 @@ import {
   useUpdateTask,
   useUpdateTaskStatus,
 } from '../hooks/api/useTasks';
-import { User } from '../hooks/useUser';
+import { User } from '../hooks/useUsers';
 import { Label } from '../hooks/api/useLabels';
 
 // ============================================
@@ -174,7 +174,10 @@ const mapTask = (task: any): Task => {
     watcherIds: task.watcherIds || [],
     createdBy: task.createdBy,
     createdAt: dateToISO(task.createdAt), // ✅ convert to string
-    updatedAt: dateToISO(task.updatedAt), // ✅ convert to string
+    updatedAt: dateToISO(task.updatedAt),
+    projectId: task.projectId,
+    assignee: task.assignee || null,
+    label: task.label || null,
   };
 };
 

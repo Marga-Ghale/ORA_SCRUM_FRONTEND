@@ -22,7 +22,7 @@ import { useProjectsBySpace } from '../../hooks/api/useProjects';
 
 import PageMeta from '../../components/common/PageMeta';
 import { useAutoStatus } from '../../hooks/api/useStatus';
-import { useCurrentUser } from '../../hooks/useUser';
+import { useCurrentUser } from '../../hooks/useUsers';
 import { useMyFolders } from '../../hooks/api/useFolder';
 
 // Status Badge Component

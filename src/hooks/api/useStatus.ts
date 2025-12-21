@@ -1,6 +1,6 @@
 // src/hooks/useStatus.ts
 import { useEffect } from 'react';
-import { UserStatus, useUpdateStatus } from '../useUser';
+import { UserStatus, useUpdateStatus } from '../useUsers';
 
 // ============================================
 // Auto Status Management Hook

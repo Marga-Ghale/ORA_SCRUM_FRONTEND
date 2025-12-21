@@ -1,25 +1,23 @@
 import React, { useState } from 'react';
 import { Plus, ClipboardList, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useProject } from '../../context/ProjectContext';
 import TaskCard from '../../components/tasks/TaskCard';
 import TaskDetailModal from '../../components/tasks/TaskDetailModal';
 import CreateTaskModal from '../../components/tasks/CreateTaskModal';
 import PageMeta from '../../components/common/PageMeta';
 import { STATUS_COLUMNS, PRIORITY_CONFIG } from '../../types/project';
-import { useAuth } from '../../components/UserProfile/AuthContext';
+import { useMyTasks } from '../../hooks/api/useTasks';
 
 const MyTasks: React.FC = () => {
-  const { tasks } = useProject();
-  const { user } = useAuth();
+  const { data: myTasks = [], isLoading } = useMyTasks();
   const [groupBy, setGroupBy] = useState<'status' | 'priority' | 'dueDate'>('status');
   const [showCompleted, setShowCompleted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Get user's tasks
-  const myTasks = tasks.filter((task) => task.assignee?.id === user?.id);
   const filteredTasks = showCompleted ? myTasks : myTasks.filter((t) => t.status !== 'done');
 
+  // =====================
   // Stats
+  // =====================
   const stats = {
     total: myTasks.length,
     todo: myTasks.filter((t) => t.status === 'todo').length,
@@ -30,7 +28,9 @@ const MyTasks: React.FC = () => {
     ).length,
   };
 
-  // Group tasks
+  // =====================
+  // Grouping logic (unchanged)
+  // =====================
   const groupedTasks = () => {
     if (groupBy === 'status') {
       return STATUS_COLUMNS.map((status) => ({
@@ -59,8 +59,10 @@ const MyTasks: React.FC = () => {
     // Group by due date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+
     const nextWeek = new Date(today);
     nextWeek.setDate(nextWeek.getDate() + 7);
 
@@ -107,10 +109,7 @@ const MyTasks: React.FC = () => {
         id: 'later',
         title: 'Later',
         color: '#6B7280',
-        tasks: filteredTasks.filter((t) => {
-          if (!t.dueDate) return false;
-          return new Date(t.dueDate) > nextWeek;
-        }),
+        tasks: filteredTasks.filter((t) => t.dueDate && new Date(t.dueDate) > nextWeek),
       },
       {
         id: 'noDue',
@@ -120,6 +119,10 @@ const MyTasks: React.FC = () => {
       },
     ].filter((g) => g.tasks.length > 0);
   };
+
+  if (isLoading) {
+    return null; // keep design intact (no spinner added)
+  }
 
   return (
     <>
