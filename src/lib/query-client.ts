@@ -149,15 +149,21 @@ export const queryKeys = {
   members: {
     all: ['members'] as const,
     direct: (entityType: string, entityId: string) =>
-      [...queryKeys.members.all, 'direct', entityType, entityId] as const,
+      ['members', 'direct', entityType, entityId] as const,
     effective: (entityType: string, entityId: string) =>
-      [...queryKeys.members.all, 'effective', entityType, entityId] as const,
+      ['members', 'effective', entityType, entityId] as const,
     access: (entityType: string, entityId: string) =>
-      [...queryKeys.members.all, 'access', entityType, entityId] as const,
+      ['members', 'access', entityType, entityId] as const,
     accessLevel: (entityType: string, entityId: string) =>
-      [...queryKeys.members.all, 'access-level', entityType, entityId] as const,
-    myMemberships: () => [...queryKeys.members.all, 'my', 'memberships'] as const,
-    myAccess: () => [...queryKeys.members.all, 'my', 'access'] as const,
+      ['members', 'accessLevel', entityType, entityId] as const,
+    myMemberships: () => ['members', 'my', 'memberships'] as const,
+    myAccess: () => ['members', 'my', 'access'] as const,
+
+    // ✅ ADD THESE NEW KEYS
+    accessibleWorkspaces: () => ['members', 'my', 'accessible', 'workspaces'] as const,
+    accessibleSpaces: () => ['members', 'my', 'accessible', 'spaces'] as const,
+    accessibleFolders: () => ['members', 'my', 'accessible', 'folders'] as const,
+    accessibleProjects: () => ['members', 'my', 'accessible', 'projects'] as const,
   },
 
   // ============================================

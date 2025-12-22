@@ -1,4 +1,5 @@
-// src/pages/Team/Team.tsx
+// ✅ COMPLETE REPLACEMENT: src/pages/Team/Team.tsx
+
 import React, { useState, useMemo } from 'react';
 import {
   UserPlus,
@@ -8,11 +9,17 @@ import {
   MoreVertical,
   MessageCircle,
   Users as UsersIcon,
+  Building2,
+  FolderOpen,
+  Folder,
+  FileText,
+  ChevronDown,
 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import PageMeta from '../../components/common/PageMeta';
-import { useEffectiveMembers } from '../../hooks/api/useMembers';
-import InviteMemberModalv2 from '../../components/members/Invitemembermodalv2';
+import { useEffectiveMembers, EntityType } from '../../hooks/api/useMembers';
+import { useAllAccessibleEntities } from '../../hooks/api/useAccessibleEntities';
+import InviteMemberModal from '../../components/members/Invitemembermodal';
 
 interface TeamMember {
   id: string;
@@ -21,6 +28,8 @@ interface TeamMember {
   avatar?: string;
   role: string;
   status: 'online' | 'offline' | 'away' | 'busy';
+  isInherited: boolean;
+  inheritedFrom?: string;
 }
 
 interface TeamMemberCardProps {
@@ -28,6 +37,20 @@ interface TeamMemberCardProps {
   tasksCount: number;
   onViewProfile: () => void;
 }
+
+const ENTITY_ICONS = {
+  workspace: Building2,
+  space: FolderOpen,
+  folder: Folder,
+  project: FileText,
+};
+
+const ENTITY_COLORS = {
+  workspace: '#7c3aed',
+  space: '#60a5fa',
+  folder: '#fbbf24',
+  project: '#ec4899',
+};
 
 const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onViewProfile }) => {
   const statusColors = {
@@ -38,7 +61,9 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
   };
 
   const roleColors = {
+    owner: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
     admin: 'bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-300',
+    lead: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
     member: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
     viewer: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
   };
@@ -67,13 +92,20 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
             title={member.status}
           />
         </div>
-        <span
-          className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${
-            roleColors[member.role as keyof typeof roleColors] || roleColors.member
-          }`}
-        >
-          {member.role}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span
+            className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${
+              roleColors[member.role as keyof typeof roleColors] || roleColors.member
+            }`}
+          >
+            {member.role}
+          </span>
+          {member.isInherited && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+              From {member.inheritedFrom}
+            </span>
+          )}
+        </div>
       </div>
 
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{member.name}</h3>
@@ -101,34 +133,68 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
 };
 
 const Team: React.FC = () => {
-  const { tasks, currentWorkspace, currentProject } = useProject();
+  const { tasks, currentWorkspace, currentProject, currentSpace } = useProject();
 
-  // Fetch project members
-  const { data: projectMembers, isLoading } = useEffectiveMembers(
-    'project',
-    currentProject?.id || '',
-    { enabled: !!currentProject?.id }
+  // ✅ Fetch all accessible entities
+  const {
+    workspaces,
+    spaces,
+    folders,
+    projects,
+    isLoading: entitiesLoading,
+  } = useAllAccessibleEntities();
+
+  // ✅ Entity selection state
+  const [selectedEntityType, setSelectedEntityType] = useState<EntityType>('workspace');
+  const [selectedEntityId, setSelectedEntityId] = useState<string>('');
+  const [selectedEntityName, setSelectedEntityName] = useState<string>('');
+  const [showEntityDropdown, setShowEntityDropdown] = useState(false);
+
+  // ✅ Set default entity from context
+  React.useEffect(() => {
+    if (currentProject?.id && selectedEntityId === '') {
+      setSelectedEntityType('project');
+      setSelectedEntityId(currentProject.id);
+      setSelectedEntityName(currentProject.name);
+    } else if (currentSpace?.id && selectedEntityId === '') {
+      setSelectedEntityType('space');
+      setSelectedEntityId(currentSpace.id);
+      setSelectedEntityName(currentSpace.name);
+    } else if (currentWorkspace?.id && selectedEntityId === '') {
+      setSelectedEntityType('workspace');
+      setSelectedEntityId(currentWorkspace.id);
+      setSelectedEntityName(currentWorkspace.name);
+    }
+  }, [currentProject, currentSpace, currentWorkspace, selectedEntityId]);
+
+  // Fetch members for selected entity
+  const { data: members, isLoading: membersLoading } = useEffectiveMembers(
+    selectedEntityType,
+    selectedEntityId,
+    { enabled: !!selectedEntityId }
   );
 
   const [isInviteMemberModalOpen, setIsInviteMemberModalOpen] = useState(false);
 
-  // Map members with their user data (includes status)
   const users = useMemo<TeamMember[]>(() => {
-    if (!projectMembers) return [];
+    if (!members) return [];
 
-    return projectMembers.map((member) => ({
+    return members.map((member) => ({
       id: member.userId,
       name: member.user?.name || 'Unknown',
       email: member.user?.email || '',
       avatar: member.user?.avatar,
       role: member.role,
       status: (member.user?.status as 'online' | 'offline' | 'away' | 'busy') || 'offline',
+      isInherited: member.isInherited,
+      inheritedFrom: member.inheritedFrom,
     }));
-  }, [projectMembers]);
+  }, [members]);
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [accessFilter, setAccessFilter] = useState<'all' | 'direct' | 'inherited'>('all');
 
   const filteredMembers = useMemo(() => {
     return users.filter((member) => {
@@ -136,9 +202,13 @@ const Team: React.FC = () => {
         member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         member.email.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRole = roleFilter === 'all' || member.role === roleFilter;
-      return matchesSearch && matchesRole;
+      const matchesAccess =
+        accessFilter === 'all' ||
+        (accessFilter === 'direct' && !member.isInherited) ||
+        (accessFilter === 'inherited' && member.isInherited);
+      return matchesSearch && matchesRole && matchesAccess;
     });
-  }, [users, searchQuery, roleFilter]);
+  }, [users, searchQuery, roleFilter, accessFilter]);
 
   const getTasksForMember = (memberId: string) => {
     return tasks.filter((t) => t.assigneeIds?.includes(memberId as any)).length;
@@ -154,8 +224,61 @@ const Team: React.FC = () => {
     [users]
   );
 
-  // Loading state
-  if (isLoading) {
+  const directMembersCount = users.filter((u) => !u.isInherited).length;
+  const inheritedMembersCount = users.filter((u) => u.isInherited).length;
+
+  const EntityIcon = ENTITY_ICONS[selectedEntityType];
+
+  // ✅ Build entity options for dropdown
+  const entityOptions = useMemo(() => {
+    const options: Array<{ type: EntityType; id: string; name: string; parentName?: string }> = [];
+
+    workspaces.forEach((w) => {
+      options.push({ type: 'workspace', id: w.id, name: w.name });
+    });
+
+    spaces.forEach((s) => {
+      const workspace = workspaces.find((w) => w.id === s.workspaceId);
+      options.push({
+        type: 'space',
+        id: s.id,
+        name: s.name,
+        parentName: workspace?.name,
+      });
+    });
+
+    folders.forEach((f) => {
+      const space = spaces.find((s) => s.id === f.spaceId);
+      options.push({
+        type: 'folder',
+        id: f.id,
+        name: f.name,
+        parentName: space?.name,
+      });
+    });
+
+    projects.forEach((p) => {
+      const space = spaces.find((s) => s.id === p.spaceId);
+      const folder = p.folderId ? folders.find((f) => f.id === p.folderId) : null;
+      options.push({
+        type: 'project',
+        id: p.id,
+        name: p.name,
+        parentName: folder ? folder.name : space?.name,
+      });
+    });
+
+    return options;
+  }, [workspaces, spaces, folders, projects]);
+
+  const handleSelectEntity = (option: (typeof entityOptions)[0]) => {
+    setSelectedEntityType(option.type);
+    setSelectedEntityId(option.id);
+    setSelectedEntityName(option.name);
+    setShowEntityDropdown(false);
+  };
+
+  if (entitiesLoading || membersLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -173,12 +296,88 @@ const Team: React.FC = () => {
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Team</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {users.length} member{users.length !== 1 ? 's' : ''} in{' '}
-              {currentWorkspace?.name || 'workspace'}
-            </p>
+          <div className="flex items-center gap-3">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: `${ENTITY_COLORS[selectedEntityType]}20` }}
+            >
+              <EntityIcon
+                className="w-6 h-6"
+                style={{ color: ENTITY_COLORS[selectedEntityType] }}
+              />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Team</h1>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {users.length} member{users.length !== 1 ? 's' : ''} in
+                </span>
+                {/* Entity Selector Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowEntityDropdown(!showEntityDropdown)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                      {selectedEntityType}
+                    </span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {selectedEntityName}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </button>
+
+                  {showEntityDropdown && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowEntityDropdown(false)}
+                      />
+                      <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
+                        {entityOptions.map((option) => {
+                          const Icon = ENTITY_ICONS[option.type];
+                          const isSelected =
+                            option.type === selectedEntityType && option.id === selectedEntityId;
+
+                          return (
+                            <button
+                              key={`${option.type}-${option.id}`}
+                              onClick={() => handleSelectEntity(option)}
+                              className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                                isSelected ? 'bg-brand-50 dark:bg-brand-900/30' : ''
+                              }`}
+                            >
+                              <div
+                                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                style={{ backgroundColor: `${ENTITY_COLORS[option.type]}20` }}
+                              >
+                                <Icon
+                                  className="w-4 h-4"
+                                  style={{ color: ENTITY_COLORS[option.type] }}
+                                />
+                              </div>
+                              <div className="flex-1 text-left min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                  {option.name}
+                                </p>
+                                {option.parentName && (
+                                  <p className="text-xs text-gray-500 truncate">
+                                    in {option.parentName}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 capitalize">
+                                {option.type}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
           <button
             onClick={() => setIsInviteMemberModalOpen(true)}
@@ -190,7 +389,7 @@ const Team: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2 h-2 rounded-full bg-success-500" />
@@ -221,12 +420,27 @@ const Team: React.FC = () => {
               {statusStats.offline}
             </p>
           </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Direct</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{directMembersCount}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Inherited</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {inheritedMembersCount}
+            </p>
+          </div>
         </div>
 
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -238,20 +452,30 @@ const Team: React.FC = () => {
               />
             </div>
 
-            {/* Role Filter */}
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
               className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="all">All Roles</option>
+              <option value="owner">Owner</option>
               <option value="admin">Admin</option>
+              <option value="lead">Lead</option>
               <option value="member">Member</option>
               <option value="viewer">Viewer</option>
             </select>
+
+            <select
+              value={accessFilter}
+              onChange={(e) => setAccessFilter(e.target.value as any)}
+              className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option value="all">All Access</option>
+              <option value="direct">Direct Only</option>
+              <option value="inherited">Inherited Only</option>
+            </select>
           </div>
 
-          {/* View Toggle */}
           <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => setViewMode('grid')}
@@ -283,7 +507,7 @@ const Team: React.FC = () => {
               <UsersIcon className="w-8 h-8 text-gray-300 dark:text-gray-600" />
             </div>
             <p className="text-gray-500 dark:text-gray-400 mb-2">No team members found</p>
-            {searchQuery || roleFilter !== 'all' ? (
+            {searchQuery || roleFilter !== 'all' || accessFilter !== 'all' ? (
               <p className="text-sm text-gray-400">Try adjusting your filters</p>
             ) : (
               <button
@@ -303,7 +527,6 @@ const Team: React.FC = () => {
                 member={member}
                 tasksCount={getTasksForMember(member.id)}
                 onViewProfile={() => {
-                  // TODO: Implement profile view
                   console.log('View profile:', member.id);
                 }}
               />
@@ -319,6 +542,9 @@ const Team: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Access
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Status
@@ -380,6 +606,17 @@ const Team: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
+                      {member.isInherited ? (
+                        <span className="px-2 py-1 rounded-full text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                          From {member.inheritedFrom}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                          Direct
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <span
                           className="w-2 h-2 rounded-full"
@@ -415,10 +652,19 @@ const Team: React.FC = () => {
             </table>
           </div>
         )}
-        {/* ✅ THIS WAS MISSING BEFORE */}
-        <InviteMemberModalv2
+
+        <InviteMemberModal
           isOpen={isInviteMemberModalOpen}
           onClose={() => setIsInviteMemberModalOpen(false)}
+          defaultEntity={
+            selectedEntityId
+              ? {
+                  type: selectedEntityType,
+                  id: selectedEntityId,
+                  name: selectedEntityName,
+                }
+              : undefined
+          }
         />
       </div>
     </>

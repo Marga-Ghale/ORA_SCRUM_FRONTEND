@@ -77,6 +77,9 @@ const memberApi = {
   addMember: (entityType: EntityType, entityId: string, data: AddMemberRequest) =>
     apiClient.post<{ message: string }>(`/members/${entityType}/${entityId}`, data),
 
+  inviteMemberByIntityType: (entityType: EntityType, entityId: string, data: InviteMemberRequest) =>
+    apiClient.post<{ message: string }>(`/members/${entityType}/${entityId}/invite`, data),
+
   inviteMemberByEmail: (entityType: EntityType, entityId: string, data: InviteMemberRequest) =>
     apiClient.post<{ message: string }>(`/members/${entityType}/${entityId}/invite`, data),
 
