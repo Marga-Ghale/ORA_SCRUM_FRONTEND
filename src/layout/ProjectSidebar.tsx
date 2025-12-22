@@ -35,13 +35,13 @@ import {
 import WorkspaceSelector from '../components/workspace/WorkspaceSelector';
 import { useSearchUsers } from '../hooks/useUsers';
 import MemberManagementModal from '../components/modals/MemberManagementModal';
+import {
+  useAccessibleProjects,
+  useAccessibleSpaces,
+  useAccessibleWorkspaces,
+} from '../hooks/api/useAccessibleEntities';
 
 // ✅ FIXED: Import accessible entities hooks
-import {
-  useAccessibleWorkspaces,
-  useAccessibleSpaces,
-  useAccessibleProjects,
-} from '../hooks/api/useAccessibleEntities';
 
 const ProjectSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();

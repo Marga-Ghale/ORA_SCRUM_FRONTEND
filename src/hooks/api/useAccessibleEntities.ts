@@ -1,159 +1,132 @@
+// ✅ COMPLETE REPLACEMENT: src/hooks/api/useAccessibleEntities.ts
+
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
-
-// ============================================
-// Types
-// ============================================
+import { queryKeys } from '../../lib/query-client';
 
 export interface WorkspaceResponse {
   id: string;
   name: string;
   description?: string;
-  icon?: string;
   color?: string;
-  createdAt: string;
-  updatedAt: string;
+  icon?: string;
+  createdAt?: string;
 }
 
 export interface SpaceResponse {
   id: string;
-  workspaceId: string;
   name: string;
   description?: string;
-  icon?: string;
+  workspaceId: string;
   color?: string;
-  createdAt: string;
-  updatedAt: string;
+  icon?: string;
+  createdAt?: string;
 }
 
 export interface FolderResponse {
   id: string;
-  spaceId: string;
   name: string;
   description?: string;
-  icon?: string;
-  color?: string;
-  isPrivate: boolean;
-  createdAt: string;
-  updatedAt: string;
+  spaceId: string;
+  createdAt?: string;
 }
 
 export interface ProjectResponse {
   id: string;
+  name: string;
+  description?: string;
   spaceId: string;
   folderId?: string;
-  name: string;
-  key: string;
-  description?: string;
-  icon?: string;
+  key?: string;
   color?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
 }
 
-// ============================================
-// Helper: Transform snake_case to camelCase
-// ============================================
-
-const toCamelCase = (obj: any): any => {
-  if (Array.isArray(obj)) return obj.map(toCamelCase);
-
-  if (obj && typeof obj === 'object') {
-    return Object.entries(obj).reduce((acc, [key, value]) => {
-      const camelKey =
-        key === key.toUpperCase()
-          ? key.toLowerCase() // ID -> id
-          : key.charAt(0).toLowerCase() + key.slice(1); // WorkspaceID -> workspaceID
-
-      // Fix common backend patterns
-      const normalizedKey = camelKey.replace(/ID$/, 'Id').replace(/IDs$/, 'Ids');
-
-      acc[normalizedKey] = toCamelCase(value);
-      return acc;
-    }, {} as any);
-  }
-
-  return obj;
+export const useAccessibleWorkspaces = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.members.accessibleWorkspaces(),
+    queryFn: async () => {
+      const response = await apiClient.get<any[]>('/members/my/accessible/workspaces');
+      return response.map((w: any) => ({
+        id: w.ID,
+        name: w.Name,
+        description: w.Description,
+        color: w.Color,
+        icon: w.Icon,
+        createdAt: w.CreatedAt,
+      }));
+    },
+    enabled: options?.enabled ?? true,
+  });
 };
 
-// ============================================
-// API Functions
-// ============================================
-
-const accessibleApi = {
-  getWorkspaces: async (): Promise<WorkspaceResponse[]> => {
-    try {
-      const data = await apiClient.get<WorkspaceResponse[]>('/members/my/accessible/workspaces');
-      console.log('✅ Workspaces API data:', data);
-      return toCamelCase(data ?? []);
-    } catch (err) {
-      console.error('❌ Workspaces API error:', err);
-      return [];
-    }
-  },
-
-  getSpaces: async (): Promise<SpaceResponse[]> => {
-    try {
-      const data = await apiClient.get<SpaceResponse[]>('/members/my/accessible/spaces');
-      console.log('✅ Spaces API data:', data);
-      return toCamelCase(data ?? []);
-    } catch (err) {
-      console.error('❌ Spaces API error:', err);
-      return [];
-    }
-  },
-
-  getFolders: async (): Promise<FolderResponse[]> => {
-    try {
-      const data = await apiClient.get<FolderResponse[]>('/members/my/accessible/folders');
-      console.log('✅ Folders API data:', data);
-      return toCamelCase(data ?? []);
-    } catch (err) {
-      console.error('❌ Folders API error:', err);
-      return [];
-    }
-  },
-
-  getProjects: async (): Promise<ProjectResponse[]> => {
-    try {
-      const data = await apiClient.get<ProjectResponse[]>('/members/my/accessible/projects');
-      console.log('✅ Projects API data:', data);
-      return toCamelCase(data ?? []);
-    } catch (err) {
-      console.error('❌ Projects API error:', err);
-      return [];
-    }
-  },
+export const useAccessibleSpaces = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.members.accessibleSpaces(),
+    queryFn: async () => {
+      const response = await apiClient.get<any[]>('/members/my/accessible/spaces');
+      return response.map((s: any) => ({
+        id: s.ID,
+        name: s.Name,
+        description: s.Description,
+        workspaceId: s.WorkspaceID,
+        color: s.Color,
+        icon: s.Icon,
+        createdAt: s.CreatedAt,
+      }));
+    },
+    enabled: options?.enabled ?? true,
+  });
 };
 
-// ============================================
-// React Query Hooks
-// ============================================
-
-export const useAccessibleWorkspaces = (options?: { enabled?: boolean }) =>
-  useQuery({
-    queryKey: ['accessible', 'workspaces'],
-    queryFn: accessibleApi.getWorkspaces,
+export const useAccessibleFolders = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.members.accessibleFolders(),
+    queryFn: async () => {
+      const response = await apiClient.get<any[]>('/members/my/accessible/folders');
+      return response.map((f: any) => ({
+        id: f.ID,
+        name: f.Name,
+        description: f.Description,
+        spaceId: f.SpaceID,
+        createdAt: f.CreatedAt,
+      }));
+    },
     enabled: options?.enabled ?? true,
   });
+};
 
-export const useAccessibleSpaces = (options?: { enabled?: boolean }) =>
-  useQuery({
-    queryKey: ['accessible', 'spaces'],
-    queryFn: accessibleApi.getSpaces,
+export const useAccessibleProjects = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.members.accessibleProjects(),
+    queryFn: async () => {
+      const response = await apiClient.get<any[]>('/members/my/accessible/projects');
+      return response.map((p: any) => ({
+        id: p.ID,
+        name: p.Name,
+        description: p.Description,
+        spaceId: p.SpaceID,
+        folderId: p.FolderID,
+        key: p.Key,
+        color: p.Color,
+        createdAt: p.CreatedAt,
+      }));
+    },
     enabled: options?.enabled ?? true,
   });
+};
 
-export const useAccessibleFolders = (options?: { enabled?: boolean }) =>
-  useQuery({
-    queryKey: ['accessible', 'folders'],
-    queryFn: accessibleApi.getFolders,
-    enabled: options?.enabled ?? true,
-  });
+export const useAllAccessibleEntities = () => {
+  const { data: workspaces = [], isLoading: wLoading } = useAccessibleWorkspaces();
+  const { data: spaces = [], isLoading: sLoading } = useAccessibleSpaces();
+  const { data: folders = [], isLoading: fLoading } = useAccessibleFolders();
+  const { data: projects = [], isLoading: pLoading } = useAccessibleProjects();
 
-export const useAccessibleProjects = (options?: { enabled?: boolean }) =>
-  useQuery({
-    queryKey: ['accessible', 'projects'],
-    queryFn: accessibleApi.getProjects,
-    enabled: options?.enabled ?? true,
-  });
+  return {
+    workspaces,
+    spaces,
+    folders,
+    projects,
+    isLoading: wLoading || sLoading || fLoading || pLoading,
+  };
+};
