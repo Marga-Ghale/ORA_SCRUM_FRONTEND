@@ -51,20 +51,14 @@ export interface FolderResponse {
 
 const folderApi = {
   listBySpace: (spaceId: string) => apiClient.get<FolderResponse[]>(`/spaces/${spaceId}/folders`),
-
   listByUser: () => apiClient.get<FolderResponse[]>('/folders/my'),
-
   getById: (id: string) => apiClient.get<FolderResponse>(`/folders/${id}`),
-
   create: (spaceId: string, data: CreateFolderRequest) =>
     apiClient.post<FolderResponse>(`/spaces/${spaceId}/folders`, data),
-
   update: (id: string, data: UpdateFolderRequest) =>
     apiClient.put<FolderResponse>(`/folders/${id}`, data),
-
   updateVisibility: (id: string, data: UpdateFolderVisibilityRequest) =>
     apiClient.patch<{ message: string }>(`/folders/${id}/visibility`, data),
-
   delete: (id: string) => apiClient.delete(`/folders/${id}`),
 };
 
@@ -110,6 +104,8 @@ export const useCreateFolder = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.bySpace(data.space_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.byUser() });
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
+      // ✅ INVALIDATE ACCESSIBLE FOLDERS
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
     },
   });
 };
@@ -125,6 +121,8 @@ export const useUpdateFolder = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.bySpace(data.space_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.byUser() });
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
+      // ✅ INVALIDATE ACCESSIBLE FOLDERS
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
     },
   });
 };
@@ -138,6 +136,8 @@ export const useUpdateFolderVisibility = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
+      // ✅ INVALIDATE ACCESSIBLE FOLDERS
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
     },
   });
 };
@@ -150,6 +150,8 @@ export const useDeleteFolder = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
       queryClient.removeQueries({ queryKey: queryKeys.folders.detail(id) });
+      // ✅ INVALIDATE ACCESSIBLE FOLDERS
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
     },
   });
 };

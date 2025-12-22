@@ -36,6 +36,7 @@ import WorkspaceSelector from '../components/workspace/WorkspaceSelector';
 import { useSearchUsers } from '../hooks/useUsers';
 import MemberManagementModal from '../components/modals/MemberManagementModal';
 import {
+  useAccessibleFolders,
   useAccessibleProjects,
   useAccessibleSpaces,
   useAccessibleWorkspaces,
@@ -54,7 +55,6 @@ const ProjectSidebar: React.FC = () => {
     setIsCreateSpaceModalOpen,
     setIsCreateProjectModalOpen,
     isInitializing,
-    managementEntity,
     setManagementEntity,
   } = useProject();
   const { user, logout } = useAuth();
@@ -69,6 +69,10 @@ const ProjectSidebar: React.FC = () => {
     enabled: !!user,
   });
   const { data: allProjects, isLoading: projectsLoading } = useAccessibleProjects({
+    enabled: !!user,
+  });
+
+  const { data: allFolders, isLoading: foldersLoading } = useAccessibleFolders({
     enabled: !!user,
   });
 
@@ -107,6 +111,44 @@ const ProjectSidebar: React.FC = () => {
           map[project.spaceId] = [];
         }
         map[project.spaceId].push(project);
+        return map;
+      },
+      {} as Record<string, typeof allProjects>
+    );
+  }, [allProjects]);
+
+  const foldersForCurrentWorkspace = useMemo(() => {
+    if (!currentWorkspace || !allFolders || !allSpaces) return [];
+    const spaceIds = allSpaces
+      .filter((space) => space.workspaceId === currentWorkspace.id)
+      .map((space) => space.id);
+    return allFolders.filter((folder) => spaceIds.includes(folder.spaceId));
+  }, [allFolders, allSpaces, currentWorkspace]);
+
+  const foldersBySpaceId = useMemo(() => {
+    if (!allFolders) return {};
+    return allFolders.reduce(
+      (map, folder) => {
+        if (!map[folder.spaceId]) {
+          map[folder.spaceId] = [];
+        }
+        map[folder.spaceId].push(folder);
+        return map;
+      },
+      {} as Record<string, typeof allFolders>
+    );
+  }, [allFolders]);
+
+  const projectsByFolderId = useMemo(() => {
+    if (!allProjects) return {};
+    return allProjects.reduce(
+      (map, project) => {
+        if (project.folderId) {
+          if (!map[project.folderId]) {
+            map[project.folderId] = [];
+          }
+          map[project.folderId].push(project);
+        }
         return map;
       },
       {} as Record<string, typeof allProjects>
@@ -404,11 +446,14 @@ const ProjectSidebar: React.FC = () => {
                         key={space.id}
                         space={space}
                         projects={spaceProjects}
+                        folders={foldersBySpaceId[space.id] || []}
+                        projectsByFolderId={projectsByFolderId}
                         isSpaceExpanded={isSpaceExpanded}
                         isHovered={isHovered}
                         showFull={showFull}
                         currentSpace={currentSpace}
                         projectsLoading={projectsLoading}
+                        foldersLoading={foldersLoading}
                         onToggle={toggleSpace}
                         onMouseEnter={() => setHoveredSpace(space.id)}
                         onMouseLeave={() => setHoveredSpace(null)}
@@ -549,15 +594,20 @@ const ProjectSidebar: React.FC = () => {
   );
 };
 
-// ✅ FIXED: SpaceItem now receives projects as prop
+// ✅ REPLACE SpaceItem COMPONENT (around line 450)
+import { FolderIcon } from 'lucide-react';
+
 interface SpaceItemProps {
   space: any;
   projects: any[];
+  folders: any[];
+  projectsByFolderId: Record<string, any[]>;
   isSpaceExpanded: boolean;
   isHovered: boolean;
   showFull: boolean;
   currentSpace: any;
   projectsLoading: boolean;
+  foldersLoading: boolean;
   onToggle: (id: string, e?: React.MouseEvent) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -566,7 +616,7 @@ interface SpaceItemProps {
   setIsCreateProjectModalOpen: (open: boolean) => void;
   isProjectActive: (id: string) => boolean;
   onManageMembers: (
-    entityType: 'space' | 'project',
+    entityType: 'space' | 'project' | 'folder',
     entityId: string,
     entityName: string,
     e?: React.MouseEvent
@@ -576,11 +626,14 @@ interface SpaceItemProps {
 const SpaceItem: React.FC<SpaceItemProps> = ({
   space,
   projects,
+  folders,
+  projectsByFolderId,
   isSpaceExpanded,
   isHovered,
   showFull,
   currentSpace,
   projectsLoading,
+  foldersLoading,
   onToggle,
   onMouseEnter,
   onMouseLeave,
@@ -590,6 +643,24 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
   isProjectActive,
   onManageMembers,
 }) => {
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  const toggleFolder = (folderId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
+  };
+
+  // Projects NOT in folders
+  const rootProjects = projects.filter((p) => !p.folderId);
+
   return (
     <div className="mb-0.5">
       {/* Space Item */}
@@ -661,29 +732,50 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
         )}
       </div>
 
-      {/* Projects */}
+      {/* Projects & Folders */}
       {showFull && isSpaceExpanded && (
         <div className="ml-5 pl-3 border-l border-[#2a2e33] mt-0.5">
-          {projectsLoading ? (
+          {projectsLoading || foldersLoading ? (
             <div className="space-y-2 py-2">
               {[1, 2].map((i) => (
                 <div key={i} className="h-7 bg-[#2a2e33] rounded-md animate-pulse" />
               ))}
             </div>
-          ) : projects && projects.length > 0 ? (
-            projects.map((project) => (
-              <ProjectItem
-                key={project.id}
-                project={project}
-                space={space}
-                isProjectActive={isProjectActive}
-                setCurrentSpace={setCurrentSpace}
-                setCurrentProject={setCurrentProject}
-                onManageMembers={onManageMembers}
-              />
-            ))
           ) : (
-            <p className="px-2 py-1.5 text-xs text-[#6b7280] italic">No projects</p>
+            <>
+              {/* Root Projects */}
+              {rootProjects.map((project) => (
+                <ProjectItem
+                  key={project.id}
+                  project={project}
+                  space={space}
+                  isProjectActive={isProjectActive}
+                  setCurrentSpace={setCurrentSpace}
+                  setCurrentProject={setCurrentProject}
+                  onManageMembers={onManageMembers}
+                />
+              ))}
+
+              {/* Folders with Projects */}
+              {folders.map((folder) => (
+                <FolderItem
+                  key={folder.id}
+                  folder={folder}
+                  space={space}
+                  projects={projectsByFolderId[folder.id] || []}
+                  isExpanded={expandedFolders.has(folder.id)}
+                  onToggle={toggleFolder}
+                  isProjectActive={isProjectActive}
+                  setCurrentSpace={setCurrentSpace}
+                  setCurrentProject={setCurrentProject}
+                  onManageMembers={onManageMembers}
+                />
+              ))}
+
+              {rootProjects.length === 0 && folders.length === 0 && (
+                <p className="px-2 py-1.5 text-xs text-[#6b7280] italic">No projects</p>
+              )}
+            </>
           )}
 
           <button
@@ -696,6 +788,90 @@ const SpaceItem: React.FC<SpaceItemProps> = ({
             <Plus className="w-3.5 h-3.5" />
             <span>Add Project</span>
           </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ✅ NEW COMPONENT
+interface FolderItemProps {
+  folder: any;
+  space: any;
+  projects: any[];
+  isExpanded: boolean;
+  onToggle: (id: string, e?: React.MouseEvent) => void;
+  isProjectActive: (id: string) => boolean;
+  setCurrentSpace: (space: any) => void;
+  setCurrentProject: (project: any) => void;
+  onManageMembers: (
+    entityType: 'folder',
+    entityId: string,
+    entityName: string,
+    e?: React.MouseEvent
+  ) => void;
+}
+
+const FolderItem: React.FC<FolderItemProps> = ({
+  folder,
+  space,
+  projects,
+  isExpanded,
+  onToggle,
+  isProjectActive,
+  setCurrentSpace,
+  setCurrentProject,
+  onManageMembers,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div className="mb-0.5">
+      <div
+        className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-[#25282c] transition-colors"
+        onClick={() => onToggle(folder.id)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <button
+          onClick={(e) => onToggle(folder.id, e)}
+          className="p-0.5 rounded hover:bg-[#2a2e33] text-[#6b7280]"
+        >
+          <ChevronRight
+            className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+          />
+        </button>
+        <FolderIcon className="w-3.5 h-3.5 text-[#9ca3af]" />
+        <span className="flex-1 text-sm text-[#9ca3af] truncate">{folder.name}</span>
+
+        {isHovered && (
+          <button
+            onClick={(e) => onManageMembers('folder', folder.id, folder.name, e)}
+            className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white"
+            title="Manage members"
+          >
+            <UserPlus className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+
+      {isExpanded && (
+        <div className="ml-5 pl-3 border-l border-[#2a2e33]">
+          {projects.length > 0 ? (
+            projects.map((project) => (
+              <ProjectItem
+                key={project.id}
+                project={project}
+                space={space}
+                isProjectActive={isProjectActive}
+                setCurrentSpace={setCurrentSpace}
+                setCurrentProject={setCurrentProject}
+                onManageMembers={onManageMembers as any}
+              />
+            ))
+          ) : (
+            <p className="px-2 py-1.5 text-xs text-[#6b7280] italic">No projects</p>
+          )}
         </div>
       )}
     </div>
