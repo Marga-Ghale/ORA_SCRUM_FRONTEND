@@ -3,9 +3,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Task, TaskStatus, STATUS_COLUMNS } from '../../types/project';
-import { useProject } from '../../context/ProjectContext';
 import TaskCard from './TaskCard';
 import { MoreVertical, Plus, TrendingUp, Calendar, EyeOff, Trash2 } from 'lucide-react';
+import { useProjectContext } from '../../context/ProjectContext';
 
 const ItemTypes = {
   TASK: 'task',
@@ -310,7 +310,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
   columns = ['backlog', 'todo', 'in_progress', 'in_review', 'done'],
 }) => {
   const { filters, moveTask, deleteTask, setIsCreateTaskModalOpen, setCreateTaskInitialStatus } =
-    useProject();
+    useProjectContext();
 
   const [hiddenColumns, setHiddenColumns] = useState<Set<TaskStatus>>(new Set());
 

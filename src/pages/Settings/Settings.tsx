@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { useProject } from '../../context/ProjectContext';
 import PageMeta from '../../components/common/PageMeta';
+import { useProjectContext } from '../../context/ProjectContext';
 
 type SettingsTab = 'general' | 'members' | 'notifications' | 'integrations' | 'danger';
 
 const Settings: React.FC = () => {
-  const { currentProject, users, setIsInviteMemberModalOpen } = useProject();
+  const { currentProject } = useProjectContext();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [projectName, setProjectName] = useState(currentProject?.name || '');
   const [projectKey, setProjectKey] = useState(currentProject?.key || '');
@@ -13,7 +13,6 @@ const Settings: React.FC = () => {
 
   const tabs: { id: SettingsTab; label: string; icon: string }[] = [
     { id: 'general', label: 'General', icon: '⚙️' },
-    { id: 'members', label: 'Members', icon: '👥' },
     { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'integrations', label: 'Integrations', icon: '🔌' },
     { id: 'danger', label: 'Danger Zone', icon: '⚠️' },
@@ -128,97 +127,11 @@ const Settings: React.FC = () => {
                     />
                   </div>
 
-                  {/* Project Lead */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Project Lead
-                    </label>
-                    <select className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
                   <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                     <button className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
                       Save Changes
                     </button>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Members Settings */}
-            {activeTab === 'members' && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Team Members
-                  </h2>
-                  <button
-                    onClick={() => setIsInviteMemberModalOpen(true)}
-                    className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Add Member
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {users.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        {member.avatar ? (
-                          <img
-                            src={member.avatar}
-                            alt={member.name}
-                            className="w-10 h-10 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-sm font-medium text-brand-600 dark:text-brand-400">
-                            {member.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')}
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
-                          <p className="text-sm text-gray-500">{member.email}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <select
-                          defaultValue={member.role}
-                          className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="member">Member</option>
-                          <option value="viewer">Viewer</option>
-                        </select>
-                        <button className="p-2 text-gray-400 hover:text-error-500 rounded-lg hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors">
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}

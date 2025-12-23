@@ -1,15 +1,31 @@
-// src/components/modals/InviteMemberModal.tsx
+// ✅ COMPLETE REPLACEMENT: src/components/modals/InviteMemberModal.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
-import { useProject } from '../../context/ProjectContext';
+import {
+  X,
+  UserPlus,
+  Search,
+  Check,
+  Loader,
+  Info,
+  Crown,
+  Shield,
+  Eye,
+  Users,
+  ChevronDown,
+} from 'lucide-react';
 import { useAddMember, useInviteMemberByEmail } from '../../hooks/api/useMembers';
 import { useSearchUsers } from '../../hooks/useUsers';
+import { EntityType } from '../../types/entity';
+import { HierarchicalEntitySelector } from '../members/HierarchicalEntitySelector';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultEntity?: { type: EntityType; id: string; name: string };
 }
 
-type InviteRole = 'admin' | 'member' | 'viewer';
+type InviteRole = 'owner' | 'admin' | 'lead' | 'member' | 'viewer';
 
 interface SearchUserResult {
   id: string;
@@ -23,15 +39,37 @@ interface PendingInvite {
   user?: SearchUserResult;
 }
 
-const ROLE_OPTIONS: { value: InviteRole; label: string; description: string }[] = [
-  { value: 'admin', label: 'Admin', description: 'Full access to all features and settings' },
-  { value: 'member', label: 'Member', description: 'Can create and manage tasks and projects' },
-  { value: 'viewer', label: 'Viewer', description: 'Can view and comment only' },
+const ROLE_OPTIONS: {
+  value: InviteRole;
+  label: string;
+  description: string;
+  icon: any;
+  level: number;
+}[] = [
+  {
+    value: 'owner',
+    label: 'Owner',
+    description: 'Full control, can delete',
+    icon: Crown,
+    level: 5,
+  },
+  {
+    value: 'admin',
+    label: 'Admin',
+    description: 'Manage members & settings',
+    icon: Shield,
+    level: 4,
+  },
+  { value: 'lead', label: 'Lead', description: 'Add members to projects', icon: Users, level: 3 },
+  { value: 'member', label: 'Member', description: 'Work on tasks', icon: Users, level: 2 },
+  { value: 'viewer', label: 'Viewer', description: 'Read-only access', icon: Eye, level: 1 },
 ];
 
-const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose }) => {
-  const { currentWorkspace } = useProject();
-
+export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
+  isOpen,
+  onClose,
+  defaultEntity,
+}) => {
   const [email, setEmail] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<InviteRole>('member');
@@ -40,15 +78,16 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState<{
+    type: EntityType;
+    id: string;
+    name: string;
+  } | null>(defaultEntity || null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
 
-  const workspaceId = currentWorkspace?.id || '';
-  const workspaceName = currentWorkspace?.name || 'Workspace';
-
-  // Use the correct hooks
   const addMemberMutation = useAddMember();
   const inviteMemberMutation = useInviteMemberByEmail();
   const { data: searchResults, isLoading: isSearching } = useSearchUsers(searchQuery, {
@@ -57,7 +96,6 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
 
   const isSubmitting = addMemberMutation.isPending || inviteMemberMutation.isPending;
 
-  // Focus input when modal opens
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -70,7 +108,6 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
     };
   }, [isOpen]);
 
-  // Handle escape key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isSubmitting) onClose();
@@ -81,7 +118,6 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose, isSubmitting]);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
@@ -95,7 +131,6 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       if (email.length >= 2) {
@@ -173,12 +208,11 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
     setError(null);
     setSuccess(null);
 
-    if (!workspaceId) {
-      setError('No workspace selected. Please select a workspace first.');
+    if (!selectedEntity) {
+      setError('Please select a workspace, space, folder, or project');
       return;
     }
 
-    // Add current email if not empty
     const allInvites = [...pendingInvites];
     const trimmedEmail = email.toLowerCase().trim();
 
@@ -202,10 +236,9 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
       for (const invite of allInvites) {
         try {
           if (invite.user) {
-            // Add existing user directly to workspace
             await addMemberMutation.mutateAsync({
-              entityType: 'workspace',
-              entityId: workspaceId,
+              entityType: selectedEntity.type,
+              entityId: selectedEntity.id,
               data: {
                 userId: invite.user.id,
                 role: selectedRole,
@@ -213,10 +246,9 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
             });
             addedCount++;
           } else {
-            // Send workspace invitation
             await inviteMemberMutation.mutateAsync({
-              entityType: 'workspace',
-              entityId: workspaceId,
+              entityType: selectedEntity.type,
+              entityId: selectedEntity.id,
               data: {
                 email: invite.email,
                 role: selectedRole,
@@ -224,8 +256,8 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
             });
             invitedCount++;
           }
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        } catch (err: any) {
+          const errorMsg = err?.response?.data?.error || err?.message || 'Unknown error';
           errors.push(`${invite.email}: ${errorMsg}`);
         }
       }
@@ -235,7 +267,7 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
         successParts.push(`${addedCount} member${addedCount > 1 ? 's' : ''} added`);
       }
       if (invitedCount > 0) {
-        successParts.push(`${invitedCount} invitation${invitedCount > 1 ? 's' : ''} sent`);
+        successParts.push(`${invitedCount} user${invitedCount > 1 ? 's' : ''} found by email`);
       }
 
       if (successParts.length > 0) {
@@ -255,8 +287,8 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
         setPendingInvites([]);
         setEmail('');
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send invitations');
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || 'Failed to send invitations');
     }
   };
 
@@ -269,6 +301,9 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
     setSuccess(null);
     setShowRoleDropdown(false);
     setShowSearchResults(false);
+    if (!defaultEntity) {
+      setSelectedEntity(null);
+    }
   };
 
   const handleClose = () => {
@@ -280,84 +315,64 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
 
   if (!isOpen) return null;
 
-  if (!currentWorkspace?.id) {
-    return (
-      <>
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999]" onClick={onClose} />
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <div className="text-center">
-              <svg
-                className="w-12 h-12 text-yellow-500 mx-auto mb-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                No Workspace Selected
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                Please select or create a workspace before inviting members.
-              </p>
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
   const selectedRoleOption = ROLE_OPTIONS.find((r) => r.value === selectedRole);
-  const hasExistingUsers = pendingInvites.some((p) => p.user);
-  const hasNewInvites = pendingInvites.some((p) => !p.user);
+  const RoleIcon = selectedRoleOption?.icon || Users;
+
+  const getAccessInfo = () => {
+    if (!selectedEntity) return null;
+
+    const { type } = selectedEntity;
+
+    if (type === 'workspace') {
+      return {
+        direct: 'Full access to workspace',
+        inherited: ['All spaces', 'All folders', 'All projects', 'All tasks'],
+      };
+    }
+    if (type === 'space') {
+      return {
+        direct: 'Access to this space',
+        inherited: ['All folders in space', 'All projects in space', 'All tasks in projects'],
+      };
+    }
+    if (type === 'folder') {
+      return {
+        direct: 'Access to this folder',
+        inherited: ['All projects in folder', 'All tasks in projects'],
+      };
+    }
+    if (type === 'project') {
+      return {
+        direct: 'Access to this project',
+        inherited: ['All tasks in project'],
+      };
+    }
+    return null;
+  };
+
+  const accessInfo = getAccessInfo();
 
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999]" onClick={handleClose} />
 
-      {/* Modal */}
       <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-brand-600 dark:text-brand-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                  />
-                </svg>
+                <UserPlus className="w-5 h-5 text-brand-600 dark:text-brand-400" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Invite Team Members
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Add people to <span className="font-medium">{workspaceName}</span>
+                  Add people by user ID or email
                 </p>
               </div>
             </div>
@@ -366,14 +381,7 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
               disabled={isSubmitting}
               className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors disabled:opacity-50"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -381,19 +389,7 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
           {success && (
             <div className="mx-6 mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
               <div className="flex gap-3">
-                <svg
-                  className="w-5 h-5 text-green-500 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
                 <p className="text-sm text-green-700 dark:text-green-300">{success}</p>
               </div>
             </div>
@@ -402,19 +398,7 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
           {error && (
             <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
               <div className="flex gap-3">
-                <svg
-                  className="w-5 h-5 text-red-500 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <X className="w-5 h-5 text-red-500 flex-shrink-0" />
                 <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
               </div>
             </div>
@@ -425,6 +409,34 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
             onSubmit={handleSubmit}
             className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar"
           >
+            {/* Entity Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Add to <span className="text-red-500">*</span>
+              </label>
+              <HierarchicalEntitySelector
+                value={selectedEntity}
+                onChange={setSelectedEntity}
+                disabled={isSubmitting || !!defaultEntity}
+              />
+              {selectedEntity && accessInfo && (
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex gap-2">
+                    <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-blue-700 dark:text-blue-300">
+                      <p className="font-medium mb-1">Members will get:</p>
+                      <ul className="space-y-1">
+                        <li>• {accessInfo.direct}</li>
+                        {accessInfo.inherited.map((item, i) => (
+                          <li key={i}>• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Email Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -432,7 +444,6 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
               </label>
 
               <div className="min-h-[80px] p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-transparent transition-all">
-                {/* Tags */}
                 {pendingInvites.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">
                     {pendingInvites.map((invite) => (
@@ -461,20 +472,7 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
                           </>
                         ) : (
                           <>
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                              />
-                            </svg>
-                            {invite.email}
+                            <span>{invite.email}</span>
                           </>
                         )}
                         <button
@@ -483,26 +481,13 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
                           className="hover:opacity-70 transition-opacity"
                           disabled={isSubmitting}
                         >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
+                          <X className="w-4 h-4" />
                         </button>
                       </span>
                     ))}
                   </div>
                 )}
 
-                {/* Input with search */}
                 <div className="relative" ref={searchResultsRef}>
                   <input
                     ref={inputRef}
@@ -520,30 +505,11 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
                     disabled={isSubmitting}
                   />
 
-                  {/* Search Dropdown */}
                   {showSearchResults && email.length >= 2 && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
                       {isSearching ? (
                         <div className="p-4 text-center text-gray-500">
-                          <svg
-                            className="w-5 h-5 animate-spin mx-auto"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                            />
-                          </svg>
+                          <Loader className="w-5 h-5 animate-spin mx-auto" />
                         </div>
                       ) : searchResults && searchResults.length > 0 ? (
                         <>
@@ -592,25 +558,13 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
                                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left border-t border-gray-100 dark:border-gray-700"
                               >
                                 <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                  <svg
-                                    className="w-4 h-4 text-gray-500"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                    />
-                                  </svg>
+                                  <Search className="w-4 h-4 text-gray-500" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                    Invite "{email}"
+                                    Add "{email}"
                                   </p>
-                                  <p className="text-xs text-gray-500">Send invitation email</p>
+                                  <p className="text-xs text-gray-500">Find by email</p>
                                 </div>
                               </button>
                             )}
@@ -622,27 +576,13 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
                           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
                         >
                           <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                            <svg
-                              className="w-4 h-4 text-gray-500"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                              />
-                            </svg>
+                            <Search className="w-4 h-4 text-gray-500" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 dark:text-white">
-                              Invite "{email}"
+                              Add "{email}"
                             </p>
-                            <p className="text-xs text-gray-500">
-                              User not found - send invitation email
-                            </p>
+                            <p className="text-xs text-gray-500">Find user by email</p>
                           </div>
                         </button>
                       ) : (
@@ -656,7 +596,7 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
               </div>
 
               <p className="text-xs text-gray-500 mt-1.5">
-                Search for existing users or enter email addresses to send invitations
+                Search for existing users or enter email addresses
               </p>
             </div>
 
@@ -672,161 +612,92 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
                   disabled={isSubmitting}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-left transition-all hover:border-gray-300 dark:hover:border-gray-600 disabled:opacity-50"
                 >
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {selectedRoleOption?.label}
-                    </span>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {selectedRoleOption?.description}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <RoleIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {selectedRoleOption?.label}
+                      </span>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {selectedRoleOption?.description}
+                      </p>
+                    </div>
                   </div>
-                  <svg
+                  <ChevronDown
                     className={`w-5 h-5 text-gray-400 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
+                  />
                 </button>
 
                 {showRoleDropdown && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden">
-                    {ROLE_OPTIONS.map((role) => (
-                      <button
-                        key={role.value}
-                        type="button"
-                        onClick={() => {
-                          setSelectedRole(role.value);
-                          setShowRoleDropdown(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                          selectedRole === role.value ? 'bg-brand-50 dark:bg-brand-900/20' : ''
-                        }`}
-                      >
-                        <div className="text-left">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            {role.label}
-                          </span>
-                          <p className="text-xs text-gray-500 mt-0.5">{role.description}</p>
-                        </div>
-                        {selectedRole === role.value && (
-                          <svg
-                            className="w-5 h-5 text-brand-500"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    ))}
+                    {ROLE_OPTIONS.map((role) => {
+                      const Icon = role.icon;
+                      return (
+                        <button
+                          key={role.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedRole(role.value);
+                            setShowRoleDropdown(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                            selectedRole === role.value ? 'bg-brand-50 dark:bg-brand-900/30' : ''
+                          }`}
+                        >
+                          <Icon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                          <div className="flex-1 text-left">
+                            <span
+                              className={`text-sm font-medium ${
+                                selectedRole === role.value
+                                  ? 'text-brand-600 dark:text-brand-400'
+                                  : 'text-gray-900 dark:text-white'
+                              }`}
+                            >
+                              {role.label}
+                            </span>
+                            <p className="text-xs text-gray-500 mt-0.5">{role.description}</p>
+                          </div>
+                          {selectedRole === role.value && (
+                            <Check className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Preview */}
-            {pendingInvites.length > 0 && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                <div className="flex gap-3">
-                  <svg
-                    className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                    {hasExistingUsers && (
-                      <p>
-                        <strong>{pendingInvites.filter((p) => p.user).length}</strong> existing user
-                        {pendingInvites.filter((p) => p.user).length > 1 ? 's' : ''} will be added
-                        immediately
-                      </p>
-                    )}
-                    {hasNewInvites && (
-                      <p>
-                        <strong>{pendingInvites.filter((p) => !p.user).length}</strong> invitation
-                        {pendingInvites.filter((p) => !p.user).length > 1 ? 's' : ''} will be sent
-                      </p>
-                    )}
-                    <p className="text-blue-600 dark:text-blue-400">
-                      All will join <strong>{workspaceName}</strong> as{' '}
-                      <strong className="capitalize">{selectedRole}</strong>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </form>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
+              type="submit"
               onClick={handleSubmit}
-              disabled={(pendingInvites.length === 0 && !validateEmail(email)) || isSubmitting}
-              className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 min-w-[160px] justify-center"
+              disabled={
+                isSubmitting ||
+                (pendingInvites.length === 0 && email.trim() === '') ||
+                !selectedEntity
+              }
+              className="px-5 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  <span>Processing...</span>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Sending...
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                    />
-                  </svg>
-                  <span>
-                    {pendingInvites.length > 0
-                      ? `Send ${pendingInvites.length} Invite${pendingInvites.length > 1 ? 's' : ''}`
-                      : 'Send Invitation'}
-                  </span>
+                  <UserPlus className="w-4 h-4" />
+                  Send Invites
                 </>
               )}
             </button>
@@ -837,4 +708,4 @@ const InviteMemberModalv1: React.FC<InviteMemberModalProps> = ({ isOpen, onClose
   );
 };
 
-export default InviteMemberModalv1;
+export default InviteMemberModal;

@@ -1,6 +1,6 @@
 // src/components/modals/CreateProjectModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { useProject } from '../../context/ProjectContext';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -23,7 +23,7 @@ const PROJECT_COLORS = [
 ];
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose }) => {
-  const { createProject, allSpaces, currentSpace, isInitializing } = useProject();
+  const { createProject, allSpaces, currentSpace, isInitializing } = useProjectContext();
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');

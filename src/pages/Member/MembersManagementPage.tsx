@@ -94,7 +94,7 @@ const MemberRow = ({
   const RoleIcon = roleConfig?.icon || Users;
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-[#1a1d21] rounded-lg border border-[#2a2e33] hover:border-[#3a3e43] transition-all">
+    <div className="flex items-center gap-4 p-4 bg-white dark:bg-[#1a1d21] rounded-lg border border-gray-200 dark:border-[#2a2e33] hover:border-gray-300 dark:hover:border-[#3a3e43] transition-all">
       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
         {member.user?.avatar ? (
           <img
@@ -109,7 +109,9 @@ const MemberRow = ({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="text-sm font-medium text-white">{member.user?.name || 'Unknown'}</p>
+          <p className="text-sm font-medium text-gray-900 dark:text-white">
+            {member.user?.name || 'Unknown'}
+          </p>
           <span
             className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${accessBadge.color} flex items-center gap-1 cursor-help`}
             onMouseEnter={() => setShowAccessInfo(member.userId)}
@@ -119,9 +121,9 @@ const MemberRow = ({
             {accessBadge.text}
           </span>
         </div>
-        <p className="text-xs text-[#6b7280]">{member.user?.email || ''}</p>
+        <p className="text-xs text-gray-600 dark:text-[#6b7280]">{member.user?.email || ''}</p>
         {member.isInherited && showAccessInfo === member.userId && (
-          <div className="mt-2 text-xs text-[#9ca3af] bg-[#25282c] px-3 py-2 rounded border border-[#2a2e33]">
+          <div className="mt-2 text-xs text-gray-600 dark:text-[#9ca3af] bg-gray-100 dark:bg-[#25282c] px-3 py-2 rounded border border-gray-200 dark:border-[#2a2e33]">
             Access inherited from parent {member.inheritedFrom}. To modify, go to the{' '}
             {member.inheritedFrom} settings.
           </div>
@@ -138,7 +140,7 @@ const MemberRow = ({
             }}
             onBlur={() => setIsEditing(false)}
             autoFocus
-            className="px-4 py-2 bg-[#25282c] border border-[#2a2e33] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+            className="px-4 py-2 bg-gray-100 dark:bg-[#25282c] border border-gray-300 dark:border-[#2a2e33] rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
           >
             {ROLE_OPTIONS.map((role) => (
               <option key={role.value} value={role.value}>
@@ -152,8 +154,8 @@ const MemberRow = ({
             disabled={!canEdit}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
               canEdit
-                ? 'bg-[#25282c] hover:bg-[#2a2e33] text-white cursor-pointer'
-                : 'bg-[#25282c]/50 text-[#6b7280] cursor-not-allowed'
+                ? 'bg-gray-100 dark:bg-[#25282c] hover:bg-gray-200 dark:hover:bg-[#2a2e33] text-gray-900 dark:text-white cursor-pointer'
+                : 'bg-gray-100/50 dark:bg-[#25282c]/50 text-gray-400 dark:text-[#6b7280] cursor-not-allowed'
             } transition-colors`}
           >
             <RoleIcon className="w-4 h-4" style={{ color: roleConfig?.color }} />
@@ -165,7 +167,7 @@ const MemberRow = ({
         {canEdit && (
           <button
             onClick={() => onRemove(member.userId, member.user?.name || 'this member')}
-            className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+            className="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
             title="Remove member"
           >
             <Trash2 className="w-4 h-4" />
@@ -189,30 +191,36 @@ const AddMemberSection = ({
   addMemberLoading,
 }: any) => {
   return (
-    <div className="bg-[#1a1d21] rounded-xl border border-[#2a2e33] p-6 space-y-6 sticky top-6">
-      <h3 className="text-lg font-semibold text-white mb-4">Add New Members</h3>
+    <div className="bg-white dark:bg-[#1a1d21] rounded-xl border border-gray-200 dark:border-[#2a2e33] p-6 space-y-6 sticky top-6">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add New Members</h3>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-[#e5e7eb] mb-2">Search Users</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#e5e7eb] mb-2">
+            Search Users
+          </label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#6b7280]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name or email..."
-              className="w-full pl-10 pr-4 py-3 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white placeholder-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-[#25282c] border border-gray-300 dark:border-[#2a2e33] rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
             />
             {searchLoading && (
-              <Loader className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280] animate-spin" />
+              <Loader className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#6b7280] animate-spin" />
             )}
           </div>
-          <p className="text-xs text-[#6b7280] mt-2">Type at least 2 characters to search</p>
+          <p className="text-xs text-gray-500 dark:text-[#6b7280] mt-2">
+            Type at least 2 characters to search
+          </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#e5e7eb] mb-2">Select Role</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#e5e7eb] mb-2">
+            Select Role
+          </label>
           <div className="space-y-2">
             {ROLE_OPTIONS.map((role) => {
               const Icon = role.icon;
@@ -222,16 +230,20 @@ const AddMemberSection = ({
                   onClick={() => setSelectedRole(role.value)}
                   className={`w-full flex items-center gap-2 p-3 rounded-lg border transition-all ${
                     selectedRole === role.value
-                      ? 'bg-[#7c3aed]/10 border-[#7c3aed] text-white'
-                      : 'bg-[#25282c] border-[#2a2e33] text-[#9ca3af] hover:bg-[#2a2e33]'
+                      ? 'bg-purple-50 dark:bg-[#7c3aed]/10 border-purple-500 dark:border-[#7c3aed] text-gray-900 dark:text-white'
+                      : 'bg-gray-50 dark:bg-[#25282c] border-gray-300 dark:border-[#2a2e33] text-gray-600 dark:text-[#9ca3af] hover:bg-gray-100 dark:hover:bg-[#2a2e33]'
                   }`}
                 >
                   <Icon className="w-4 h-4" style={{ color: role.color }} />
                   <div className="flex-1 text-left">
                     <p className="text-xs font-medium">{role.label}</p>
-                    <p className="text-[10px] text-[#6b7280]">{role.description}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-[#6b7280]">
+                      {role.description}
+                    </p>
                   </div>
-                  {selectedRole === role.value && <Check className="w-4 h-4 text-[#7c3aed]" />}
+                  {selectedRole === role.value && (
+                    <Check className="w-4 h-4 text-purple-600 dark:text-[#7c3aed]" />
+                  )}
                 </button>
               );
             })}
@@ -240,27 +252,27 @@ const AddMemberSection = ({
 
         {searchQuery.length >= 2 && (
           <div>
-            <label className="block text-sm font-medium text-[#e5e7eb] mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#e5e7eb] mb-2">
               Available Users ({selectedUsers.size} selected)
             </label>
-            <div className="border border-[#2a2e33] rounded-lg overflow-hidden max-h-80">
+            <div className="border border-gray-300 dark:border-[#2a2e33] rounded-lg overflow-hidden max-h-80">
               {searchLoading ? (
                 <div className="p-8 text-center">
-                  <Loader className="w-6 h-6 text-[#6b7280] animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-[#6b7280]">Searching...</p>
+                  <Loader className="w-6 h-6 text-gray-400 dark:text-[#6b7280] animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-[#6b7280]">Searching...</p>
                 </div>
               ) : availableUsers.length > 0 ? (
-                <div className="divide-y divide-[#2a2e33] overflow-y-auto max-h-80">
+                <div className="divide-y divide-gray-200 dark:divide-[#2a2e33] overflow-y-auto max-h-80">
                   {availableUsers.map((user: any) => (
                     <label
                       key={user.id}
-                      className="flex items-center gap-3 p-3 hover:bg-[#25282c] cursor-pointer transition-colors"
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-[#25282c] cursor-pointer transition-colors"
                     >
                       <input
                         type="checkbox"
                         checked={selectedUsers.has(user.id)}
                         onChange={() => toggleUserSelection(user.id)}
-                        className="w-4 h-4 rounded border-[#2a2e33] bg-[#25282c] text-[#7c3aed]"
+                        className="w-4 h-4 rounded border-gray-300 dark:border-[#2a2e33] bg-white dark:bg-[#25282c] text-[#7c3aed]"
                       />
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-xs font-semibold">
                         {user.avatar ? (
@@ -274,16 +286,20 @@ const AddMemberSection = ({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-white truncate">{user.name}</p>
-                        <p className="text-[10px] text-[#6b7280] truncate">{user.email}</p>
+                        <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          {user.name}
+                        </p>
+                        <p className="text-[10px] text-gray-500 dark:text-[#6b7280] truncate">
+                          {user.email}
+                        </p>
                       </div>
                     </label>
                   ))}
                 </div>
               ) : (
                 <div className="p-8 text-center">
-                  <Search className="w-8 h-8 text-[#6b7280] mx-auto mb-2" />
-                  <p className="text-sm text-[#9ca3af]">No users found</p>
+                  <Search className="w-8 h-8 text-gray-400 dark:text-[#6b7280] mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-[#9ca3af]">No users found</p>
                 </div>
               )}
             </div>
@@ -293,7 +309,7 @@ const AddMemberSection = ({
         <button
           onClick={handleAddMembers}
           disabled={selectedUsers.size === 0 || addMemberLoading}
-          className="w-full px-4 py-3 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full px-4 py-3 bg-purple-600 dark:bg-[#7c3aed] hover:bg-purple-700 dark:hover:bg-[#6d28d9] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {addMemberLoading ? (
             <>
@@ -567,15 +583,15 @@ export default function MembersManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111315]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111315]">
       {/* Header */}
-      <div className="bg-[#1a1d21] border-b border-[#2a2e33] sticky top-0 z-10">
+      <div className="bg-white dark:bg-[#1a1d21] border-b border-gray-200 dark:border-[#2a2e33] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate(-1)}
-                className="p-2 rounded-lg hover:bg-[#25282c] text-[#9ca3af] hover:text-white transition-colors"
+                onClick={() => window.history.back()}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#25282c] text-gray-600 dark:text-[#9ca3af] hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -587,8 +603,10 @@ export default function MembersManagementPage() {
                   {entityConfig.icon}
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-white">{entityName}</h1>
-                  <p className="text-sm text-[#6b7280]">
+                  <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {entityName}
+                  </h1>
+                  <p className="text-sm text-gray-600 dark:text-[#6b7280]">
                     {entityConfig.singular} Members Management
                   </p>
                 </div>
@@ -598,30 +616,38 @@ export default function MembersManagementPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className=" mx-auto  py-5">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Member List */}
           <div className="lg:col-span-2 space-y-6">
             {/* Stats Card */}
-            <div className="bg-[#1a1d21] rounded-xl border border-[#2a2e33] p-6">
+            <div className="bg-white dark:bg-[#1a1d21] rounded-xl border border-gray-200 dark:border-[#2a2e33] p-6">
               <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-[#60a5fa] mt-0.5 flex-shrink-0" />
+                <Info className="w-5 h-5 text-blue-500 dark:text-[#60a5fa] mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="text-sm font-medium text-white mb-3">Access Overview</h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                    Access Overview
+                  </h3>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center p-3 bg-[#25282c] rounded-lg">
-                      <p className="text-2xl font-bold text-white">{members.length}</p>
-                      <p className="text-xs text-[#6b7280] mt-1">Total Members</p>
+                    <div className="text-center p-3 bg-gray-100 dark:bg-[#25282c] rounded-lg">
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {members.length}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-[#6b7280] mt-1">
+                        Total Members
+                      </p>
                     </div>
-                    <div className="text-center p-3 bg-[#25282c] rounded-lg">
-                      <p className="text-2xl font-bold text-green-400">{directMembers.length}</p>
-                      <p className="text-xs text-[#6b7280] mt-1">Direct</p>
+                    <div className="text-center p-3 bg-gray-100 dark:bg-[#25282c] rounded-lg">
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {directMembers.length}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-[#6b7280] mt-1">Direct</p>
                     </div>
-                    <div className="text-center p-3 bg-[#25282c] rounded-lg">
-                      <p className="text-2xl font-bold text-purple-400">
+                    <div className="text-center p-3 bg-gray-100 dark:bg-[#25282c] rounded-lg">
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                         {inheritedMembers.length}
                       </p>
-                      <p className="text-xs text-[#6b7280] mt-1">Inherited</p>
+                      <p className="text-xs text-gray-600 dark:text-[#6b7280] mt-1">Inherited</p>
                     </div>
                   </div>
                 </div>
@@ -630,13 +656,13 @@ export default function MembersManagementPage() {
 
             {/* Filter */}
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#6b7280]" />
+              <Filter className="w-4 h-4 text-gray-500 dark:text-[#6b7280]" />
               <button
                 onClick={() => setFilterType('all')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filterType === 'all'
-                    ? 'bg-[#7c3aed] text-white'
-                    : 'bg-[#25282c] text-[#9ca3af] hover:text-white'
+                    ? 'bg-purple-600 dark:bg-[#7c3aed] text-white'
+                    : 'bg-gray-100 dark:bg-[#25282c] text-gray-600 dark:text-[#9ca3af] hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 All ({members.length})
@@ -645,8 +671,8 @@ export default function MembersManagementPage() {
                 onClick={() => setFilterType('direct')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filterType === 'direct'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-[#25282c] text-[#9ca3af] hover:text-white'
+                    ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400'
+                    : 'bg-gray-100 dark:bg-[#25282c] text-gray-600 dark:text-[#9ca3af] hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 Direct ({directMembers.length})
@@ -655,8 +681,8 @@ export default function MembersManagementPage() {
                 onClick={() => setFilterType('inherited')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filterType === 'inherited'
-                    ? 'bg-purple-500/20 text-purple-400'
-                    : 'bg-[#25282c] text-[#9ca3af] hover:text-white'
+                    ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400'
+                    : 'bg-gray-100 dark:bg-[#25282c] text-gray-600 dark:text-[#9ca3af] hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 Inherited ({inheritedMembers.length})
@@ -666,7 +692,7 @@ export default function MembersManagementPage() {
             {/* Members List */}
             <div className="space-y-3">
               {filteredMembers.length > 0 ? (
-                filteredMembers.map((member: any) => (
+                filteredMembers.map((member) => (
                   <MemberRow
                     key={member.userId}
                     member={member}
@@ -679,10 +705,10 @@ export default function MembersManagementPage() {
                   />
                 ))
               ) : (
-                <div className="text-center py-12 bg-[#1a1d21] rounded-xl border border-[#2a2e33]">
-                  <Users className="w-12 h-12 text-[#6b7280] mx-auto mb-3" />
-                  <p className="text-sm text-[#9ca3af]">No members found</p>
-                  <p className="text-xs text-[#6b7280] mt-1">
+                <div className="text-center py-12 bg-white dark:bg-[#1a1d21] rounded-xl border border-gray-200 dark:border-[#2a2e33]">
+                  <Users className="w-12 h-12 text-gray-400 dark:text-[#6b7280] mx-auto mb-3" />
+                  <p className="text-sm text-gray-600 dark:text-[#9ca3af]">No members found</p>
+                  <p className="text-xs text-gray-500 dark:text-[#6b7280] mt-1">
                     {filterType === 'direct' && 'No direct members yet'}
                     {filterType === 'inherited' && 'No inherited members'}
                     {filterType === 'all' && 'Add members to get started'}
@@ -702,9 +728,9 @@ export default function MembersManagementPage() {
               selectedUsers={selectedUsers}
               toggleUserSelection={toggleUserSelection}
               availableUsers={availableUsers}
-              searchLoading={searchLoading}
+              searchLoading={false}
               handleAddMembers={handleAddMembers}
-              addMemberLoading={addMember.isPending}
+              addMemberLoading={false}
             />
           </div>
         </div>

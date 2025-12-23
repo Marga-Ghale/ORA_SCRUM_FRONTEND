@@ -1,6 +1,6 @@
 // src/components/modals/CreateSprintModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { useProject } from '../../context/ProjectContext';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface CreateSprintModalProps {
   isOpen: boolean;
@@ -15,7 +15,7 @@ const DURATION_OPTIONS = [
 ];
 
 const CreateSprintModal: React.FC<CreateSprintModalProps> = ({ isOpen, onClose }) => {
-  const { createSprint, currentProject } = useProject();
+  const { createSprint, currentProject } = useProjectContext();
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
   const [startDate, setStartDate] = useState('');

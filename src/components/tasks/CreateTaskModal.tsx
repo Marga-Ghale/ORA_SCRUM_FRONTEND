@@ -2,7 +2,6 @@
 // src/components/CreateTaskModal/CreateTaskModal.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { TaskStatus, Priority, TaskType } from '../../types/project';
-import { useProject } from '../../context/ProjectContext';
 import { useCreateTask } from '../../hooks/api/useTasks';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
 import { dateToISO } from '../../utils/dateUtils';
@@ -15,13 +14,14 @@ import { PriorityDropdown } from './PriorityDropdown';
 import { TypeDropdown } from './TypeDropdown';
 import { SubtaskFormData } from '../Subtasks/SubtasksItems';
 import { SubtasksSection } from '../Subtasks/SubtasksSection';
+import { useProjectContext } from '../../context/ProjectContext';
 
 // ============================================
 // CREATE TASK MODAL - MAIN COMPONENT
 // ============================================
 
 const CreateTaskModal: React.FC = () => {
-  const { isCreateTaskModalOpen, currentProject, setIsCreateTaskModalOpen } = useProject();
+  const { isCreateTaskModalOpen, currentProject, setIsCreateTaskModalOpen } = useProjectContext();
 
   const createTaskMutation = useCreateTask();
 

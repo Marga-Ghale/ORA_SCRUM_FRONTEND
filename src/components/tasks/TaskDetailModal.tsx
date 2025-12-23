@@ -1,7 +1,6 @@
 // src/components/TaskDetailModal/TaskDetailModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { TaskStatus, Priority, TaskType, TASK_TYPE_CONFIG } from '../../types/project';
-import { useProject } from '../../context/ProjectContext';
 import {
   CommentResponse,
   useAddComment,
@@ -30,9 +29,10 @@ import { CustomCalendar } from '../common/Calender';
 import { StatusDropdown } from './StatusDropdown';
 import { PriorityDropdown } from './PriorityDropdown';
 import { TypeDropdown } from './TypeDropdown';
+import { useProjectContext } from '../../context/ProjectContext';
 
 const TaskDetailModal: React.FC = () => {
-  const { selectedTask, isTaskModalOpen, closeTaskModal, currentProject } = useProject();
+  const { selectedTask, isTaskModalOpen, closeTaskModal, currentProject } = useProjectContext();
 
   const { data: commentsData, refetch: refetchComments } = useTaskComments(selectedTask?.id || '', {
     enabled: !!selectedTask?.id,

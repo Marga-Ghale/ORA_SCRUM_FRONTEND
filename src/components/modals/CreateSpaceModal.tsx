@@ -1,6 +1,6 @@
 // src/components/modals/CreateSpaceModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { useProject } from '../../context/ProjectContext';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface CreateSpaceModalProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ const SPACE_COLORS = [
 ];
 
 const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) => {
-  const { createSpace } = useProject();
+  const { createSpace } = useProjectContext();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState(SPACE_ICONS[0]);
