@@ -101,21 +101,25 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg bg-[#1a1d21] border border-[#2a2e33] rounded-2xl shadow-2xl">
+      <div className="relative w-full max-w-lg bg-white dark:bg-[#1a1d21] border border-gray-200 dark:border-[#2a2e33] rounded-2xl shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2a2e33]">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2a2e33]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-brand-500/20 flex items-center justify-center">
               <Hash className="w-5 h-5 text-brand-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Create Channel</h2>
-              <p className="text-xs text-[#6b7280]">Channels are for team conversations</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Create Channel
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-[#6b7280]">
+                Channels are for team conversations
+              </p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-[#2a2e33] rounded-lg text-[#6b7280] hover:text-white transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-[#2a2e33] rounded-lg text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -133,7 +137,9 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
           {/* Channel Type Selection */}
           <div>
-            <label className="block text-sm font-medium text-[#9ca3af] mb-2">Channel Type</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-[#9ca3af] mb-2">
+              Channel Type
+            </label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 {
@@ -166,7 +172,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors ${
                     channelType === type
                       ? 'bg-brand-500/20 border-brand-500/50 text-brand-400'
-                      : 'bg-[#25282c] border-[#2a2e33] text-[#9ca3af] hover:border-[#3a3e43]'
+                      : 'bg-gray-50 dark:bg-[#25282c] border-gray-200 dark:border-[#2a2e33] text-gray-600 dark:text-[#9ca3af] hover:border-gray-300 dark:hover:border-[#3a3e43]'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -179,7 +185,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
           {/* Target Selection (for project/space channels) */}
           {channelType !== 'team' && (
             <div>
-              <label className="block text-sm font-medium text-[#9ca3af] mb-2">
+              <label className="block text-sm font-medium text-gray-600 dark:text-[#9ca3af] mb-2">
                 Select {channelType === 'project' ? 'Project' : 'Space'}
               </label>
               <select
@@ -188,7 +194,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                   setSelectedTargetId(e.target.value);
                   setError(null);
                 }}
-                className="w-full px-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white text-sm focus:outline-none focus:border-brand-500/50"
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#25282c] border border-gray-200 dark:border-[#2a2e33] rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-brand-500/50"
               >
                 <option value="">Select a {channelType === 'project' ? 'project' : 'space'}</option>
                 {channelType === 'project'
@@ -208,9 +214,11 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
           {/* Channel Name */}
           <div>
-            <label className="block text-sm font-medium text-[#9ca3af] mb-2">Channel Name</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-[#9ca3af] mb-2">
+              Channel Name
+            </label>
             <div className="relative">
-              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280]" />
+              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-[#6b7280]" />
               <input
                 type="text"
                 value={name}
@@ -219,29 +227,29 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                   setError(null);
                 }}
                 placeholder="e.g. general, announcements, dev-team"
-                className="w-full pl-9 pr-3 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white placeholder-[#6b7280] text-sm focus:outline-none focus:border-brand-500/50"
+                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-[#25282c] border border-gray-200 dark:border-[#2a2e33] rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-[#6b7280] text-sm focus:outline-none focus:border-brand-500/50"
                 required
                 maxLength={50}
               />
             </div>
-            <p className="mt-1 text-xs text-[#6b7280]">
+            <p className="mt-1 text-xs text-gray-500 dark:text-[#6b7280]">
               Lowercase letters, numbers, and hyphens only
             </p>
           </div>
 
           {/* Privacy Toggle */}
-          <div className="flex items-center justify-between p-3 bg-[#25282c] rounded-xl">
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#25282c] rounded-xl">
             <div className="flex items-center gap-3">
               {isPrivate ? (
-                <Lock className="w-5 h-5 text-[#9ca3af]" />
+                <Lock className="w-5 h-5 text-gray-600 dark:text-[#9ca3af]" />
               ) : (
-                <Globe className="w-5 h-5 text-[#9ca3af]" />
+                <Globe className="w-5 h-5 text-gray-600 dark:text-[#9ca3af]" />
               )}
               <div>
-                <p className="text-sm font-medium text-white">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
                   {isPrivate ? 'Private Channel' : 'Public Channel'}
                 </p>
-                <p className="text-xs text-[#6b7280]">
+                <p className="text-xs text-gray-500 dark:text-[#6b7280]">
                   {isPrivate
                     ? 'Only invited members can see this channel'
                     : 'Anyone in the workspace can join'}
@@ -252,7 +260,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
               type="button"
               onClick={() => setIsPrivate(!isPrivate)}
               className={`relative w-11 h-6 rounded-full transition-colors ${
-                isPrivate ? 'bg-brand-500' : 'bg-[#3a3e43]'
+                isPrivate ? 'bg-brand-500' : 'bg-gray-300 dark:bg-[#3a3e43]'
               }`}
             >
               <span
@@ -268,7 +276,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 px-4 py-2.5 bg-[#25282c] hover:bg-[#2a2e33] text-white rounded-lg font-medium transition-colors"
+              className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-[#25282c] hover:bg-gray-200 dark:hover:bg-[#2a2e33] text-gray-900 dark:text-white rounded-lg font-medium transition-colors"
             >
               Cancel
             </button>

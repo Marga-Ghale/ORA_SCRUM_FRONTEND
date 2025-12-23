@@ -224,26 +224,26 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
 
       {/* Picker */}
       <div
-        className="absolute z-50 w-[320px] bg-[#25282c] border border-[#3a3e43] rounded-xl shadow-2xl overflow-hidden"
+        className="absolute z-50 w-[320px] bg-white dark:bg-[#25282c] border border-gray-200 dark:border-[#3a3e43] rounded-xl shadow-2xl overflow-hidden"
         style={position}
       >
         {/* Search */}
-        <div className="p-2 border-b border-[#3a3e43]">
+        <div className="p-2 border-b border-gray-200 dark:border-[#3a3e43]">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280]" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-[#6b7280]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search emoji..."
-              className="w-full pl-8 pr-3 py-1.5 bg-[#1a1d21] border border-[#3a3e43] rounded-lg text-white placeholder-[#6b7280] text-sm focus:outline-none focus:border-brand-500/50"
+              className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-[#1a1d21] border border-gray-200 dark:border-[#3a3e43] rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-[#6b7280] text-sm focus:outline-none focus:border-brand-500/50"
             />
           </div>
         </div>
 
         {/* Categories */}
         {!searchQuery && (
-          <div className="flex gap-1 p-2 border-b border-[#3a3e43] overflow-x-auto custom-scrollbar">
+          <div className="flex gap-1 p-2 border-b border-gray-200 dark:border-[#3a3e43] overflow-x-auto custom-scrollbar">
             {Object.keys(EMOJI_CATEGORIES).map((category) => (
               <button
                 key={category}
@@ -251,7 +251,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
                 className={`px-2 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
                   activeCategory === category
                     ? 'bg-brand-500/20 text-brand-400'
-                    : 'text-[#9ca3af] hover:bg-[#3a3e43]'
+                    : 'text-gray-600 dark:text-[#9ca3af] hover:bg-gray-100 dark:hover:bg-[#3a3e43]'
                 }`}
               >
                 {category}
@@ -267,14 +267,16 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
               <button
                 key={`${emoji}-${index}`}
                 onClick={() => handleSelect(emoji)}
-                className="w-8 h-8 flex items-center justify-center text-xl hover:bg-[#3a3e43] rounded transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-xl hover:bg-gray-100 dark:hover:bg-[#3a3e43] rounded transition-colors"
               >
                 {emoji}
               </button>
             ))}
           </div>
           {filteredEmojis.length === 0 && (
-            <p className="text-center text-sm text-[#6b7280] py-4">No emojis found</p>
+            <p className="text-center text-sm text-gray-500 dark:text-[#6b7280] py-4">
+              No emojis found
+            </p>
           )}
         </div>
       </div>

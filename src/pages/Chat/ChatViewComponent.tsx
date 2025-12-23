@@ -154,9 +154,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const memberCount = channel.type !== 'direct' ? '12 members' : undefined; // Replace with actual count
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#0d0f11]">
+    <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0d0f11]">
       {/* Channel Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2e33] bg-[#0d0f11]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-[#2a2e33] bg-white dark:bg-[#0d0f11]">
         <div className="flex items-center gap-3">
           {/* Channel/User Avatar */}
           {channel.type === 'direct' ? (
@@ -175,22 +175,26 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 )}
               </div>
               {/* Online status */}
-              <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 text-green-500 fill-green-500 stroke-[#0d0f11] stroke-2" />
+              <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 text-green-500 fill-green-500 stroke-white dark:stroke-[#0d0f11] stroke-2" />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center">
-              <Hash className="w-5 h-5 text-[#9ca3af]" />
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-[#25282c] flex items-center justify-center">
+              <Hash className="w-5 h-5 text-gray-600 dark:text-[#9ca3af]" />
             </div>
           )}
 
           {/* Channel Info */}
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold text-white">{displayName}</h2>
-              {channel.isPrivate && <Lock className="w-3.5 h-3.5 text-[#6b7280]" />}
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                {displayName}
+              </h2>
+              {channel.isPrivate && (
+                <Lock className="w-3.5 h-3.5 text-gray-500 dark:text-[#6b7280]" />
+              )}
               {isStarred && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
             </div>
-            <p className="text-xs text-[#6b7280]">
+            <p className="text-xs text-gray-500 dark:text-[#6b7280]">
               {channel.type === 'direct'
                 ? channel.otherUser?.status === 'online'
                   ? 'Online'
@@ -206,18 +210,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
           {channel.type === 'direct' && (
             <>
               <button
-                className="p-2 hover:bg-[#25282c] rounded-lg text-[#6b7280] hover:text-white transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#25282c] rounded-lg text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white transition-colors"
                 title="Start call"
               >
                 <Phone className="w-5 h-5" />
               </button>
               <button
-                className="p-2 hover:bg-[#25282c] rounded-lg text-[#6b7280] hover:text-white transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#25282c] rounded-lg text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white transition-colors"
                 title="Start video call"
               >
                 <Video className="w-5 h-5" />
               </button>
-              <div className="w-px h-5 bg-[#2a2e33] mx-1" />
+              <div className="w-px h-5 bg-gray-200 dark:bg-[#2a2e33] mx-1" />
             </>
           )}
 
@@ -227,7 +231,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             className={`p-2 rounded-lg transition-colors ${
               showMembersActive
                 ? 'bg-brand-500/20 text-brand-400'
-                : 'hover:bg-[#25282c] text-[#6b7280] hover:text-white'
+                : 'hover:bg-gray-100 dark:hover:bg-[#25282c] text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white'
             }`}
             title="View members"
           >
@@ -236,7 +240,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* Pinned Messages */}
           <button
-            className="p-2 hover:bg-[#25282c] rounded-lg text-[#6b7280] hover:text-white transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-[#25282c] rounded-lg text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white transition-colors"
             title="Pinned messages"
           >
             <Pin className="w-5 h-5" />
@@ -244,7 +248,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* Search */}
           <button
-            className="p-2 hover:bg-[#25282c] rounded-lg text-[#6b7280] hover:text-white transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-[#25282c] rounded-lg text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white transition-colors"
             title="Search in conversation"
           >
             <Search className="w-5 h-5" />
@@ -256,8 +260,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
               onClick={() => setShowChannelMenu(!showChannelMenu)}
               className={`p-2 rounded-lg transition-colors ${
                 showChannelMenu
-                  ? 'bg-[#25282c] text-white'
-                  : 'hover:bg-[#25282c] text-[#6b7280] hover:text-white'
+                  ? 'bg-gray-100 dark:bg-[#25282c] text-gray-900 dark:text-white'
+                  : 'hover:bg-gray-100 dark:hover:bg-[#25282c] text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white'
               }`}
               title="More options"
             >
@@ -268,13 +272,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
             {showChannelMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowChannelMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-56 bg-[#25282c] border border-[#3a3e43] rounded-xl shadow-xl z-50 py-1 overflow-hidden">
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-[#25282c] border border-gray-200 dark:border-[#3a3e43] rounded-xl shadow-xl z-50 py-1 overflow-hidden">
                   <button
                     onClick={() => {
                       setIsStarred(!isStarred);
                       setShowChannelMenu(false);
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#e5e7eb] hover:bg-[#3a3e43] transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors"
                   >
                     <Star
                       className={`w-4 h-4 ${isStarred ? 'text-yellow-500 fill-yellow-500' : ''}`}
@@ -287,7 +291,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       setIsMuted(!isMuted);
                       setShowChannelMenu(false);
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#e5e7eb] hover:bg-[#3a3e43] transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors"
                   >
                     {isMuted ? (
                       <>
@@ -302,9 +306,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     )}
                   </button>
 
-                  <div className="h-px bg-[#3a3e43] my-1" />
+                  <div className="h-px bg-gray-200 dark:bg-[#3a3e43] my-1" />
 
-                  <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#e5e7eb] hover:bg-[#3a3e43] transition-colors">
+                  <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors">
                     <Settings className="w-4 h-4" />
                     <span>Channel settings</span>
                   </button>
@@ -317,8 +321,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       {/* Muted Banner */}
       {isMuted && (
-        <div className="flex items-center justify-between px-4 py-2 bg-[#25282c] border-b border-[#2a2e33]">
-          <div className="flex items-center gap-2 text-sm text-[#9ca3af]">
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-[#25282c] border-b border-gray-200 dark:border-[#2a2e33]">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-[#9ca3af]">
             <BellOff className="w-4 h-4" />
             <span>This conversation is muted</span>
           </div>
@@ -338,14 +342,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div className="p-4 space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex gap-3 animate-pulse">
-                <div className="w-9 h-9 rounded-lg bg-[#2a2e33]" />
+                <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-[#2a2e33]" />
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-4 bg-[#2a2e33] rounded w-24" />
-                    <div className="h-3 bg-[#2a2e33] rounded w-12" />
+                    <div className="h-4 bg-gray-200 dark:bg-[#2a2e33] rounded w-24" />
+                    <div className="h-3 bg-gray-200 dark:bg-[#2a2e33] rounded w-12" />
                   </div>
-                  <div className="h-4 bg-[#2a2e33] rounded w-3/4" />
-                  <div className="h-4 bg-[#2a2e33] rounded w-1/2" />
+                  <div className="h-4 bg-gray-200 dark:bg-[#2a2e33] rounded w-3/4" />
+                  <div className="h-4 bg-gray-200 dark:bg-[#2a2e33] rounded w-1/2" />
                 </div>
               </div>
             ))}
@@ -356,12 +360,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500/20 to-purple-600/20 flex items-center justify-center mb-4">
               <MessageSquare className="w-10 h-10 text-brand-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               {channel.type === 'direct'
                 ? `Start chatting with ${displayName}`
                 : `Welcome to #${displayName}`}
             </h3>
-            <p className="text-sm text-[#6b7280] max-w-md">
+            <p className="text-sm text-gray-600 dark:text-[#6b7280] max-w-md">
               {channel.type === 'direct'
                 ? `This is the beginning of your direct message history with ${displayName}.`
                 : `This is the start of the #${channel.name} channel. Send a message to begin the conversation.`}
@@ -374,11 +378,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
               <div key={groupIndex}>
                 {/* Date Divider */}
                 <div className="flex items-center gap-4 px-4 py-3">
-                  <div className="flex-1 h-px bg-[#2a2e33]" />
-                  <span className="text-xs font-medium text-[#6b7280] bg-[#0d0f11] px-2">
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-[#2a2e33]" />
+                  <span className="text-xs font-medium text-gray-600 dark:text-[#6b7280] bg-white dark:bg-[#0d0f11] px-2">
                     {group.date}
                   </span>
-                  <div className="flex-1 h-px bg-[#2a2e33]" />
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-[#2a2e33]" />
                 </div>
 
                 {/* Messages in Group */}
@@ -404,18 +408,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       {/* Reply Indicator */}
       {replyingTo && (
-        <div className="flex items-center gap-2 mx-4 px-3 py-2 bg-[#25282c] rounded-t-xl border-l-2 border-brand-500">
+        <div className="flex items-center gap-2 mx-4 px-3 py-2 bg-gray-100 dark:bg-[#25282c] rounded-t-xl border-l-2 border-brand-500">
           <Reply className="w-4 h-4 text-brand-400 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <span className="text-sm text-[#9ca3af]">
+            <span className="text-sm text-gray-600 dark:text-[#9ca3af]">
               Replying to{' '}
-              <span className="text-white font-medium">{replyingTo.user?.name || 'Unknown'}</span>
+              <span className="text-gray-900 dark:text-white font-medium">
+                {replyingTo.user?.name || 'Unknown'}
+              </span>
             </span>
-            <p className="text-xs text-[#6b7280] truncate">{replyingTo.content}</p>
+            <p className="text-xs text-gray-500 dark:text-[#6b7280] truncate">
+              {replyingTo.content}
+            </p>
           </div>
           <button
             onClick={() => setReplyingTo(null)}
-            className="p-1 hover:bg-[#3a3e43] rounded text-[#6b7280] hover:text-white flex-shrink-0"
+            className="p-1 hover:bg-gray-200 dark:hover:bg-[#3a3e43] rounded text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white flex-shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
