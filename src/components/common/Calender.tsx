@@ -80,7 +80,7 @@ export const CustomCalendar: React.FC<{
   };
 
   return (
-    <div className=" mb-2 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-56 overflow-hidden w-75">
+    <div className="mb-5 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700  overflow-hidden ">
       {/* Header */}
       <div className="bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-5">
         <div className="flex items-center justify-between mb-3">
