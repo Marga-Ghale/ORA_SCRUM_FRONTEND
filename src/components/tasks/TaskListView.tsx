@@ -184,6 +184,23 @@ const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
         )}
       </td>
 
+      <th className="px-4 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider w-28">
+        Subtasks
+      </th>
+      {/* Subtasks */}
+      <td className="px-4 py-4 w-28 text-center">
+        {task.subtaskCount > 0 ? (
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <CheckSquare className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              0/{task.subtaskCount}
+            </span>
+          </div>
+        ) : (
+          <span className="text-gray-300 dark:text-gray-700">—</span>
+        )}
+      </td>
+
       {/* Due Date */}
       <td className="px-4 py-4 w-36">
         {dueInfo ? (
