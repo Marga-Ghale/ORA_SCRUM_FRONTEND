@@ -21,11 +21,22 @@ import {
 } from '../../hooks/api/useTasks';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
 import { dateToISO, isoToDate, formatRelativeTime } from '../../utils/dateUtils';
+import {
+  X,
+  Save,
+  Trash2,
+  Send,
+  Calendar,
+  User,
+  Target,
+  Clock,
+  MessageSquare,
+  Activity,
+} from 'lucide-react';
 
 const TaskDetailModal: React.FC = () => {
   const { selectedTask, isTaskModalOpen, closeTaskModal, currentProject } = useProject();
 
-  // ✅ Fetch comments AND activity
   const { data: commentsData, refetch: refetchComments } = useTaskComments(selectedTask?.id || '', {
     enabled: !!selectedTask?.id,
   });
@@ -38,13 +49,11 @@ const TaskDetailModal: React.FC = () => {
     enabled: !!currentProject?.id,
   });
 
-  // Mutations
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
   const addCommentMutation = useAddComment();
   const deleteCommentMutation = useDeleteComment();
 
-  // Form state
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -54,7 +63,7 @@ const TaskDetailModal: React.FC = () => {
     assigneeIds: [] as string[],
     labelIds: [] as string[],
     storyPoints: undefined as number | undefined,
-    dueDate: '', // ✅ This will be YYYY-MM-DD for input field
+    dueDate: '',
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -62,11 +71,9 @@ const TaskDetailModal: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Map data correctly
   const comments: CommentResponse[] = commentsData || [];
   const activities: ActivityResponse[] = activityData || [];
 
-  // ✅ Map members data with proper structure
   const users =
     membersData?.map((m) => ({
       id: m.userId,
@@ -75,7 +82,6 @@ const TaskDetailModal: React.FC = () => {
       avatar: m.user?.avatar,
     })) || [];
 
-  // ✅ Initialize form when task loads - FIXED DATE HANDLING
   useEffect(() => {
     if (selectedTask) {
       setFormData({
@@ -84,16 +90,15 @@ const TaskDetailModal: React.FC = () => {
         status: selectedTask.status,
         priority: selectedTask.priority,
         type: selectedTask.type || 'task',
-        assigneeIds: selectedTask.assigneeIds || [], // ✅ Use assigneeIds (array)
+        assigneeIds: selectedTask.assigneeIds || [],
         labelIds: selectedTask.labelIds || [],
         storyPoints: selectedTask.storyPoints,
-        dueDate: isoToDate(selectedTask.dueDate), // ✅ Convert ISO to YYYY-MM-DD
+        dueDate: isoToDate(selectedTask.dueDate),
       });
       setHasChanges(false);
     }
   }, [selectedTask]);
 
-  // Handle escape key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -118,7 +123,6 @@ const TaskDetailModal: React.FC = () => {
     };
   }, [isTaskModalOpen, closeTaskModal, hasChanges]);
 
-  // Refetch comments when modal opens
   useEffect(() => {
     if (isTaskModalOpen && selectedTask) {
       refetchComments();
@@ -127,13 +131,11 @@ const TaskDetailModal: React.FC = () => {
 
   if (!isTaskModalOpen || !selectedTask || !currentProject) return null;
 
-  // Update form field and mark as changed
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
 
-  // ✅ Handle save - FIXED DATE CONVERSION
   const handleSave = async () => {
     if (!selectedTask) return;
 
@@ -149,7 +151,7 @@ const TaskDetailModal: React.FC = () => {
           assigneeIds: formData.assigneeIds,
           labelIds: formData.labelIds,
           storyPoints: formData.storyPoints,
-          dueDate: dateToISO(formData.dueDate), // ✅ Convert to ISO format
+          dueDate: dateToISO(formData.dueDate),
         },
       });
 
@@ -161,11 +163,12 @@ const TaskDetailModal: React.FC = () => {
     }
   };
 
-  // Handle delete
   const handleDelete = async () => {
     if (!selectedTask) return;
 
-    if (window.confirm('Are you sure you want to delete this task?')) {
+    if (
+      window.confirm('Are you sure you want to delete this task? This action cannot be undone.')
+    ) {
       try {
         await deleteTaskMutation.mutateAsync(selectedTask.id);
         closeTaskModal();
@@ -176,7 +179,6 @@ const TaskDetailModal: React.FC = () => {
     }
   };
 
-  // Handle cancel
   const handleCancel = () => {
     if (hasChanges) {
       if (window.confirm('You have unsaved changes. Are you sure you want to discard them?')) {
@@ -196,7 +198,6 @@ const TaskDetailModal: React.FC = () => {
     }
   };
 
-  // Add comment
   const handleAddComment = async () => {
     if (!newComment.trim() || !selectedTask) return;
 
@@ -215,7 +216,6 @@ const TaskDetailModal: React.FC = () => {
     }
   };
 
-  // Delete comment
   const handleDeleteComment = async (commentId: string) => {
     if (!selectedTask) return;
 
@@ -230,7 +230,6 @@ const TaskDetailModal: React.FC = () => {
     }
   };
 
-  // Toggle assignee
   const toggleAssignee = (userId: string) => {
     setFormData((prev) => {
       const newAssignees = prev.assigneeIds.includes(userId)
@@ -246,7 +245,6 @@ const TaskDetailModal: React.FC = () => {
   const isSaving = updateTaskMutation.isPending;
   const isDeleting = deleteTaskMutation.isPending;
 
-  // ✅ Format activity action for display
   const formatActivityAction = (activity: ActivityResponse): string => {
     const actionMap: Record<string, string> = {
       created: 'created this task',
@@ -282,7 +280,7 @@ const TaskDetailModal: React.FC = () => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
         onClick={() => {
           if (hasChanges) {
             if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
@@ -295,68 +293,52 @@ const TaskDetailModal: React.FC = () => {
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
         <div
           ref={modalRef}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-800"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-900/50">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{typeConfig.icon}</span>
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                {selectedTask.id.slice(0, 8)}
-              </span>
-              {hasChanges && (
-                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-medium rounded">
-                  Unsaved changes
+              <div
+                className="flex items-center justify-center w-10 h-10 rounded-xl shadow-sm"
+                style={{
+                  backgroundColor: `${typeConfig.color}15`,
+                  border: `2px solid ${typeConfig.color}40`,
+                }}
+              >
+                <span className="text-xl" style={{ color: typeConfig.color }}>
+                  {typeConfig.icon}
                 </span>
-              )}
+              </div>
+              <div>
+                <span className="text-sm font-mono font-semibold text-gray-500 dark:text-gray-400">
+                  {selectedTask.id.slice(0, 8)}
+                </span>
+                {hasChanges && (
+                  <span className="ml-2 px-2.5 py-1 bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 text-xs font-semibold rounded-full border border-orange-200 dark:border-orange-900">
+                    Unsaved
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Delete */}
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="p-2 rounded-lg hover:bg-error-50 dark:hover:bg-error-900/20 text-gray-500 hover:text-error-600 transition-colors disabled:opacity-50"
-                title="Delete"
+                className="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50 border border-transparent hover:border-red-200 dark:hover:border-red-900"
+                title="Delete task"
               >
                 {isDeleting ? (
-                  <svg
-                    className="animate-spin h-5 w-5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
+                  <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
+                  <Trash2 className="w-5 h-5" />
                 )}
               </button>
 
-              {/* Close */}
               <button
                 onClick={() => {
                   if (hasChanges) {
@@ -369,16 +351,9 @@ const TaskDetailModal: React.FC = () => {
                     closeTaskModal();
                   }
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
+                className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -392,20 +367,20 @@ const TaskDetailModal: React.FC = () => {
                 type="text"
                 value={formData.title}
                 onChange={(e) => updateField('title', e.target.value)}
-                className="w-full text-2xl font-bold text-gray-900 dark:text-white bg-transparent border-2 border-transparent hover:border-gray-200 focus:border-brand-500 outline-none rounded px-2 py-1 -mx-2 mb-4 transition-colors"
+                className="w-full text-2xl font-bold text-gray-900 dark:text-white bg-transparent border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:border-brand-500 dark:focus:border-brand-500 outline-none rounded-xl px-3 py-2 -mx-3 mb-4 transition-all"
                 placeholder="Task title"
               />
 
               {/* Status bar */}
               <div className="flex flex-wrap gap-2 mb-6">
-                {/* Status */}
                 <select
                   value={formData.status}
                   onChange={(e) => updateField('status', e.target.value as TaskStatus)}
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium border-0 cursor-pointer transition-colors"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold border-2 cursor-pointer transition-all shadow-sm hover:shadow"
                   style={{
-                    backgroundColor: `${statusConfig?.color}20`,
+                    backgroundColor: `${statusConfig?.color}15`,
                     color: statusConfig?.color,
+                    borderColor: `${statusConfig?.color}40`,
                   }}
                 >
                   {STATUS_COLUMNS.map((status) => (
@@ -415,11 +390,10 @@ const TaskDetailModal: React.FC = () => {
                   ))}
                 </select>
 
-                {/* Priority */}
                 <select
                   value={formData.priority}
                   onChange={(e) => updateField('priority', e.target.value as Priority)}
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 border-0 cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
                 >
                   {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
                     <option key={key} value={key}>
@@ -428,11 +402,10 @@ const TaskDetailModal: React.FC = () => {
                   ))}
                 </select>
 
-                {/* Type */}
                 <select
                   value={formData.type}
                   onChange={(e) => updateField('type', e.target.value as TaskType)}
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 border-0 cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
                 >
                   {Object.entries(TASK_TYPE_CONFIG).map(([key, config]) => (
                     <option key={key} value={key}>
@@ -444,49 +417,72 @@ const TaskDetailModal: React.FC = () => {
 
               {/* Description */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
                   Description
                 </h3>
                 <textarea
                   value={formData.description}
                   onChange={(e) => updateField('description', e.target.value)}
-                  placeholder="Add a description..."
-                  className="w-full min-h-[120px] p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="Add a detailed description..."
+                  className="w-full min-h-[140px] p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
                 />
               </div>
 
               {/* Tabs */}
-              <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-                <div className="flex gap-4 border-b border-gray-200 dark:border-gray-700">
-                  {(['comments', 'activity'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                        activeTab === tab
-                          ? 'border-brand-500 text-brand-500'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                      {tab === 'comments' && comments.length > 0 && (
-                        <span className="ml-1 text-xs">({comments.length})</span>
-                      )}
-                      {tab === 'activity' && activities.length > 0 && (
-                        <span className="ml-1 text-xs">({activities.length})</span>
-                      )}
-                    </button>
-                  ))}
+              <div className="mt-8 border-t-2 border-gray-100 dark:border-gray-800 pt-6">
+                <div className="flex gap-1 border-b-2 border-gray-100 dark:border-gray-800 mb-6">
+                  {(
+                    [
+                      {
+                        id: 'comments',
+                        label: 'Comments',
+                        icon: MessageSquare,
+                        count: comments.length,
+                      },
+                      {
+                        id: 'activity',
+                        label: 'Activity',
+                        icon: Activity,
+                        count: activities.length,
+                      },
+                    ] as const
+                  ).map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex items-center gap-2 pb-3 px-4 text-sm font-semibold border-b-2 transition-all ${
+                          activeTab === tab.id
+                            ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+                            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {tab.label}
+                        {tab.count > 0 && (
+                          <span
+                            className={`ml-1 px-2 py-0.5 text-xs font-bold rounded-full ${
+                              activeTab === tab.id
+                                ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                            }`}
+                          >
+                            {tab.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="mt-4">
-                  {/* Comments Tab */}
                   {activeTab === 'comments' && (
                     <div>
-                      {/* Add Comment */}
-                      <div className="flex gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
+                      <div className="flex gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                          <span className="text-sm font-bold text-white">
                             {users[0]?.name?.charAt(0) || 'U'}
                           </span>
                         </div>
@@ -499,51 +495,61 @@ const TaskDetailModal: React.FC = () => {
                                 handleAddComment();
                               }
                             }}
-                            placeholder="Write a comment... (Ctrl+Enter to send)"
-                            className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500"
-                            rows={2}
+                            placeholder="Write a comment... (⌘+Enter to send)"
+                            className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                            rows={3}
                           />
                           {newComment.trim() && (
                             <button
                               onClick={handleAddComment}
                               disabled={addCommentMutation.isPending}
-                              className="mt-2 px-3 py-1.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600 disabled:opacity-50"
+                              className="mt-3 flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 disabled:opacity-50 transition-all shadow-sm hover:shadow"
                             >
+                              <Send className="w-4 h-4" />
                               {addCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Comments List */}
                       {comments.length === 0 ? (
-                        <p className="text-center text-gray-400 mt-6">No comments yet</p>
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <MessageSquare className="w-8 h-8 text-gray-400 dark:text-gray-600" />
+                          </div>
+                          <p className="text-gray-400 dark:text-gray-600 font-medium">
+                            No comments yet
+                          </p>
+                          <p className="text-sm text-gray-400 dark:text-gray-600 mt-1">
+                            Start the conversation
+                          </p>
+                        </div>
                       ) : (
                         <div className="space-y-4">
                           {comments.map((comment) => {
                             const user = users.find((u) => u.id === comment.userId);
                             return (
                               <div key={comment.id} className="flex gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center flex-shrink-0 shadow">
+                                  <span className="text-sm font-bold text-white">
                                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                                   </span>
                                 </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
                                       {user?.name || 'Unknown User'}
                                     </span>
-                                    <span className="text-xs text-gray-400">
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">
                                       {formatRelativeTime(comment.createdAt)}
                                     </span>
                                   </div>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                                     {comment.content}
                                   </p>
                                   <button
                                     onClick={() => handleDeleteComment(comment.id)}
-                                    className="text-xs text-gray-400 hover:text-error-600 mt-1"
+                                    className="text-xs text-gray-400 hover:text-red-600 dark:hover:text-red-400 mt-2 font-medium"
                                   >
                                     Delete
                                   </button>
@@ -556,31 +562,41 @@ const TaskDetailModal: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Activity Tab - ✅ FIXED: Use real activity data */}
                   {activeTab === 'activity' && (
-                    <div className="text-sm text-gray-500 space-y-3">
+                    <div className="space-y-3">
                       {activities.length === 0 ? (
-                        <p className="text-center text-gray-400 mt-6">No activity yet</p>
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <Activity className="w-8 h-8 text-gray-400 dark:text-gray-600" />
+                          </div>
+                          <p className="text-gray-400 dark:text-gray-600 font-medium">
+                            No activity yet
+                          </p>
+                        </div>
                       ) : (
                         activities.map((activity) => {
                           const user = users.find((u) => u.id === activity.userId);
                           return (
-                            <div key={activity.id} className="flex items-start gap-3 py-2">
-                              <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            <div
+                              key={activity.id}
+                              className="flex items-start gap-3 py-3 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center flex-shrink-0 shadow">
+                                <span className="text-xs font-bold text-white">
                                   {user?.name?.charAt(0)?.toUpperCase() || 'S'}
                                 </span>
                               </div>
-                              <div className="flex-1">
-                                <div>
-                                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm">
+                                  <span className="font-semibold text-gray-900 dark:text-white">
                                     {user?.name || 'System'}
                                   </span>{' '}
                                   <span className="text-gray-600 dark:text-gray-400">
                                     {formatActivityAction(activity)}
                                   </span>
                                 </div>
-                                <div className="text-xs text-gray-400 mt-0.5">
+                                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
                                   {formatRelativeTime(activity.createdAt)}
                                 </div>
                               </div>
@@ -595,40 +611,55 @@ const TaskDetailModal: React.FC = () => {
             </div>
 
             {/* Right Sidebar */}
-            <div className="w-72 border-l border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900 overflow-y-auto custom-scrollbar">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                Details
+            <div className="w-80 border-l-2 border-gray-100 dark:border-gray-800 p-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-900 overflow-y-auto custom-scrollbar">
+              <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-5 flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Task Details
               </h3>
 
-              {/* Assignees (Multiple) */}
-              <div className="mb-4">
-                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+              {/* Assignees */}
+              <div className="mb-6">
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 block flex items-center gap-2">
+                  <User className="w-4 h-4" />
                   Assignees
                 </label>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {users.map((user) => (
                     <label
                       key={user.id}
-                      className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
                     >
                       <input
                         type="checkbox"
                         checked={formData.assigneeIds.includes(user.id)}
                         onChange={() => toggleAssignee(user.id)}
-                        className="rounded"
+                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-brand-500 focus:ring-brand-500"
                       />
-                      <span className="text-sm">{user.name}</span>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow">
+                        <span className="text-xs font-bold text-white">
+                          {user.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {user.name}
+                      </span>
                     </label>
                   ))}
                   {users.length === 0 && (
-                    <p className="text-xs text-gray-400">No members available</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-600 text-center py-4">
+                      No members available
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* Story Points */}
-              <div className="mb-4">
-                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+              <div className="mb-6">
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 block flex items-center gap-2">
+                  <Target className="w-4 h-4" />
                   Story Points
                 </label>
                 <input
@@ -637,15 +668,16 @@ const TaskDetailModal: React.FC = () => {
                   onChange={(e) =>
                     updateField('storyPoints', parseInt(e.target.value) || undefined)
                   }
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
-                  placeholder="Estimate"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                  placeholder="Enter estimate"
                   min="0"
                 />
               </div>
 
-              {/* Due Date */}
-              <div className="mb-4">
-                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+              {/* Due Date - FIXED FOR DARK MODE */}
+              <div className="mb-6">
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 block flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
                   Due Date
                 </label>
                 <div className="relative">
@@ -653,78 +685,81 @@ const TaskDetailModal: React.FC = () => {
                     type="date"
                     value={formData.dueDate}
                     onChange={(e) => updateField('dueDate', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm cursor-pointer"
-                    style={{
-                      colorScheme: 'light dark',
-                    }}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all
+                    [&::-webkit-calendar-picker-indicator]:dark:invert
+                    [&::-webkit-calendar-picker-indicator]:dark:opacity-70
+                    [&::-webkit-calendar-picker-indicator]:hover:dark:opacity-100
+                    [&::-webkit-datetime-edit-text]:dark:text-gray-400
+                    [&::-webkit-datetime-edit-month-field]:dark:text-white
+                    [&::-webkit-datetime-edit-day-field]:dark:text-white
+                    [&::-webkit-datetime-edit-year-field]:dark:text-white"
                   />
                   {formData.dueDate && (
                     <button
                       onClick={() => updateField('dueDate', '')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all"
                       title="Clear date"
                     >
-                      ×
+                      <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
               </div>
 
               {/* Created/Updated */}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-6">
-                <div className="text-xs text-gray-400 space-y-1">
-                  <p>Created {formatRelativeTime(selectedTask.createdAt)}</p>
-                  <p>Updated {formatRelativeTime(selectedTask.updatedAt)}</p>
+              <div className="pt-6 border-t-2 border-gray-100 dark:border-gray-800">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Created {formatRelativeTime(selectedTask.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Updated {formatRelativeTime(selectedTask.updatedAt)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Footer with Save/Cancel */}
-          <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
+          {/* Footer */}
+          <div className="border-t-2 border-gray-100 dark:border-gray-800 px-6 py-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-900/50 flex items-center justify-between">
+            <div className="text-sm font-medium">
               {hasChanges && (
-                <span className="text-orange-600 dark:text-orange-400">
-                  You have unsaved changes
+                <span className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                  <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                  Unsaved changes
                 </span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={handleCancel}
                 disabled={!hasChanges || isSaving}
-                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-600"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={!hasChanges || isSaving || !formData.title.trim()}
-                className="px-4 py-2 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
               >
-                {isSaving && (
-                  <svg
-                    className="animate-spin h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </>
                 )}
-                {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
