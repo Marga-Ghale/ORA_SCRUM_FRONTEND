@@ -1,11 +1,13 @@
-// ============================================
-// SUBTASKS SECTION
-// ============================================
-
+// src/components/tasks/SubtasksSection.tsx
 import { useState } from 'react';
 import { SubtaskFormData, SubtaskItem } from './SubtasksItems';
 import { CheckSquare, Plus } from 'lucide-react';
-import { User } from '../../types/project';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface SubtasksSectionProps {
   subtasks: SubtaskFormData[];
@@ -49,13 +51,14 @@ export const SubtasksSection: React.FC<SubtasksSectionProps> = ({
       {/* Subtask List */}
       {subtasks.length > 0 && (
         <div className="space-y-1">
-          {subtasks.map((subtask) => (
+          {subtasks.map((subtask, index) => (
             <SubtaskItem
-              key={subtask.id}
+              key={subtask.id || `new-${index}`}
               subtask={subtask}
               users={users}
               onDelete={onDeleteSubtask}
               onUpdate={onUpdateSubtask}
+              index={index}
             />
           ))}
         </div>
@@ -63,8 +66,8 @@ export const SubtasksSection: React.FC<SubtasksSectionProps> = ({
 
       {/* Add New Subtask */}
       {isAddingSubtask ? (
-        <div className="flex items-center gap-2 pl-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-brand-400 p-3">
-          <CheckSquare className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <div className="flex items-center gap-2 pl-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-brand-400 dark:border-brand-500 p-3">
+          <CheckSquare className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           <input
             type="text"
             value={newSubtaskTitle}
@@ -78,7 +81,7 @@ export const SubtasksSection: React.FC<SubtasksSectionProps> = ({
             }}
             placeholder="Subtask name"
             autoFocus
-            className="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white"
+            className="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
           <button
             onClick={handleAddSubtask}

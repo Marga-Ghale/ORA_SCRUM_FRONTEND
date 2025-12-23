@@ -31,6 +31,8 @@ export interface TaskResponse {
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
+  subtaskCount: number;
+  subtasks?: TaskResponse[];
 }
 
 export interface CreateTaskRequest {
@@ -47,6 +49,16 @@ export interface CreateTaskRequest {
   storyPoints?: number;
   startDate?: string;
   dueDate?: string;
+  subtasks?: SubtaskRequest[];
+}
+export interface SubtaskRequest {
+  title: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  assigneeIds?: string[];
+  estimatedHours?: number;
+  storyPoints?: number;
 }
 
 export interface UpdateTaskRequest {
@@ -261,6 +273,8 @@ const taskApi = {
 
   convertToSubtask: (id: string, parentTaskId: string) =>
     apiClient.post<{ message: string }>(`/tasks/${id}/convert-subtask`, { parentTaskId }),
+
+  promoteToTask: (id: string) => apiClient.post<{ message: string }>(`/tasks/${id}/promote`),
 
   // Subtasks
   listSubtasks: (taskId: string) => apiClient.get<TaskResponse[]>(`/tasks/${taskId}/subtasks`),
@@ -649,6 +663,18 @@ export const useConvertToSubtask = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.subtasks(variables.parentTaskId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+};
+
+export const usePromoteToTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: taskApi.promoteToTask,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });

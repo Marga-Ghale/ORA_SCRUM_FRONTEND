@@ -194,25 +194,24 @@ const CreateTaskModal: React.FC = () => {
         assigneeIds: formData.assigneeIds,
         storyPoints: formData.storyPoints,
         dueDate: formData.dueDate ? dateToISO(formData.dueDate) : undefined,
+        // ✅ ADD THIS LINE
+        subtasks: subtasks
+          .filter((s) => s.title.trim())
+          .map((s) => ({
+            title: s.title,
+            description: s.description,
+            status: s.status,
+            priority: s.priority,
+            assigneeIds: s.assigneeIds,
+            storyPoints: s.storyPoints,
+            estimatedHours: s.estimatedHours,
+          })),
       };
 
-      const createdTask = await createTaskMutation.mutateAsync({
+      await createTaskMutation.mutateAsync({
         projectId: currentProject.id,
         data: taskData,
       });
-
-      // Create subtasks if any
-      if (subtasks.length > 0 && createdTask?.id) {
-        // You would call your subtask creation API here
-        // For now, we'll just log it
-        console.log(
-          'Subtasks to create:',
-          subtasks.map(({ id, ...rest }) => ({
-            ...rest,
-            parentTaskId: createdTask.id,
-          }))
-        );
-      }
 
       setIsCreateTaskModalOpen(false);
     } catch (error) {
@@ -220,7 +219,6 @@ const CreateTaskModal: React.FC = () => {
       alert('Failed to create task. Please try again.');
     }
   };
-
   const typeConfig = {
     epic: { color: '#8B5CF6', icon: '⚡' },
     story: { color: '#10B981', icon: '📖' },
