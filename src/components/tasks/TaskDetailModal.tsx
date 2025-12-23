@@ -322,6 +322,537 @@ const TaskDetailModal: React.FC = () => {
   const dueDateInfo = formatDueDate(formData.dueDate);
 
   return (
+    // <>
+    //   {/* Backdrop */}
+    //   <div
+    //     className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+    //     onClick={() => {
+    //       if (hasChanges) {
+    //         if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
+    //           closeTaskModal();
+    //         }
+    //       } else {
+    //         closeTaskModal();
+    //       }
+    //     }}
+    //   />
+
+    //   {/* Modal */}
+    //   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
+    //     <div
+    //       ref={modalRef}
+    //       className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col border border-gray-200/50 dark:border-gray-700/50"
+    //       onClick={(e) => e.stopPropagation()}
+    //     >
+    //       {/* Header */}
+    //       <div className="flex items-center justify-between px-8 py-5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/30">
+    //         <div className="flex items-center gap-4">
+    //           <div
+    //             className="flex items-center justify-center w-11 h-11 rounded-xl shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+    //             style={{
+    //               backgroundColor: `${typeConfig.color}12`,
+    //             }}
+    //           >
+    //             <span className="text-2xl" style={{ color: typeConfig.color }}>
+    //               {typeConfig.icon}
+    //             </span>
+    //           </div>
+    //           <div className="flex items-center gap-3">
+    //             <span className="text-sm font-mono font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg">
+    //               {selectedTask.id.slice(0, 8).toUpperCase()}
+    //             </span>
+    //             {hasChanges && (
+    //               <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200 dark:border-amber-900/50">
+    //                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+    //                 Unsaved
+    //               </span>
+    //             )}
+    //           </div>
+    //         </div>
+
+    //         <div className="flex items-center gap-2">
+    //           <button
+    //             onClick={handleDelete}
+    //             disabled={isDeleting}
+    //             className="p-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50 group"
+    //             title="Delete task"
+    //           >
+    //             {isDeleting ? (
+    //               <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+    //             ) : (
+    //               <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+    //             )}
+    //           </button>
+
+    //           <button
+    //             onClick={() => {
+    //               if (hasChanges) {
+    //                 if (
+    //                   window.confirm('You have unsaved changes. Are you sure you want to close?')
+    //                 ) {
+    //                   closeTaskModal();
+    //                 }
+    //               } else {
+    //                 closeTaskModal();
+    //               }
+    //             }}
+    //             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all group"
+    //           >
+    //             <X className="w-5 h-5 group-hover:scale-110 transition-transform" />
+    //           </button>
+    //         </div>
+    //       </div>
+
+    //       {/* Content */}
+    //       <div className="flex-1 overflow-hidden flex">
+    //         {/* Main Content */}
+    //         <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+    //           {/* Title */}
+    //           <input
+    //             type="text"
+    //             value={formData.title}
+    //             onChange={(e) => updateField('title', e.target.value)}
+    //             className="w-full text-3xl font-bold text-gray-900 dark:text-white bg-transparent border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:border-brand-500 dark:focus:border-brand-500 outline-none rounded-xl px-4 py-3 -mx-4 mb-5 transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+    //             placeholder="Task title"
+    //           />
+
+    //           {/* Professional Metadata Pills */}
+    //           <div className="flex flex-wrap gap-2 mb-8">
+    //             <StatusDropdown
+    //               value={formData.status}
+    //               onChange={(value) => updateField('status', value)}
+    //             />
+    //             <PriorityDropdown
+    //               value={formData.priority}
+    //               onChange={(value) => updateField('priority', value)}
+    //             />
+    //             <TypeDropdown
+    //               value={formData.type}
+    //               onChange={(value) => updateField('type', value)}
+    //             />
+    //           </div>
+
+    //           {/* Description */}
+    //           <div className="mb-8">
+    //             <div className="flex items-center gap-2 mb-3">
+    //               <MessageSquare className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+    //               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+    //                 Description
+    //               </h3>
+    //             </div>
+    //             <textarea
+    //               value={formData.description}
+    //               onChange={(e) => updateField('description', e.target.value)}
+    //               placeholder="Add a detailed description of this task..."
+    //               className="w-full min-h-[160px] p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-relaxed"
+    //             />
+    //           </div>
+
+    //           {/* Tabs */}
+    //           <div className="border-t-2 border-gray-100 dark:border-gray-800 pt-8">
+    //             <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800/50 p-1.5 rounded-xl inline-flex">
+    //               {(
+    //                 [
+    //                   {
+    //                     id: 'comments',
+    //                     label: 'Comments',
+    //                     icon: MessageSquare,
+    //                     count: comments.length,
+    //                   },
+    //                   {
+    //                     id: 'activity',
+    //                     label: 'Activity',
+    //                     icon: Activity,
+    //                     count: activities.length,
+    //                   },
+    //                 ] as const
+    //               ).map((tab) => {
+    //                 const Icon = tab.icon;
+    //                 return (
+    //                   <button
+    //                     key={tab.id}
+    //                     onClick={() => setActiveTab(tab.id)}
+    //                     className={`flex items-center gap-2.5 px-5 py-2.5 text-sm font-semibold rounded-lg transition-all ${
+    //                       activeTab === tab.id
+    //                         ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm'
+    //                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+    //                     }`}
+    //                   >
+    //                     <Icon className="w-4 h-4" />
+    //                     {tab.label}
+    //                     {tab.count > 0 && (
+    //                       <span
+    //                         className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+    //                           activeTab === tab.id
+    //                             ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300'
+    //                             : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+    //                         }`}
+    //                       >
+    //                         {tab.count}
+    //                       </span>
+    //                     )}
+    //                   </button>
+    //                 );
+    //               })}
+    //             </div>
+
+    //             <div className="mt-6">
+    //               {activeTab === 'comments' && (
+    //                 <div>
+    //                   <div className="flex gap-4 mb-8">
+    //                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white dark:ring-gray-900">
+    //                       <span className="text-sm font-bold text-white">
+    //                         {users[0]?.name?.charAt(0) || 'U'}
+    //                       </span>
+    //                     </div>
+    //                     <div className="flex-1">
+    //                       <textarea
+    //                         value={newComment}
+    //                         onChange={(e) => setNewComment(e.target.value)}
+    //                         onKeyDown={(e) => {
+    //                           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    //                             handleAddComment();
+    //                           }
+    //                         }}
+    //                         placeholder="Write a comment... (⌘+Enter to send)"
+    //                         className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+    //                         rows={3}
+    //                       />
+    //                       {newComment.trim() && (
+    //                         <button
+    //                           onClick={handleAddComment}
+    //                           disabled={addCommentMutation.isPending}
+    //                           className="mt-3 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl text-sm font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 transition-all shadow-sm hover:shadow-md"
+    //                         >
+    //                           <Send className="w-4 h-4" />
+    //                           {addCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
+    //                         </button>
+    //                       )}
+    //                     </div>
+    //                   </div>
+
+    //                   {comments.length === 0 ? (
+    //                     <div className="text-center py-16">
+    //                       <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
+    //                         <MessageSquare className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+    //                       </div>
+    //                       <p className="text-gray-900 dark:text-gray-100 font-semibold text-lg mb-1">
+    //                         No comments yet
+    //                       </p>
+    //                       <p className="text-sm text-gray-500 dark:text-gray-400">
+    //                         Start the conversation and share your thoughts
+    //                       </p>
+    //                     </div>
+    //                   ) : (
+    //                     <div className="space-y-4">
+    //                       {comments.map((comment) => {
+    //                         const user = users.find((u) => u.id === comment.userId);
+    //                         return (
+    //                           <div key={comment.id} className="flex gap-3 group">
+    //                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white dark:ring-gray-900">
+    //                               <span className="text-sm font-bold text-white">
+    //                                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+    //                               </span>
+    //                             </div>
+    //                             <div className="flex-1 bg-gray-50 dark:bg-gray-800/70 rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all">
+    //                               <div className="flex items-center justify-between mb-2">
+    //                                 <div className="flex items-center gap-2">
+    //                                   <span className="text-sm font-semibold text-gray-900 dark:text-white">
+    //                                     {user?.name || 'Unknown User'}
+    //                                   </span>
+    //                                   <span className="text-xs text-gray-400 dark:text-gray-500">
+    //                                     {formatRelativeTime(comment.createdAt)}
+    //                                   </span>
+    //                                 </div>
+    //                                 <button
+    //                                   onClick={() => handleDeleteComment(comment.id)}
+    //                                   className="opacity-0 group-hover:opacity-100 text-xs text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium transition-all"
+    //                                 >
+    //                                   Delete
+    //                                 </button>
+    //                               </div>
+    //                               <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+    //                                 {comment.content}
+    //                               </p>
+    //                             </div>
+    //                           </div>
+    //                         );
+    //                       })}
+    //                     </div>
+    //                   )}
+    //                 </div>
+    //               )}
+
+    //               {activeTab === 'activity' && (
+    //                 <div className="space-y-2">
+    //                   {activities.length === 0 ? (
+    //                     <div className="text-center py-16">
+    //                       <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
+    //                         <Activity className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+    //                       </div>
+    //                       <p className="text-gray-900 dark:text-gray-100 font-semibold text-lg mb-1">
+    //                         No activity yet
+    //                       </p>
+    //                       <p className="text-sm text-gray-500 dark:text-gray-400">
+    //                         Activity will appear here as changes are made
+    //                       </p>
+    //                     </div>
+    //                   ) : (
+    //                     activities.map((activity) => {
+    //                       const user = users.find((u) => u.id === activity.userId);
+    //                       return (
+    //                         <div
+    //                           key={activity.id}
+    //                           className="flex items-start gap-3 py-3 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
+    //                         >
+    //                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm ring-2 ring-white dark:ring-gray-900">
+    //                             <span className="text-xs font-bold text-white">
+    //                               {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+    //                             </span>
+    //                           </div>
+    //                           <div className="flex-1 min-w-0">
+    //                             <div className="text-sm">
+    //                               <span className="font-semibold text-gray-900 dark:text-white">
+    //                                 {user?.name || 'System'}
+    //                               </span>{' '}
+    //                               <span className="text-gray-600 dark:text-gray-400">
+    //                                 {formatActivityAction(activity)}
+    //                               </span>
+    //                             </div>
+    //                             <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+    //                               <Clock className="w-3 h-3" />
+    //                               {formatRelativeTime(activity.createdAt)}
+    //                             </div>
+    //                           </div>
+    //                         </div>
+    //                       );
+    //                     })
+    //                   )}
+    //                 </div>
+    //               )}
+    //             </div>
+    //           </div>
+    //         </div>
+
+    //         {/* Right Sidebar */}
+    //         <div className="w-96 border-l border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 overflow-y-auto custom-scrollbar">
+    //           <div className="p-6 space-y-6">
+    //             <div className="flex items-center gap-2 pb-4 border-b border-gray-200 dark:border-gray-800">
+    //               <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+    //               <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+    //                 Task Details
+    //               </h3>
+    //             </div>
+
+    //             {/* Assignees */}
+    //             <div>
+    //               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+    //                 <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+    //                 Assignees
+    //               </label>
+    //               <div className="space-y-2 mt-3">
+    //                 {users.length === 0 ? (
+    //                   <div className="text-center py-8 bg-white dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+    //                     <User className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+    //                     <p className="text-sm text-gray-400 dark:text-gray-500">
+    //                       No members available
+    //                     </p>
+    //                   </div>
+    //                 ) : (
+    //                   users.map((user) => (
+    //                     <label
+    //                       key={user.id}
+    //                       className="flex items-center gap-3 p-3 rounded-xl hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-all border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 group"
+    //                     >
+    //                       <input
+    //                         type="checkbox"
+    //                         checked={formData.assigneeIds.includes(user.id)}
+    //                         onChange={() => toggleAssignee(user.id)}
+    //                         className="w-4 h-4 rounded-md border-2 border-gray-300 dark:border-gray-600 text-brand-500 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all"
+    //                       />
+    //                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow ring-2 ring-white dark:ring-gray-900">
+    //                         <span className="text-xs font-bold text-white">
+    //                           {user.name
+    //                             .split(' ')
+    //                             .map((n) => n[0])
+    //                             .join('')
+    //                             .toUpperCase()}
+    //                         </span>
+    //                       </div>
+    //                       <div className="flex-1 min-w-0">
+    //                         <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+    //                           {user.name}
+    //                         </span>
+    //                         <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">
+    //                           {user.email}
+    //                         </span>
+    //                       </div>
+    //                     </label>
+    //                   ))
+    //                 )}
+    //               </div>
+    //             </div>
+
+    //             {/* Due Date with Custom Calendar */}
+    //             <div ref={calendarRef} className="relative">
+    //               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+    //                 <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+    //                 Due Date
+    //               </label>
+    //               <button
+    //                 onClick={() => setShowCalendar(!showCalendar)}
+    //                 className={`w-full mt-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${
+    //                   formData.dueDate
+    //                     ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+    //                     : 'bg-gray-50 dark:bg-gray-800/50 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-400 dark:hover:border-brand-600 hover:bg-white dark:hover:bg-gray-800'
+    //                 }`}
+    //               >
+    //                 <div className="flex items-center gap-3">
+    //                   <div
+    //                     className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+    //                       formData.dueDate
+    //                         ? 'bg-brand-50 dark:bg-brand-950/30'
+    //                         : 'bg-gray-100 dark:bg-gray-700'
+    //                     }`}
+    //                   >
+    //                     <Calendar
+    //                       className={`w-5 h-5 ${
+    //                         formData.dueDate
+    //                           ? 'text-brand-600 dark:text-brand-400'
+    //                           : 'text-gray-400 dark:text-gray-500'
+    //                       }`}
+    //                     />
+    //                   </div>
+    //                   <div>
+    //                     {formData.dueDate && dueDateInfo ? (
+    //                       <>
+    //                         <div className={`text-sm font-semibold ${dueDateInfo.color}`}>
+    //                           {dueDateInfo.text}
+    //                         </div>
+    //                         <div className="text-xs text-gray-500 dark:text-gray-400">
+    //                           {new Date(formData.dueDate).toLocaleDateString('en-US', {
+    //                             weekday: 'long',
+    //                             month: 'long',
+    //                             day: 'numeric',
+    //                             year: 'numeric',
+    //                           })}
+    //                         </div>
+    //                       </>
+    //                     ) : (
+    //                       <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+    //                         Set due date
+    //                       </div>
+    //                     )}
+    //                   </div>
+    //                 </div>
+    //                 {formData.dueDate && (
+    //                   <button
+    //                     onClick={(e) => {
+    //                       e.stopPropagation();
+    //                       updateField('dueDate', '');
+    //                     }}
+    //                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all opacity-0 group-hover:opacity-100"
+    //                   >
+    //                     <X className="w-4 h-4" />
+    //                   </button>
+    //                 )}
+    //               </button>
+
+    //               {/* Custom Calendar Dropdown - Opens UPWARD */}
+    //               {showCalendar && (
+    //                 <CustomCalendar
+    //                   selectedDate={formData.dueDate}
+    //                   onSelect={(date) => updateField('dueDate', date)}
+    //                   onClose={() => setShowCalendar(false)}
+    //                 />
+    //               )}
+    //             </div>
+
+    //             {/* Story Points */}
+    //             <div>
+    //               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+    //                 <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+    //                 Story Points
+    //               </label>
+    //               <input
+    //                 type="number"
+    //                 value={formData.storyPoints || ''}
+    //                 onChange={(e) =>
+    //                   updateField('storyPoints', parseInt(e.target.value) || undefined)
+    //                 }
+    //                 className="w-full mt-3 px-4 py-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+    //                 placeholder="Enter points"
+    //                 min="0"
+    //               />
+    //             </div>
+
+    //             {/* Metadata */}
+    //             <div className="pt-6 border-t border-gray-200 dark:border-gray-800 space-y-3">
+    //               <div className="flex items-center justify-between text-xs">
+    //                 <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+    //                   <Clock className="w-3.5 h-3.5" />
+    //                   Created
+    //                 </span>
+    //                 <span className="font-medium text-gray-700 dark:text-gray-300">
+    //                   {formatRelativeTime(selectedTask.createdAt)}
+    //                 </span>
+    //               </div>
+    //               <div className="flex items-center justify-between text-xs">
+    //                 <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+    //                   <Clock className="w-3.5 h-3.5" />
+    //                   Updated
+    //                 </span>
+    //                 <span className="font-medium text-gray-700 dark:text-gray-300">
+    //                   {formatRelativeTime(selectedTask.updatedAt)}
+    //                 </span>
+    //               </div>
+    //             </div>
+    //           </div>
+    //         </div>
+    //       </div>
+
+    //       {/* Footer */}
+    //       <div className="border-t border-gray-200 dark:border-gray-800 px-8 py-5 bg-gradient-to-b from-transparent to-gray-50/50 dark:to-gray-800/30 flex items-center justify-between">
+    //         <div className="text-sm font-medium">
+    //           {hasChanges && (
+    //             <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+    //               <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+    //               Unsaved changes
+    //             </span>
+    //           )}
+    //         </div>
+    //         <div className="flex gap-3">
+    //           <button
+    //             onClick={handleCancel}
+    //             disabled={!hasChanges || isSaving}
+    //             className="px-6 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+    //           >
+    //             Cancel
+    //           </button>
+    //           <button
+    //             onClick={handleSave}
+    //             disabled={!hasChanges || isSaving || !formData.title.trim()}
+    //             className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl disabled:shadow-none"
+    //           >
+    //             {isSaving ? (
+    //               <>
+    //                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+    //                 Saving...
+    //               </>
+    //             ) : (
+    //               <>
+    //                 <Save className="w-4 h-4" />
+    //                 Save Changes
+    //               </>
+    //             )}
+    //           </button>
+    //         </div>
+    //       </div>
+    //     </div>
+    //   </div>
+    // </>
+
+    // TaskDetailsModal - Fully Responsive Version
     <>
       {/* Backdrop */}
       <div
@@ -337,32 +868,32 @@ const TaskDetailModal: React.FC = () => {
         }}
       />
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
+      {/* Modal - Full screen on mobile, centered on desktop */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 animate-in zoom-in-95 duration-200">
         <div
           ref={modalRef}
-          className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col border border-gray-200/50 dark:border-gray-700/50"
+          className="bg-white dark:bg-gray-900 rounded-none sm:rounded-3xl shadow-2xl w-full h-full sm:max-w-6xl sm:max-h-[92vh] overflow-hidden flex flex-col border-0 sm:border border-gray-200/50 dark:border-gray-700/50"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-8 py-5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/30">
-            <div className="flex items-center gap-4">
+          {/* Header - Compact on mobile */}
+          <div className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/30">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                className="flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-xl shadow-sm ring-1 ring-black/5 dark:ring-white/10 flex-shrink-0"
                 style={{
                   backgroundColor: `${typeConfig.color}12`,
                 }}
               >
-                <span className="text-2xl" style={{ color: typeConfig.color }}>
+                <span className="text-xl sm:text-2xl" style={{ color: typeConfig.color }}>
                   {typeConfig.icon}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-mono font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-3 min-w-0">
+                <span className="text-xs sm:text-sm font-mono font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg">
                   {selectedTask.id.slice(0, 8).toUpperCase()}
                 </span>
                 {hasChanges && (
-                  <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200 dark:border-amber-900/50">
+                  <span className="flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200 dark:border-amber-900/50">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                     Unsaved
                   </span>
@@ -370,17 +901,17 @@ const TaskDetailModal: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="p-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50 group"
+                className="p-2 sm:p-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50 group"
                 title="Delete task"
               >
                 {isDeleting ? (
-                  <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
                 )}
               </button>
 
@@ -396,28 +927,28 @@ const TaskDetailModal: React.FC = () => {
                     closeTaskModal();
                   }
                 }}
-                className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all group"
+                className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all group"
               >
-                <X className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
               </button>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-hidden flex">
+          {/* Content - Stacks vertically on mobile */}
+          <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 custom-scrollbar">
               {/* Title */}
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => updateField('title', e.target.value)}
-                className="w-full text-3xl font-bold text-gray-900 dark:text-white bg-transparent border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:border-brand-500 dark:focus:border-brand-500 outline-none rounded-xl px-4 py-3 -mx-4 mb-5 transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className="w-full text-xl sm:text-3xl font-bold text-gray-900 dark:text-white bg-transparent border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:border-brand-500 dark:focus:border-brand-500 outline-none rounded-xl px-3 sm:px-4 py-2 sm:py-3 -mx-3 sm:-mx-4 mb-4 sm:mb-5 transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
                 placeholder="Task title"
               />
 
-              {/* Professional Metadata Pills */}
-              <div className="flex flex-wrap gap-2 mb-8">
+              {/* Professional Metadata Pills - Horizontal scroll on mobile */}
+              <div className="flex flex-wrap gap-2 mb-6 sm:mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 hide-scrollbar">
                 <StatusDropdown
                   value={formData.status}
                   onChange={(value) => updateField('status', value)}
@@ -433,10 +964,10 @@ const TaskDetailModal: React.FC = () => {
               </div>
 
               {/* Description */}
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <div className="mb-6 sm:mb-8">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-500" />
+                  <h3 className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Description
                   </h3>
                 </div>
@@ -444,13 +975,187 @@ const TaskDetailModal: React.FC = () => {
                   value={formData.description}
                   onChange={(e) => updateField('description', e.target.value)}
                   placeholder="Add a detailed description of this task..."
-                  className="w-full min-h-[160px] p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-relaxed"
+                  className="w-full min-h-[120px] sm:min-h-[160px] p-4 sm:p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-relaxed text-sm sm:text-base"
                 />
               </div>
 
-              {/* Tabs */}
-              <div className="border-t-2 border-gray-100 dark:border-gray-800 pt-8">
-                <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800/50 p-1.5 rounded-xl inline-flex">
+              {/* Mobile-only Task Details Section */}
+              <div className="lg:hidden mb-6 space-y-6 p-4 bg-gray-50 dark:bg-gray-800/30 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 pb-3 border-b border-gray-200 dark:border-gray-800">
+                  <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Task Details
+                  </h3>
+                </div>
+
+                {/* Assignees */}
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    Assignees
+                  </label>
+                  <div className="space-y-2 mt-3">
+                    {users.length === 0 ? (
+                      <div className="text-center py-6 bg-white dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                        <User className="w-6 h-6 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          No members available
+                        </p>
+                      </div>
+                    ) : (
+                      users.map((user) => (
+                        <label
+                          key={user.id}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-all border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 group"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={formData.assigneeIds.includes(user.id)}
+                            onChange={() => toggleAssignee(user.id)}
+                            className="w-4 h-4 rounded-md border-2 border-gray-300 dark:border-gray-600 text-brand-500 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all"
+                          />
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow ring-2 ring-white dark:ring-gray-900">
+                            <span className="text-xs font-bold text-white">
+                              {user.name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')
+                                .toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+                              {user.name}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">
+                              {user.email}
+                            </span>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Due Date */}
+                <div ref={calendarRef} className="relative">
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    Due Date
+                  </label>
+                  <button
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    className={`w-full mt-3 px-4 py-3 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${
+                      formData.dueDate
+                        ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        : 'bg-gray-50 dark:bg-gray-800/50 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-400 dark:hover:border-brand-600 hover:bg-white dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                          formData.dueDate
+                            ? 'bg-brand-50 dark:bg-brand-950/30'
+                            : 'bg-gray-100 dark:bg-gray-700'
+                        }`}
+                      >
+                        <Calendar
+                          className={`w-4 h-4 ${
+                            formData.dueDate
+                              ? 'text-brand-600 dark:text-brand-400'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        {formData.dueDate && dueDateInfo ? (
+                          <>
+                            <div
+                              className={`text-xs sm:text-sm font-semibold ${dueDateInfo.color}`}
+                            >
+                              {dueDateInfo.text}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(formData.dueDate).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Set due date
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {formData.dueDate && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateField('dueDate', '');
+                        }}
+                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </button>
+
+                  {showCalendar && (
+                    <CustomCalendar
+                      selectedDate={formData.dueDate}
+                      onSelect={(date) => updateField('dueDate', date)}
+                      onClose={() => setShowCalendar(false)}
+                    />
+                  )}
+                </div>
+
+                {/* Story Points */}
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    Story Points
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.storyPoints || ''}
+                    onChange={(e) =>
+                      updateField('storyPoints', parseInt(e.target.value) || undefined)
+                    }
+                    className="w-full mt-3 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                    placeholder="Enter points"
+                    min="0"
+                  />
+                </div>
+
+                {/* Metadata */}
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5" />
+                      Created
+                    </span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {formatRelativeTime(selectedTask.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5" />
+                      Updated
+                    </span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {formatRelativeTime(selectedTask.updatedAt)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs - Horizontal scroll on mobile */}
+              <div className="border-t-2 border-gray-100 dark:border-gray-800 pt-6 sm:pt-8">
+                <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800/50 p-1.5 rounded-xl overflow-x-auto hide-scrollbar">
                   {(
                     [
                       {
@@ -472,17 +1177,17 @@ const TaskDetailModal: React.FC = () => {
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2.5 px-5 py-2.5 text-sm font-semibold rounded-lg transition-all ${
+                        className={`flex items-center gap-2 sm:gap-2.5 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
                           activeTab === tab.id
                             ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm'
                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                         }`}
                       >
-                        <Icon className="w-4 h-4" />
-                        {tab.label}
+                        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">{tab.label}</span>
                         {tab.count > 0 && (
                           <span
-                            className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                            className={`px-1.5 sm:px-2 py-0.5 text-xs font-bold rounded-full ${
                               activeTab === tab.id
                                 ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300'
                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
@@ -496,12 +1201,12 @@ const TaskDetailModal: React.FC = () => {
                   })}
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-4 sm:mt-6 pb-20 lg:pb-0">
                   {activeTab === 'comments' && (
                     <div>
-                      <div className="flex gap-4 mb-8">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white dark:ring-gray-900">
-                          <span className="text-sm font-bold text-white">
+                      <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white dark:ring-gray-900">
+                          <span className="text-xs sm:text-sm font-bold text-white">
                             {users[0]?.name?.charAt(0) || 'U'}
                           </span>
                         </div>
@@ -515,14 +1220,14 @@ const TaskDetailModal: React.FC = () => {
                               }
                             }}
                             placeholder="Write a comment... (⌘+Enter to send)"
-                            className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                            className="w-full p-3 sm:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
                             rows={3}
                           />
                           {newComment.trim() && (
                             <button
                               onClick={handleAddComment}
                               disabled={addCommentMutation.isPending}
-                              className="mt-3 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl text-sm font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 transition-all shadow-sm hover:shadow-md"
+                              className="mt-2 sm:mt-3 flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl text-sm font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 transition-all shadow-sm hover:shadow-md w-full sm:w-auto justify-center"
                             >
                               <Send className="w-4 h-4" />
                               {addCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
@@ -532,32 +1237,32 @@ const TaskDetailModal: React.FC = () => {
                       </div>
 
                       {comments.length === 0 ? (
-                        <div className="text-center py-16">
-                          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
-                            <MessageSquare className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+                        <div className="text-center py-12 sm:py-16">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
+                            <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500" />
                           </div>
-                          <p className="text-gray-900 dark:text-gray-100 font-semibold text-lg mb-1">
+                          <p className="text-gray-900 dark:text-gray-100 font-semibold text-base sm:text-lg mb-1">
                             No comments yet
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                             Start the conversation and share your thoughts
                           </p>
                         </div>
                       ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {comments.map((comment) => {
                             const user = users.find((u) => u.id === comment.userId);
                             return (
-                              <div key={comment.id} className="flex gap-3 group">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white dark:ring-gray-900">
-                                  <span className="text-sm font-bold text-white">
+                              <div key={comment.id} className="flex gap-2 sm:gap-3 group">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white dark:ring-gray-900">
+                                  <span className="text-xs sm:text-sm font-bold text-white">
                                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                                   </span>
                                 </div>
-                                <div className="flex-1 bg-gray-50 dark:bg-gray-800/70 rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all">
-                                  <div className="flex items-center justify-between mb-2">
+                                <div className="flex-1 bg-gray-50 dark:bg-gray-800/70 rounded-2xl p-3 sm:p-4 border border-gray-200/50 dark:border-gray-700/50 group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all">
+                                  <div className="flex items-center justify-between mb-1 sm:mb-2">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                      <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                                         {user?.name || 'Unknown User'}
                                       </span>
                                       <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -571,7 +1276,7 @@ const TaskDetailModal: React.FC = () => {
                                       Delete
                                     </button>
                                   </div>
-                                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                  <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                                     {comment.content}
                                   </p>
                                 </div>
@@ -586,14 +1291,14 @@ const TaskDetailModal: React.FC = () => {
                   {activeTab === 'activity' && (
                     <div className="space-y-2">
                       {activities.length === 0 ? (
-                        <div className="text-center py-16">
-                          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
-                            <Activity className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+                        <div className="text-center py-12 sm:py-16">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
+                            <Activity className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500" />
                           </div>
-                          <p className="text-gray-900 dark:text-gray-100 font-semibold text-lg mb-1">
+                          <p className="text-gray-900 dark:text-gray-100 font-semibold text-base sm:text-lg mb-1">
                             No activity yet
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                             Activity will appear here as changes are made
                           </p>
                         </div>
@@ -603,15 +1308,15 @@ const TaskDetailModal: React.FC = () => {
                           return (
                             <div
                               key={activity.id}
-                              className="flex items-start gap-3 py-3 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
+                              className="flex items-start gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
                             >
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm ring-2 ring-white dark:ring-gray-900">
+                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm ring-2 ring-white dark:ring-gray-900">
                                 <span className="text-xs font-bold text-white">
                                   {user?.name?.charAt(0)?.toUpperCase() || 'S'}
                                 </span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm">
+                                <div className="text-xs sm:text-sm">
                                   <span className="font-semibold text-gray-900 dark:text-white">
                                     {user?.name || 'System'}
                                   </span>{' '}
@@ -634,8 +1339,8 @@ const TaskDetailModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Sidebar */}
-            <div className="w-96 border-l border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 overflow-y-auto custom-scrollbar">
+            {/* Right Sidebar - Hidden on mobile, shown on desktop */}
+            <div className="hidden lg:block w-96 border-l border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 overflow-y-auto custom-scrollbar">
               <div className="p-6 space-y-6">
                 <div className="flex items-center gap-2 pb-4 border-b border-gray-200 dark:border-gray-800">
                   <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
@@ -758,7 +1463,6 @@ const TaskDetailModal: React.FC = () => {
                     )}
                   </button>
 
-                  {/* Custom Calendar Dropdown - Opens UPWARD */}
                   {showCalendar && (
                     <CustomCalendar
                       selectedDate={formData.dueDate}
@@ -811,28 +1515,28 @@ const TaskDetailModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-gray-200 dark:border-gray-800 px-8 py-5 bg-gradient-to-b from-transparent to-gray-50/50 dark:to-gray-800/30 flex items-center justify-between">
-            <div className="text-sm font-medium">
+          {/* Footer - Fixed at bottom on mobile */}
+          <div className="border-t border-gray-200 dark:border-gray-800 px-4 sm:px-8 py-3 sm:py-5 bg-gradient-to-b from-transparent to-gray-50/50 dark:to-gray-800/30 flex flex-col-reverse sm:flex-row items-center justify-between gap-2 sm:gap-0">
+            <div className="text-xs sm:text-sm font-medium w-full sm:w-auto text-center sm:text-left">
               {hasChanges && (
-                <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <span className="flex items-center justify-center sm:justify-start gap-2 text-amber-600 dark:text-amber-400">
                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                   Unsaved changes
                 </span>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={handleCancel}
                 disabled={!hasChanges || isSaving}
-                className="px-6 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={!hasChanges || isSaving || !formData.title.trim()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl disabled:shadow-none"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl disabled:shadow-none text-sm"
               >
                 {isSaving ? (
                   <>
@@ -850,6 +1554,17 @@ const TaskDetailModal: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Add custom styles for hiding scrollbar */}
+      <style jsx>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </>
   );
 };
