@@ -19,7 +19,6 @@ import {
   PersonStandingIcon,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
-import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
 import { useNotificationCount } from '../hooks/api/useNotifications';
 import { useUnreadCounts } from '../hooks/api/useChat';
@@ -39,6 +38,7 @@ import {
   useAccessibleWorkspaces,
 } from '../hooks/api/useAccessibleEntities';
 import { SpaceItem } from '../components/projectSidebarCompponent/SpaceComponent';
+import { useProjectContext } from '../context/ProjectContext';
 
 // ============================================================================
 // LOCALSTORAGE KEYS
@@ -64,7 +64,7 @@ const ProjectSidebar: React.FC = () => {
     setIsCreateProjectModalOpen,
     isInitializing,
     setManagementEntity,
-  } = useProject();
+  } = useProjectContext();
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -399,7 +399,7 @@ const ProjectSidebar: React.FC = () => {
                 <span>Invite</span>
               </button>
               <button
-                onClick={() => navigate(`/members/workspace/${currentWorkspace.id}`)}
+                onClick={() => navigate(`/member-management/workspace/${currentWorkspace.id}`)}
                 className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs text-[#9ca3af] hover:bg-[#25282c] hover:text-white transition-colors"
               >
                 <Users className="w-3.5 h-3.5" />
@@ -456,8 +456,8 @@ const ProjectSidebar: React.FC = () => {
                 navigate(`/member-management/workspace/${currentWorkspace.id}`);
               },
             },
-            { icon: FileText, label: 'Docs', path: '/docs' },
-            { icon: BarChart3, label: 'Dashboards', path: '/dashboards' },
+            // { icon: FileText, label: 'Docs', path: '/docs' },
+            // { icon: BarChart3, label: 'Dashboards', path: '/dashboards' },
           ].map((item) => {
             const Icon = item.icon;
 

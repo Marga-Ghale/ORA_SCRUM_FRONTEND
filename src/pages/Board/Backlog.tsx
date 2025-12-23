@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { useProject } from '../../context/ProjectContext';
 import { Task, Sprint, PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
 import PageMeta from '../../components/common/PageMeta';
 import TaskDetailModal from '../../components/tasks/TaskDetailModal';
+import { useProjectContext } from '../../context/ProjectContext';
 
 const ItemTypes = {
   TASK: 'backlog-task',
@@ -227,7 +227,7 @@ const BacklogContent: React.FC = () => {
     setCreateTaskInitialStatus,
     startSprint,
     completeSprint,
-  } = useProject();
+  } = useProjectContext();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['sprint-2', 'backlog'])
   );

@@ -1,7 +1,6 @@
 // src/components/TaskListView/TaskListView.tsx
 import React, { useState } from 'react';
 import { TaskStatus, STATUS_COLUMNS, PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
-import { useProject } from '../../context/ProjectContext';
 import { TaskResponse, useUpdateTaskStatus } from '../../hooks/api/useTasks';
 import { formatDateDisplay } from '../../utils/dateUtils';
 import {
@@ -13,6 +12,7 @@ import {
   Clock,
   User,
 } from 'lucide-react';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface TaskListViewProps {
   tasks: TaskResponse[];
@@ -24,7 +24,7 @@ interface TaskRowProps {
 }
 
 const TaskRow: React.FC<TaskRowProps> = ({ task }) => {
-  const { openTaskModal } = useProject();
+  const { openTaskModal } = useProjectContext();
   const updateStatusMutation = useUpdateTaskStatus();
 
   const typeConfig = TASK_TYPE_CONFIG[task.type || 'task'];

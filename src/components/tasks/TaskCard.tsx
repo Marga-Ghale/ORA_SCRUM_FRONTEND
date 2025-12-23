@@ -1,11 +1,11 @@
 // src/components/TaskCard/TaskCard.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { PRIORITY_CONFIG, TASK_TYPE_CONFIG, Priority, TaskType } from '../../types/project';
-import { useProject } from '../../context/ProjectContext';
 import { TaskResponse } from '../../hooks/api/useTasks';
 import { formatDateDisplay } from '../../utils/dateUtils';
 import { useUserInitials } from '../../hooks/api/useUserInitials';
 import { MoreVertical, Edit2, Trash2, Clock, CheckSquare, CornerDownRight } from 'lucide-react';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface TaskCardProps {
   task: TaskResponse;
@@ -14,7 +14,7 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, compact = false }) => {
-  const { openTaskModal, deleteTask } = useProject();
+  const { openTaskModal, deleteTask } = useProjectContext();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

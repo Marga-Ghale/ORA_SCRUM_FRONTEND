@@ -98,6 +98,14 @@ export interface Space {
   projects: Project[];
 }
 
+export interface Folder {
+  id: string;
+  name: string;
+  icon?: string;
+  color: string;
+  projects: Project[];
+}
+
 export interface Workspace {
   id: string;
   name: string;

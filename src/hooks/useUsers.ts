@@ -11,17 +11,37 @@ export type UserStatus = 'online' | 'offline' | 'away' | 'busy';
 
 export interface User {
   id: string;
-  name: string;
   email: string;
+  name: string;
   avatar?: string;
-  status: UserStatus;
+  role: 'admin' | 'member' | 'viewer';
+  status: 'online' | 'offline' | 'away';
   createdAt: string;
+
+  // Add these new fields
+  phone?: string;
+  bio?: string;
+  socialLinks?: {
+    facebook?: string;
+    twitter?: string;
+    linkedin?: string;
+    instagram?: string;
+  };
 }
 
+// Update your UpdateUserRequest type
 export interface UpdateUserRequest {
   name?: string;
   avatar?: string;
   status?: UserStatus;
+  phone?: string;
+  bio?: string;
+  socialLinks?: {
+    facebook?: string;
+    twitter?: string;
+    linkedin?: string;
+    instagram?: string;
+  };
 }
 
 // ============================================

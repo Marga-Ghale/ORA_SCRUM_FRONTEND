@@ -1,9 +1,9 @@
 // src/components/project/ProjectSettingsModal.tsx
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useProject } from '../../context/ProjectContext';
 import MembersList from '../members/MembersList';
 import { InviteMemberModal } from '../modals';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface ProjectSettingsModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ interface ProjectSettingsModalProps {
 type Tab = 'general' | 'members' | 'labels' | 'danger';
 
 const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onClose }) => {
-  const { currentProject, updateProject, deleteProject } = useProject();
+  const { currentProject, updateProject, deleteProject } = useProjectContext();
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -58,7 +58,6 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
     updateProject(currentProject.id, {
       name,
       description,
-      color,
     });
     onClose();
   };
@@ -318,13 +317,7 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({ isOpen, onC
 
       {/* Invite Member Modal */}
       {showInviteModal && (
-        <InviteMemberModal
-          isOpen={showInviteModal}
-          onClose={() => setShowInviteModal(false)}
-          type="project"
-          targetId={currentProject.id}
-          targetName={currentProject.name}
-        />
+        <InviteMemberModal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} />
       )}
     </div>
   );

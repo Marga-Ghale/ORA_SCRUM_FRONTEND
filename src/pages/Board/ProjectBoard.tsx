@@ -11,7 +11,6 @@ import {
   UserPlus,
   ChevronDown,
 } from 'lucide-react';
-import { useProject } from '../../context/ProjectContext';
 import { PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
 import KanbanBoard from '../../components/tasks/KanbanBoard';
 import TaskListView from '../../components/tasks/TaskListView';
@@ -19,6 +18,7 @@ import TaskDetailModal from '../../components/tasks/TaskDetailModal';
 import AddProjectMemberModal from '../../components/modals/AddProjectMemberModal';
 import PageMeta from '../../components/common/PageMeta';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
+import { useProjectContext } from '../../context/ProjectContext';
 
 const ProjectBoard: React.FC = () => {
   const {
@@ -32,7 +32,7 @@ const ProjectBoard: React.FC = () => {
     setFilters,
     setIsCreateTaskModalOpen,
     setCreateTaskInitialStatus,
-  } = useProject();
+  } = useProjectContext();
 
   const { data: projectMembers } = useEffectiveMembers('project', currentProject?.id || '', {
     enabled: !!currentProject?.id,

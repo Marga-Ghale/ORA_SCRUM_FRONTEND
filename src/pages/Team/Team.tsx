@@ -15,11 +15,11 @@ import {
   FileText,
   ChevronDown,
 } from 'lucide-react';
-import { useProject } from '../../context/ProjectContext';
 import PageMeta from '../../components/common/PageMeta';
 import { useEffectiveMembers, EntityType } from '../../hooks/api/useMembers';
 import { useAllAccessibleEntities } from '../../hooks/api/useAccessibleEntities';
 import InviteMemberModal from '../../components/members/Invitemembermodal';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface TeamMember {
   id: string;
@@ -133,7 +133,7 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, tasksCount, onV
 };
 
 const Team: React.FC = () => {
-  const { tasks, currentWorkspace, currentProject, currentSpace } = useProject();
+  const { tasks, currentWorkspace, currentProject, currentSpace } = useProjectContext();
 
   // ✅ Fetch all accessible entities
   const {

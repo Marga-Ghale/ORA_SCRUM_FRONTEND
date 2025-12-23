@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { X, Hash, Lock, Globe, Users, Folder, Briefcase, AlertCircle } from 'lucide-react';
 import { useCreateChannel } from '../../hooks/api/useChat';
-import { useProject } from '../../context/ProjectContext';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface CreateChannelModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { currentWorkspace, allSpaces } = useProject();
+  const { currentWorkspace, allSpaces } = useProjectContext();
   const createChannel = useCreateChannel();
 
   const [name, setName] = useState('');
