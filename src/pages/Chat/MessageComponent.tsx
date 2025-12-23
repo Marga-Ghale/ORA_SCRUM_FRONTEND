@@ -119,8 +119,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {/* Username & Time - Only for received messages with avatar */}
         {showAvatar && !isOwn && (
           <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-sm font-semibold text-white">{userName}</span>
-            <span className="text-xs text-[#6b7280]">{time}</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</span>
+            <span className="text-xs text-gray-500 dark:text-[#6b7280]">{time}</span>
           </div>
         )}
 
@@ -129,7 +129,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           className={`relative px-4 py-2.5 rounded-2xl ${
             isOwn
               ? 'bg-brand-500 text-white rounded-br-md'
-              : 'bg-[#25282c] text-[#e5e7eb] rounded-bl-md'
+              : 'bg-gray-100 dark:bg-[#25282c] text-gray-900 dark:text-[#e5e7eb] rounded-bl-md'
           }`}
         >
           <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
@@ -138,11 +138,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <div
             className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}
           >
-            <span className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-[#6b7280]'}`}>
+            <span
+              className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-gray-500 dark:text-[#6b7280]'}`}
+            >
               {time}
             </span>
             {message.isEdited && (
-              <span className={`text-[10px] italic ${isOwn ? 'text-white/70' : 'text-[#6b7280]'}`}>
+              <span
+                className={`text-[10px] italic ${isOwn ? 'text-white/70' : 'text-gray-500 dark:text-[#6b7280]'}`}
+              >
                 (edited)
               </span>
             )}
@@ -167,11 +171,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors ${
                     hasReacted
                       ? 'bg-brand-500/20 border border-brand-500/50'
-                      : 'bg-[#2a2e33] border border-transparent hover:border-[#3a3e43]'
+                      : 'bg-gray-100 dark:bg-[#2a2e33] border border-transparent hover:border-gray-300 dark:hover:border-[#3a3e43]'
                   }`}
                 >
                   <span>{reaction.emoji}</span>
-                  <span className="text-[#9ca3af]">{reaction.count}</span>
+                  <span className="text-gray-600 dark:text-[#9ca3af]">{reaction.count}</span>
                 </button>
               );
             })}
@@ -200,7 +204,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       {/* Action Bar - Position based on message side */}
       {showActions && (
         <div
-          className={`absolute -top-3 flex items-center bg-[#25282c] border border-[#3a3e43] rounded-lg shadow-lg overflow-hidden z-10 ${
+          className={`absolute -top-3 flex items-center bg-white dark:bg-[#25282c] border border-gray-200 dark:border-[#3a3e43] rounded-lg shadow-lg overflow-hidden z-10 ${
             isOwn ? 'left-4' : 'right-4'
           }`}
         >
@@ -208,7 +212,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowReactions(!showReactions)}
-              className="p-1.5 hover:bg-[#3a3e43] text-[#9ca3af] hover:text-white transition-colors"
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#3a3e43] text-gray-600 dark:text-[#9ca3af] hover:text-gray-900 dark:hover:text-white transition-colors"
               title="Add reaction"
             >
               <Smile className="w-4 h-4" />
@@ -217,7 +221,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             {/* Quick reactions */}
             {showReactions && (
               <div
-                className={`absolute top-full mt-1 flex items-center gap-0.5 p-1 bg-[#25282c] border border-[#3a3e43] rounded-lg shadow-xl z-10 ${
+                className={`absolute top-full mt-1 flex items-center gap-0.5 p-1 bg-white dark:bg-[#25282c] border border-gray-200 dark:border-[#3a3e43] rounded-lg shadow-xl z-10 ${
                   isOwn ? 'left-0' : 'right-0'
                 }`}
               >
@@ -228,7 +232,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                       onReact(message.id, emoji);
                       setShowReactions(false);
                     }}
-                    className="p-1.5 hover:bg-[#3a3e43] rounded transition-colors text-lg"
+                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#3a3e43] rounded transition-colors text-lg"
                   >
                     {emoji}
                   </button>
@@ -239,7 +243,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           <button
             onClick={() => onReply(message)}
-            className="p-1.5 hover:bg-[#3a3e43] text-[#9ca3af] hover:text-white transition-colors"
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#3a3e43] text-gray-600 dark:text-[#9ca3af] hover:text-gray-900 dark:hover:text-white transition-colors"
             title="Reply in thread"
           >
             <Reply className="w-4 h-4" />
@@ -249,14 +253,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <>
               <button
                 onClick={() => onEdit(message)}
-                className="p-1.5 hover:bg-[#3a3e43] text-[#9ca3af] hover:text-white transition-colors"
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#3a3e43] text-gray-600 dark:text-[#9ca3af] hover:text-gray-900 dark:hover:text-white transition-colors"
                 title="Edit"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onDelete(message.id)}
-                className="p-1.5 hover:bg-red-500/20 text-[#9ca3af] hover:text-red-400 transition-colors"
+                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-500/20 text-gray-600 dark:text-[#9ca3af] hover:text-red-600 dark:hover:text-red-400 transition-colors"
                 title="Delete"
               >
                 <Trash2 className="w-4 h-4" />
@@ -265,7 +269,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
 
           <button
-            className="p-1.5 hover:bg-[#3a3e43] text-[#9ca3af] hover:text-white transition-colors"
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#3a3e43] text-gray-600 dark:text-[#9ca3af] hover:text-gray-900 dark:hover:text-white transition-colors"
             title="More"
           >
             <MoreHorizontal className="w-4 h-4" />

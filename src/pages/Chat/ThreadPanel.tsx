@@ -74,14 +74,14 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
   const parentUserName = parentMessage.user?.name || 'Unknown';
 
   return (
-    <div className="w-[400px] h-full flex flex-col bg-[#1a1d21] border-l border-[#2a2e33]">
+    <div className="w-[400px] h-full flex flex-col bg-white dark:bg-[#1a1d21]  border-gray-200 dark:border-[#2a2e33]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2e33]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-[#2a2e33]">
         <div className="flex items-center gap-2">
-          <Reply className="w-5 h-5 text-[#9ca3af]" />
+          <Reply className="w-5 h-5 text-gray-600 dark:text-[#9ca3af]" />
           <div>
-            <h3 className="text-sm font-semibold text-white">Thread</h3>
-            <p className="text-xs text-[#6b7280]">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Thread</h3>
+            <p className="text-xs text-gray-500 dark:text-[#6b7280]">
               <Hash className="inline w-3 h-3 mr-0.5" />
               {channel.name}
             </p>
@@ -89,14 +89,14 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-[#2a2e33] rounded-lg text-[#6b7280] hover:text-white transition-colors"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-[#2a2e33] rounded-lg text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Parent Message */}
-      <div className="p-4 border-b border-[#2a2e33] bg-[#25282c]/50">
+      <div className="p-4 border-b border-gray-200 dark:border-[#2a2e33] bg-gray-50 dark:bg-[#25282c]/50">
         <div className="flex gap-3">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-medium text-white flex-shrink-0">
             {parentMessage.user?.avatar ? (
@@ -111,17 +111,19 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-sm font-semibold text-white">{parentUserName}</span>
-              <span className="text-xs text-[#6b7280]">
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                {parentUserName}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-[#6b7280]">
                 {formatMessageTime(parentMessage.createdAt)}
               </span>
             </div>
-            <p className="text-sm text-[#e5e7eb] whitespace-pre-wrap break-words">
+            <p className="text-sm text-gray-900 dark:text-[#e5e7eb] whitespace-pre-wrap break-words">
               {parentMessage.content}
             </p>
           </div>
         </div>
-        <p className="mt-3 text-xs text-[#6b7280]">
+        <p className="mt-3 text-xs text-gray-500 dark:text-[#6b7280]">
           {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
         </p>
       </div>
@@ -132,18 +134,18 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
           <div className="p-4 space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex gap-3 animate-pulse">
-                <div className="w-8 h-8 rounded-lg bg-[#2a2e33]" />
+                <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-[#2a2e33]" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-[#2a2e33] rounded w-1/4" />
-                  <div className="h-3 bg-[#2a2e33] rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-[#2a2e33] rounded w-1/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-[#2a2e33] rounded w-3/4" />
                 </div>
               </div>
             ))}
           </div>
         ) : replies.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-6">
-            <p className="text-sm text-[#6b7280]">No replies yet</p>
-            <p className="text-xs text-[#6b7280] mt-1">Be the first to reply!</p>
+            <p className="text-sm text-gray-500 dark:text-[#6b7280]">No replies yet</p>
+            <p className="text-xs text-gray-500 dark:text-[#6b7280] mt-1">Be the first to reply!</p>
           </div>
         ) : (
           <div className="py-2">
@@ -169,9 +171,9 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
       </div>
 
       {/* Reply Input */}
-      <div className="p-3 border-t border-[#2a2e33]">
-        <div className="flex items-end gap-2 bg-[#25282c] rounded-xl p-2">
-          <button className="p-1.5 hover:bg-[#3a3e43] rounded-lg text-[#6b7280] hover:text-white transition-colors">
+      <div className="p-3 border-t border-gray-200 dark:border-[#2a2e33]">
+        <div className="flex items-end gap-2 bg-gray-100 dark:bg-[#25282c] rounded-xl p-2">
+          <button className="p-1.5 hover:bg-gray-200 dark:hover:bg-[#3a3e43] rounded-lg text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white transition-colors">
             <Paperclip className="w-4 h-4" />
           </button>
 
@@ -182,10 +184,10 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
             onKeyDown={handleKeyDown}
             placeholder="Reply..."
             rows={1}
-            className="flex-1 bg-transparent text-white placeholder-[#6b7280] resize-none focus:outline-none text-sm py-1.5 max-h-[120px]"
+            className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-[#6b7280] resize-none focus:outline-none text-sm py-1.5 max-h-[120px]"
           />
 
-          <button className="p-1.5 hover:bg-[#3a3e43] rounded-lg text-[#6b7280] hover:text-white transition-colors">
+          <button className="p-1.5 hover:bg-gray-200 dark:hover:bg-[#3a3e43] rounded-lg text-gray-600 dark:text-[#6b7280] hover:text-gray-900 dark:hover:text-white transition-colors">
             <Smile className="w-4 h-4" />
           </button>
 
@@ -195,7 +197,7 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
             className={`p-1.5 rounded-lg transition-colors ${
               replyContent.trim() && !sendMessage.isPending
                 ? 'bg-brand-500 text-white hover:bg-brand-600'
-                : 'bg-[#3a3e43] text-[#6b7280] cursor-not-allowed'
+                : 'bg-gray-300 dark:bg-[#3a3e43] text-gray-500 dark:text-[#6b7280] cursor-not-allowed'
             }`}
           >
             <Send className="w-4 h-4" />

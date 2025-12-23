@@ -102,17 +102,19 @@ const NotificationPage: React.FC = () => {
     <>
       <PageMeta title="Inbox | ORA SCRUM" description="Your notifications" />
 
-      <div className="h-full flex flex-col bg-[#0d0f11]">
+      <div className="h-full flex flex-col bg-white dark:bg-[#0d0f11]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#2a2e33]">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2a2e33]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center">
                 <Inbox className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-white">Inbox</h1>
-                <p className="text-sm text-[#6b7280]">{counts?.unread || 0} unread notifications</p>
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Inbox</h1>
+                <p className="text-sm text-gray-500 dark:text-[#6b7280]">
+                  {counts?.unread || 0} unread notifications
+                </p>
               </div>
             </div>
 
@@ -121,16 +123,25 @@ const NotificationPage: React.FC = () => {
                 <button
                   onClick={() => markAllRead.mutate()}
                   disabled={markAllRead.isPending}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-[#9ca3af] hover:text-white hover:bg-[#25282c] rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-sm
+              text-gray-500 dark:text-[#9ca3af]
+              hover:text-gray-900 dark:hover:text-white
+              hover:bg-gray-100 dark:hover:bg-[#25282c]
+              rounded-lg transition-colors"
                 >
                   <CheckCheck className="w-4 h-4" />
                   <span>Mark all read</span>
                 </button>
               ) : null}
+
               <button
                 onClick={() => deleteAll.mutate()}
                 disabled={deleteAll.isPending || notifications.length === 0}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-[#9ca3af] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-2 text-sm
+            text-gray-500 dark:text-[#9ca3af]
+            hover:text-red-500
+            hover:bg-red-500/10
+            rounded-lg transition-colors disabled:opacity-50"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Clear all</span>
@@ -155,19 +166,22 @@ const NotificationPage: React.FC = () => {
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap
-                    ${
-                      isActive
-                        ? 'bg-brand-500/20 text-brand-400'
-                        : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'
-                    }`}
+              ${
+                isActive
+                  ? 'bg-brand-500/20 text-brand-600 dark:text-brand-400'
+                  : 'text-gray-500 dark:text-[#9ca3af] hover:bg-gray-100 dark:hover:bg-[#25282c] hover:text-gray-900 dark:hover:text-white'
+              }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{filter.label}</span>
                   {count ? (
                     <span
-                      className={`px-1.5 py-0.5 text-xs rounded-full ${
-                        isActive ? 'bg-brand-500/30 text-brand-300' : 'bg-[#2a2e33] text-[#9ca3af]'
-                      }`}
+                      className={`px-1.5 py-0.5 text-xs rounded-full
+                  ${
+                    isActive
+                      ? 'bg-brand-500/30 text-brand-600 dark:text-brand-300'
+                      : 'bg-gray-200 text-gray-600 dark:bg-[#2a2e33] dark:text-[#9ca3af]'
+                  }`}
                     >
                       {count}
                     </span>
@@ -183,22 +197,27 @@ const NotificationPage: React.FC = () => {
           {isLoading ? (
             <div className="p-6 space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex gap-4 p-4 bg-[#1a1d21] rounded-xl animate-pulse">
-                  <div className="w-10 h-10 rounded-full bg-[#2a2e33]" />
+                <div
+                  key={i}
+                  className="flex gap-4 p-4 bg-gray-100 dark:bg-[#1a1d21] rounded-xl animate-pulse"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-[#2a2e33]" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-[#2a2e33] rounded w-1/3" />
-                    <div className="h-3 bg-[#2a2e33] rounded w-2/3" />
+                    <div className="h-4 bg-gray-200 dark:bg-[#2a2e33] rounded w-1/3" />
+                    <div className="h-3 bg-gray-200 dark:bg-[#2a2e33] rounded w-2/3" />
                   </div>
                 </div>
               ))}
             </div>
           ) : filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-6">
-              <div className="w-16 h-16 rounded-2xl bg-[#1a1d21] flex items-center justify-center mb-4">
-                <Inbox className="w-8 h-8 text-[#4b5563]" />
+              <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-[#1a1d21] flex items-center justify-center mb-4">
+                <Inbox className="w-8 h-8 text-gray-400 dark:text-[#4b5563]" />
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">All caught up!</h3>
-              <p className="text-[#6b7280] text-sm max-w-sm">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                All caught up!
+              </h3>
+              <p className="text-gray-500 dark:text-[#6b7280] text-sm max-w-sm">
                 {activeFilter === 'all'
                   ? "You don't have any notifications yet"
                   : `No ${activeFilter} notifications`}
@@ -208,24 +227,26 @@ const NotificationPage: React.FC = () => {
             <div className="p-4">
               {Object.entries(groupedNotifications).map(([group, items]) => (
                 <div key={group} className="mb-6">
-                  <h3 className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider px-2 mb-2">
+                  <h3 className="text-xs font-semibold text-gray-500 dark:text-[#6b7280] uppercase tracking-wider px-2 mb-2">
                     {group}
                   </h3>
+
                   <div className="space-y-1">
                     {items.map((notification) => {
                       const config = getNotificationConfig(notification.type);
+
                       return (
                         <div
                           key={notification.id}
                           onClick={() => handleNotificationClick(notification)}
                           onMouseEnter={() => setShowActions(notification.id)}
                           onMouseLeave={() => setShowActions(null)}
-                          className={`relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all group
-                            ${
-                              notification.read
-                                ? 'bg-transparent hover:bg-[#1a1d21]'
-                                : 'bg-[#1a1d21] hover:bg-[#25282c]'
-                            }`}
+                          className={`relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all
+                      ${
+                        notification.read
+                          ? 'hover:bg-gray-100 dark:hover:bg-[#1a1d21]'
+                          : 'bg-gray-100 dark:bg-[#1a1d21] hover:bg-gray-200 dark:hover:bg-[#25282c]'
+                      }`}
                         >
                           {/* Unread indicator */}
                           {!notification.read && (
@@ -240,36 +261,45 @@ const NotificationPage: React.FC = () => {
                             {config.icon}
                           </div>
 
-                          {/* Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <p
                                 className={`text-sm font-medium ${
-                                  notification.read ? 'text-[#9ca3af]' : 'text-white'
+                                  notification.read
+                                    ? 'text-gray-500 dark:text-[#9ca3af]'
+                                    : 'text-gray-900 dark:text-white'
                                 }`}
                               >
                                 {notification.title}
                               </p>
-                              <span className="text-xs text-[#6b7280] whitespace-nowrap flex-shrink-0">
+                              <span className="text-xs text-gray-500 dark:text-[#6b7280] whitespace-nowrap">
                                 {formatTime(notification.createdAt)}
                               </span>
                             </div>
+
                             <p
                               className={`text-sm mt-0.5 line-clamp-2 ${
-                                notification.read ? 'text-[#6b7280]' : 'text-[#9ca3af]'
+                                notification.read
+                                  ? 'text-gray-500 dark:text-[#6b7280]'
+                                  : 'text-gray-600 dark:text-[#9ca3af]'
                               }`}
                             >
                               {notification.message}
                             </p>
+
                             {notification.data?.taskKey && (
-                              <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 bg-[#25282c] rounded text-xs text-[#9ca3af]">
+                              <span
+                                className="inline-flex items-center gap-1 mt-2 px-2 py-0.5
+                          bg-gray-200 text-gray-600
+                          dark:bg-[#25282c] dark:text-[#9ca3af]
+                          rounded text-xs"
+                              >
                                 {notification.data.taskKey}
                                 <ExternalLink className="w-3 h-3" />
                               </span>
                             )}
                           </div>
 
-                          {/* Actions */}
                           {showActions === notification.id && (
                             <div className="flex items-center gap-1">
                               {!notification.read && (
@@ -278,19 +308,24 @@ const NotificationPage: React.FC = () => {
                                     e.stopPropagation();
                                     markRead.mutate(notification.id);
                                   }}
-                                  className="p-1.5 rounded-lg hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors"
-                                  title="Mark as read"
+                                  className="p-1.5 rounded-lg
+                              hover:bg-gray-200 dark:hover:bg-[#2a2e33]
+                              text-gray-500 dark:text-[#6b7280]
+                              hover:text-gray-900 dark:hover:text-white"
                                 >
                                   <Check className="w-4 h-4" />
                                 </button>
                               )}
+
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   deleteNotification.mutate(notification.id);
                                 }}
-                                className="p-1.5 rounded-lg hover:bg-red-500/10 text-[#6b7280] hover:text-red-400 transition-colors"
-                                title="Delete"
+                                className="p-1.5 rounded-lg
+                            hover:bg-red-500/10
+                            text-gray-500 dark:text-[#6b7280]
+                            hover:text-red-500"
                               >
                                 <X className="w-4 h-4" />
                               </button>

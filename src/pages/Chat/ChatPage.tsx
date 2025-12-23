@@ -122,7 +122,8 @@ const ChatPage: React.FC = () => {
     <>
       <PageMeta title="Chat | ORA SCRUM" description="Team chat and messaging" />
 
-      <div className="h-full flex bg-[#0d0f11]">
+      <div className="h-full flex bg-white dark:bg-[#0d0f11]">
+        {' '}
         {/* Channel List Sidebar */}
         <ChannelList
           channels={channels}
@@ -132,8 +133,8 @@ const ChatPage: React.FC = () => {
           onCreateChannel={() => setShowCreateChannel(true)}
           onCreateDM={() => setShowCreateDM(true)}
           isLoading={channelsLoading}
+          currentUserId={''}
         />
-
         {/* Main Chat Area */}
         {channelId && currentChannel ? (
           <ChatView
@@ -152,7 +153,6 @@ const ChatPage: React.FC = () => {
         ) : (
           <EmptyChatState onCreateChannel={() => setShowCreateChannel(true)} />
         )}
-
         {/* Thread Panel */}
         {currentChannel && (
           <ThreadPanel
@@ -167,7 +167,6 @@ const ChatPage: React.FC = () => {
             onReact={handleReact}
           />
         )}
-
         {/* Members Panel */}
         {currentChannel && (
           <ChannelMembersPanel
