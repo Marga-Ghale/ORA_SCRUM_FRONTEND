@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router';
 import {
   BoxCubeIcon,
   CalenderIcon,
-  ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
   ListIcon,
