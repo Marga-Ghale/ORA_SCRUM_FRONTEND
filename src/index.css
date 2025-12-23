@@ -134,14 +134,6 @@ layer(base);
   }
 }
 
-/* Optimize animations for mobile performance */
-@media (max-width: 640px) {
-  * {
-    animation-duration: 0.2s !important;
-    transition-duration: 0.2s !important;
-  }
-}
-
 /* Prevent zoom on input focus (iOS) */
 @media (max-width: 640px) {
   input[type='text'],
