@@ -414,7 +414,6 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
           );
         })}
       </div>
-      <CreateTaskModal />
     </div>
   );
 };
