@@ -6,7 +6,18 @@ const Backdrop: React.FC = () => {
   if (!isMobileOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-40 bg-gray-900/50 lg:hidden" onClick={toggleMobileSidebar} />
+    <div
+      onClick={toggleMobileSidebar}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-200"
+      aria-label="Close sidebar"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+          toggleMobileSidebar();
+        }
+      }}
+    />
   );
 };
 

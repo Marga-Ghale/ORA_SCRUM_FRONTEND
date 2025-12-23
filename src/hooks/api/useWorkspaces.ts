@@ -46,19 +46,12 @@ export interface WorkspaceResponse {
 // ============================================
 
 const workspaceApi = {
-  // Get all workspaces (backend should filter by membership)
   list: () => apiClient.get<WorkspaceResponse[]>('/workspaces'),
-
-  // Get workspaces where user is a member (direct membership)
   listMyWorkspaces: () => apiClient.get<WorkspaceResponse[]>('/workspaces/my'),
-
   getById: (id: string) => apiClient.get<WorkspaceResponse>(`/workspaces/${id}`),
-
   create: (data: CreateWorkspaceRequest) => apiClient.post<WorkspaceResponse>('/workspaces', data),
-
   update: (id: string, data: UpdateWorkspaceRequest) =>
     apiClient.put<WorkspaceResponse>(`/workspaces/${id}`, data),
-
   delete: (id: string) => apiClient.delete(`/workspaces/${id}`),
 };
 
@@ -66,9 +59,6 @@ const workspaceApi = {
 // Query Hooks
 // ============================================
 
-/**
- * Get all workspaces (should be filtered by backend based on user's access)
- */
 export const useWorkspaces = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.workspaces.list(),
@@ -77,10 +67,6 @@ export const useWorkspaces = (options?: { enabled?: boolean }) => {
   });
 };
 
-/**
- * Get only workspaces where user has direct membership
- * This is the PRIMARY hook to use in ProjectSidebar
- */
 export const useMyWorkspaces = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.workspaces.list(),
@@ -109,6 +95,8 @@ export const useCreateWorkspace = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.my() });
+      // ✅ INVALIDATE ACCESSIBLE WORKSPACES
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
     },
   });
 };
@@ -123,6 +111,8 @@ export const useUpdateWorkspace = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.my() });
+      // ✅ INVALIDATE ACCESSIBLE WORKSPACES
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
     },
   });
 };
@@ -136,6 +126,8 @@ export const useDeleteWorkspace = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.my() });
       queryClient.removeQueries({ queryKey: queryKeys.workspaces.detail(id) });
+      // ✅ INVALIDATE ACCESSIBLE WORKSPACES
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
     },
   });
 };

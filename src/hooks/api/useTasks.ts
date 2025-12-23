@@ -532,6 +532,9 @@ export const useUpdateTaskStatus = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+
+      // ✅ ADD: Invalidate notifications so the UI updates
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -546,6 +549,9 @@ export const useUpdateTaskPriority = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+
+      // ✅ ADD: Invalidate notifications so the UI updates
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };

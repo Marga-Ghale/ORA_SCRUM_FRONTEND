@@ -1,10 +1,11 @@
 // src/components/tasks/KanbanBoard.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Task, TaskStatus, STATUS_COLUMNS } from '../../types/project';
 import { useProject } from '../../context/ProjectContext';
 import TaskCard from './TaskCard';
+import { MoreVertical, Plus, TrendingUp, Calendar, EyeOff, Trash2 } from 'lucide-react';
 
 const ItemTypes = {
   TASK: 'task',
@@ -16,9 +17,9 @@ interface DraggableTaskCardProps {
 }
 
 const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index }) => {
-  const [{ isDragging }, drag] = useDrag({
+  const [{ isDragging }, drag, preview] = useDrag({
     type: ItemTypes.TASK,
-    item: { id: task.id, status: task.status, index },
+    item: () => ({ id: task.id, status: task.status, index }),
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -26,11 +27,19 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index }) =>
 
   return (
     <div
-      ref={drag as unknown as React.Ref<HTMLDivElement>}
-      style={{ opacity: isDragging ? 0.5 : 1 }}
-      className="mb-3"
+      ref={preview as unknown as React.Ref<HTMLDivElement>}
+      className="mb-2.5 transition-transform"
     >
-      <TaskCard task={task as any} isDragging={isDragging} />
+      <div
+        ref={drag as unknown as React.Ref<HTMLDivElement>}
+        style={{
+          opacity: isDragging ? 0.4 : 1,
+          transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+          transition: 'transform 0.15s ease, opacity 0.15s ease',
+        }}
+      >
+        <TaskCard task={task as any} isDragging={isDragging} />
+      </div>
     </div>
   );
 };
@@ -75,23 +84,16 @@ const ColumnMenu: React.FC<ColumnMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
+      className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200"
     >
       <button
         onClick={() => {
           onSortByPriority();
           onClose();
         }}
-        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
-          />
-        </svg>
+        <TrendingUp className="w-4 h-4 text-gray-400" />
         Sort by Priority
       </button>
       <button
@@ -99,54 +101,33 @@ const ColumnMenu: React.FC<ColumnMenuProps> = ({
           onSortByDueDate();
           onClose();
         }}
-        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
+        <Calendar className="w-4 h-4 text-gray-400" />
         Sort by Due Date
       </button>
-      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+      <div className="border-t border-gray-100 dark:border-gray-700 my-1.5" />
       <button
         onClick={() => {
           onHideColumn();
           onClose();
         }}
-        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-          />
-        </svg>
+        <EyeOff className="w-4 h-4 text-gray-400" />
         Hide Column
       </button>
       {tasksCount > 0 && (
         <>
-          <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+          <div className="border-t border-gray-100 dark:border-gray-700 my-1.5" />
           <button
             onClick={() => {
               onClearColumn();
               onClose();
             }}
-            className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+            className="w-full px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
+            <Trash2 className="w-4 h-4" />
             Clear Column ({tasksCount})
           </button>
         </>
@@ -178,21 +159,25 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sortedTasks, setSortedTasks] = useState<Task[]>(tasks);
+  const [isDropping, setIsDropping] = useState(false);
 
-  // Update sorted tasks when tasks prop changes
   useEffect(() => {
     setSortedTasks(tasks);
   }, [tasks]);
 
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ItemTypes.TASK,
-    drop: (item: { id: string; status: TaskStatus; index: number }) => {
-      if (item.status !== status) {
+    drop: (item: { id: string; status: TaskStatus; index: number }, monitor) => {
+      if (!monitor.didDrop() && item.status !== status) {
+        setIsDropping(true);
+        // Immediately move task for instant feedback
         moveTask(item.id, status, sortedTasks.length);
+        // Reset dropping state after animation
+        setTimeout(() => setIsDropping(false), 300);
       }
     },
     collect: (monitor) => ({
-      isOver: monitor.isOver(),
+      isOver: monitor.isOver({ shallow: true }),
       canDrop: monitor.canDrop(),
     }),
   });
@@ -223,45 +208,31 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   };
 
   return (
-    <div className="flex flex-col min-w-[300px] max-w-[300px] bg-gray-50 dark:bg-gray-900 rounded-xl">
+    <div className="flex flex-col min-w-[320px] max-w-[320px] bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
       {/* Column Header */}
-      <div className="flex items-center justify-between p-4 pb-2 relative">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: color }} />
           <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{name}</h3>
-          <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gray-200 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300">
+          <span className="flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-400">
             {sortedTasks.length}
           </span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => onAddTask(status)}
-            className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all"
             title="Add task"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+            <Plus className="w-4 h-4" />
           </button>
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all"
               title="More options"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                />
-              </svg>
+              <MoreVertical className="w-4 h-4" />
             </button>
             <ColumnMenu
               isOpen={menuOpen}
@@ -281,45 +252,48 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
       <div
         ref={drop as unknown as React.Ref<HTMLDivElement>}
         className={`
-          flex-1 p-3 pt-2 overflow-y-auto custom-scrollbar transition-colors duration-200
-          ${isActive ? 'bg-brand-50 dark:bg-brand-900/20' : ''}
+          flex-1 p-3 overflow-y-auto custom-scrollbar transition-all duration-200
+          ${isActive ? 'bg-brand-50/50 dark:bg-brand-950/30 ring-2 ring-brand-500 ring-inset' : ''}
+          ${isDropping ? 'bg-brand-50 dark:bg-brand-950/50' : ''}
         `}
-        style={{ maxHeight: 'calc(100vh - 280px)', minHeight: '200px' }}
+        style={{ maxHeight: 'calc(100vh - 300px)', minHeight: '200px' }}
       >
         {sortedTasks.length === 0 ? (
           <div
             className={`
-              flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg
-              transition-colors duration-200 cursor-pointer
+              flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-xl
+              transition-all duration-200 cursor-pointer group
               ${
                 isActive
-                  ? 'border-brand-400 bg-brand-50/50 dark:bg-brand-900/10'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-950/40 scale-[1.02]'
+                  : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
               }
             `}
             onClick={() => onAddTask(status)}
           >
-            <svg
-              className="w-6 h-6 text-gray-400 mb-1"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <Plus
+              className={`w-6 h-6 mb-2 transition-all ${
+                isActive
+                  ? 'text-brand-500 scale-110'
+                  : 'text-gray-400 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-500'
+              }`}
+            />
+            <span
+              className={`text-sm font-medium transition-colors ${
+                isActive
+                  ? 'text-brand-600 dark:text-brand-400'
+                  : 'text-gray-400 dark:text-gray-600 group-hover:text-gray-600 dark:group-hover:text-gray-400'
+              }`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            <span className="text-sm text-gray-400 dark:text-gray-500">
-              {isActive ? 'Drop here' : 'Add task'}
+              {isActive ? 'Drop task here' : 'Add a task'}
             </span>
           </div>
         ) : (
-          sortedTasks.map((task, index) => (
-            <DraggableTaskCard key={task.id} task={task} index={index} />
-          ))
+          <div className={`transition-all duration-200 ${isActive ? 'scale-[0.98]' : ''}`}>
+            {sortedTasks.map((task, index) => (
+              <DraggableTaskCard key={task.id} task={task} index={index} />
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -340,20 +314,19 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
 
   const [hiddenColumns, setHiddenColumns] = useState<Set<TaskStatus>>(new Set());
 
-  // Filter tasks based on current filters
   const filteredTasks = tasks.filter((task) => {
     if (filters.search && !task.title.toLowerCase().includes(filters.search.toLowerCase()))
       return false;
     if (
       filters.assigneeIds.length > 0 &&
-      (!task.assigneeIds || !filters.assigneeIds.includes(task.assignee.name as any))
+      (!task.assigneeIds || !task.assigneeIds.some((id) => filters.assigneeIds.includes(id as any)))
     )
       return false;
     if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) return false;
     if (filters.types.length > 0 && !filters.types.includes(task.type)) return false;
     if (
       filters.labelIds.length > 0 &&
-      !task.labelIds.some((l) => filters.labelIds.includes(task.label.color as any))
+      (!task.labelIds || !task.labelIds.some((l) => filters.labelIds.includes(l as any)))
     )
       return false;
     return true;
@@ -363,43 +336,58 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
     (col) => columns.includes(col.id) && !hiddenColumns.has(col.id)
   );
 
-  const handleAddTask = (status: TaskStatus) => {
-    setCreateTaskInitialStatus(status);
-    setIsCreateTaskModalOpen(true);
-  };
+  const handleAddTask = useCallback(
+    (status: TaskStatus) => {
+      setCreateTaskInitialStatus(status);
+      setIsCreateTaskModalOpen(true);
+    },
+    [setCreateTaskInitialStatus, setIsCreateTaskModalOpen]
+  );
 
-  const handleHideColumn = (status: TaskStatus) => {
+  const handleHideColumn = useCallback((status: TaskStatus) => {
     setHiddenColumns((prev) => new Set([...prev, status]));
-  };
+  }, []);
 
-  const handleClearColumn = (status: TaskStatus) => {
-    const columnTasks = filteredTasks.filter((task) => task.status === status);
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${columnTasks.length} tasks from "${status}"?`
-      )
-    ) {
-      columnTasks.forEach((task) => deleteTask(task.id));
-    }
-  };
+  const handleClearColumn = useCallback(
+    (status: TaskStatus) => {
+      const columnTasks = filteredTasks.filter((task) => task.status === status);
+      if (
+        window.confirm(
+          `Are you sure you want to delete ${columnTasks.length} task${columnTasks.length !== 1 ? 's' : ''} from "${status}"?`
+        )
+      ) {
+        columnTasks.forEach((task) => deleteTask(task.id));
+      }
+    },
+    [filteredTasks, deleteTask]
+  );
 
-  const handleShowAllColumns = () => {
+  const handleShowAllColumns = useCallback(() => {
     setHiddenColumns(new Set());
-  };
+  }, []);
+
+  // Optimized move task handler
+  const handleMoveTask = useCallback(
+    (taskId: string, toStatus: TaskStatus, toIndex: number) => {
+      moveTask(taskId, toStatus, toIndex);
+    },
+    [moveTask]
+  );
 
   return (
     <div className="flex flex-col h-full">
       {/* Hidden columns indicator */}
       {hiddenColumns.size > 0 && (
-        <div className="flex items-center gap-2 mb-4 px-2">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {hiddenColumns.size} column(s) hidden
+        <div className="flex items-center gap-3 mb-4 px-2 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg">
+          <EyeOff className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+            {hiddenColumns.size} column{hiddenColumns.size !== 1 ? 's' : ''} hidden
           </span>
           <button
             onClick={handleShowAllColumns}
-            className="text-sm text-brand-500 hover:text-brand-600 font-medium"
+            className="ml-auto text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
           >
-            Show all
+            Show All
           </button>
         </div>
       )}
@@ -417,7 +405,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
               name={column.name}
               color={column.color}
               tasks={columnTasks}
-              moveTask={moveTask}
+              moveTask={handleMoveTask}
               onAddTask={handleAddTask}
               onHideColumn={handleHideColumn}
               onClearColumn={handleClearColumn}

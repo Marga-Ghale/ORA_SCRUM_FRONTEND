@@ -3,147 +3,283 @@ layer(base);
 
 @import 'tailwindcss';
 
-/* Custom DatePicker Styles */
-.react-datepicker {
-  font-family: inherit !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 1rem !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-  overflow: hidden;
+/* Custom Scrollbar Styles - Add this to your global CSS */
+
+/* Webkit Browsers (Chrome, Safari, Edge) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.dark .react-datepicker {
-  background-color: #1f2937 !important;
-  border-color: #374151 !important;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.react-datepicker__header {
-  background: linear-gradient(to right, #6366f1, #8b5cf6) !important;
-  border-bottom: none !important;
-  padding: 1rem !important;
-  border-radius: 0 !important;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  transition: background 0.2s ease;
 }
 
-.react-datepicker__current-month {
-  color: white !important;
-  font-weight: 600 !important;
-  font-size: 1rem !important;
-  margin-bottom: 0.5rem !important;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
-.react-datepicker__day-names {
-  margin-top: 0.5rem !important;
+/* Dark mode */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #374151;
 }
 
-.react-datepicker__day-name {
-  color: rgba(255, 255, 255, 0.8) !important;
-  font-weight: 500 !important;
-  font-size: 0.75rem !important;
-  width: 2.5rem !important;
-  line-height: 2.5rem !important;
-  margin: 0 !important;
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
 }
 
-.react-datepicker__month {
-  margin: 0.5rem !important;
-  padding: 0.5rem !important;
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
-.react-datepicker__day {
-  width: 2.5rem !important;
-  line-height: 2.5rem !important;
-  margin: 0.125rem !important;
-  border-radius: 0.5rem !important;
-  color: #374151 !important;
-  font-weight: 500 !important;
-  transition: all 0.15s ease !important;
+.dark .custom-scrollbar {
+  scrollbar-color: #374151 transparent;
 }
 
-.dark .react-datepicker__day {
-  color: #d1d5db !important;
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-.react-datepicker__day:hover {
-  background-color: #eef2ff !important;
-  color: #6366f1 !important;
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.dark .react-datepicker__day:hover {
-  background-color: rgba(99, 102, 241, 0.2) !important;
-  color: #a5b4fc !important;
+/* Smooth scrolling */
+.custom-scrollbar {
+  scroll-behavior: smooth;
 }
 
-.react-datepicker__day--selected,
-.react-datepicker__day--keyboard-selected {
-  background: linear-gradient(to right, #6366f1, #8b5cf6) !important;
-  color: white !important;
-  font-weight: 600 !important;
+/* Animation classes for components */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.react-datepicker__day--selected:hover,
-.react-datepicker__day--keyboard-selected:hover {
-  background: linear-gradient(to right, #4f46e5, #7c3aed) !important;
-  color: white !important;
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-.react-datepicker__day--today {
-  background-color: #f3f4f6 !important;
-  font-weight: 700 !important;
-  position: relative;
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.dark .react-datepicker__day--today {
-  background-color: #374151 !important;
+@keyframes zoom-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-.react-datepicker__day--today::after {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  background-color: #6366f1;
-  border-radius: 50%;
+.animate-in {
+  animation-fill-mode: both;
 }
 
-.react-datepicker__day--disabled {
-  color: #d1d5db !important;
-  cursor: not-allowed !important;
+.fade-in {
+  animation: fade-in 0.2s ease-out;
 }
 
-.dark .react-datepicker__day--disabled {
-  color: #4b5563 !important;
+.slide-in-from-top-2 {
+  animation: slide-in-from-top 0.2s ease-out;
 }
 
-.react-datepicker__day--outside-month {
-  color: #9ca3af !important;
+.slide-in-from-right-2 {
+  animation: slide-in-from-right 0.2s ease-out;
 }
 
-.dark .react-datepicker__day--outside-month {
-  color: #6b7280 !important;
+.zoom-in-95 {
+  animation: zoom-in 0.2s ease-out;
 }
 
-.react-datepicker__navigation {
-  top: 1rem !important;
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.react-datepicker__navigation-icon::before {
-  border-color: white !important;
-  border-width: 2px 2px 0 0 !important;
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
-.react-datepicker__navigation:hover *::before {
-  border-color: rgba(255, 255, 255, 0.8) !important;
+/* Pulse animation */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-.react-datepicker__triangle {
-  display: none !important;
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.react-datepicker-popper {
-  z-index: 9999999 !important;
+/* Glassmorphism effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dark .glass-effect {
+  background: rgba(17, 24, 39, 0.8);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark .card-hover:hover {
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Button press effect */
+.btn-press:active {
+  transform: scale(0.98);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Professional shadows */
+.shadow-theme-xs {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.shadow-theme-sm {
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-theme-md {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-theme-lg {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-theme-xl {
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode shadows */
+.dark .shadow-theme-xs {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .shadow-theme-sm {
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.4),
+    0 1px 2px -1px rgba(0, 0, 0, 0.3);
+}
+
+.dark .shadow-theme-md {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.4),
+    0 2px 4px -2px rgba(0, 0, 0, 0.3);
+}
+
+.dark .shadow-theme-lg {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.4),
+    0 4px 6px -4px rgba(0, 0, 0, 0.3);
+}
+
+.dark .shadow-theme-xl {
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.4),
+    0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}
+
+/* Improved focus styles */
+.focus-ring:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #667eea;
+  ring-offset: 2px;
+}
+
+/* Transition utilities */
+.transition-base {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Responsive utilities for better mobile experience */
+@media (max-width: 640px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
 }
 
 /* Animation for modal */

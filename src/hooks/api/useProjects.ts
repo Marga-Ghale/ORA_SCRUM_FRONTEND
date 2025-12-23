@@ -51,18 +51,13 @@ export interface ProjectResponse {
 
 const projectApi = {
   listBySpace: (spaceId: string) => apiClient.get<ProjectResponse[]>(`/spaces/${spaceId}/projects`),
-
   listByFolder: (folderId: string) =>
     apiClient.get<ProjectResponse[]>(`/folders/${folderId}/projects`),
-
   getById: (id: string) => apiClient.get<ProjectResponse>(`/projects/${id}`),
-
   create: (spaceId: string, data: CreateProjectRequest) =>
     apiClient.post<ProjectResponse>(`/spaces/${spaceId}/projects`, data),
-
   update: (id: string, data: UpdateProjectRequest) =>
     apiClient.put<ProjectResponse>(`/projects/${id}`, data),
-
   delete: (id: string) => apiClient.delete(`/projects/${id}`),
 };
 
@@ -110,6 +105,8 @@ export const useCreateProject = () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.projects.byFolder(data.folderId) });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      // ✅ INVALIDATE ACCESSIBLE PROJECTS
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
     },
   });
 };
@@ -127,6 +124,8 @@ export const useUpdateProject = () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.projects.byFolder(data.folderId) });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      // ✅ INVALIDATE ACCESSIBLE PROJECTS
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
     },
   });
 };
@@ -139,6 +138,8 @@ export const useDeleteProject = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       queryClient.removeQueries({ queryKey: queryKeys.projects.detail(id) });
+      // ✅ INVALIDATE ACCESSIBLE PROJECTS
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
     },
   });
 };
