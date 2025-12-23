@@ -6,6 +6,7 @@ import { Task, TaskStatus, STATUS_COLUMNS } from '../../types/project';
 import TaskCard from './TaskCard';
 import { MoreVertical, Plus, TrendingUp, Calendar, EyeOff, Trash2 } from 'lucide-react';
 import { useProjectContext } from '../../context/ProjectContext';
+import CreateTaskModal from './CreateTaskModal';
 
 const ItemTypes = {
   TASK: 'task',
@@ -413,6 +414,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
           );
         })}
       </div>
+      <CreateTaskModal />
     </div>
   );
 };
