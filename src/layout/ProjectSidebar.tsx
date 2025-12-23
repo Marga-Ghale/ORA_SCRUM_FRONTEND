@@ -1,4 +1,4 @@
-// src/components/ProjectSidebar.tsx - FIXED VERSION
+// src/components/ProjectSidebar.tsx - COMPLETE STATE MANAGEMENT FIX
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
@@ -40,16 +40,26 @@ import {
 } from '../hooks/api/useAccessibleEntities';
 import { SpaceItem } from '../components/projectSidebarCompponent/SpaceComponent';
 
-// ✅ FIXED: Import accessible entities hooks
+// ============================================================================
+// LOCALSTORAGE KEYS
+// ============================================================================
+const STORAGE_KEYS = {
+  WORKSPACE: 'selectedWorkspaceId',
+  SPACE: 'selectedSpaceId',
+  PROJECT: 'selectedProjectId',
+  FOLDER: 'selectedFolderId',
+} as const;
 
 const ProjectSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const {
     currentWorkspace,
     currentSpace,
+    currentFolder,
     setCurrentWorkspace,
     setCurrentSpace,
     setCurrentProject,
+    setCurrentFolder,
     setIsCreateSpaceModalOpen,
     setIsCreateProjectModalOpen,
     isInitializing,
@@ -59,7 +69,9 @@ const ProjectSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ✅ FIXED: Use accessible entities instead of direct membership
+  // ============================================================================
+  // DATA FETCHING
+  // ============================================================================
   const { data: workspaces, isLoading: workspacesLoading } = useAccessibleWorkspaces({
     enabled: !!user,
   });
@@ -69,23 +81,20 @@ const ProjectSidebar: React.FC = () => {
   const { data: allProjects, isLoading: projectsLoading } = useAccessibleProjects({
     enabled: !!user,
   });
-
   const { data: allFolders, isLoading: foldersLoading } = useAccessibleFolders({
     enabled: !!user,
   });
 
-  // Fetch notification count
   const { data: notificationData } = useNotificationCount({ enabled: !!user });
-
-  // Fetch chat unread counts
   const { data: chatUnreadData } = useUnreadCounts({ enabled: !!user });
 
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
   const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set());
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [hoveredSpace, setHoveredSpace] = useState<string | null>(null);
   const [IsCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
-
-  // Member management modal state
   const [memberModal, setMemberModal] = useState<{
     isOpen: boolean;
     entityType: 'workspace' | 'space' | 'folder' | 'project';
@@ -95,7 +104,9 @@ const ProjectSidebar: React.FC = () => {
 
   const showFull = isExpanded || isHovered || isMobileOpen;
 
-  // ✅ FIXED: Filter spaces and projects for current workspace
+  // ============================================================================
+  // MEMOIZED DATA FILTERS
+  // ============================================================================
   const spacesForCurrentWorkspace = useMemo(() => {
     if (!currentWorkspace || !allSpaces) return [];
     return allSpaces.filter((space) => space.workspaceId === currentWorkspace.id);
@@ -153,12 +164,15 @@ const ProjectSidebar: React.FC = () => {
     );
   }, [allProjects]);
 
-  // Auto-select first workspace if none selected
+  // ============================================================================
+  // STATE PERSISTENCE - RESTORE ON MOUNT
+  // ============================================================================
+
+  // 1. WORKSPACE RESTORATION
   useEffect(() => {
     if (!workspaces || workspaces.length === 0) return;
 
-    // Try to restore from localStorage
-    const savedWorkspaceId = localStorage.getItem('selectedWorkspaceId');
+    const savedWorkspaceId = localStorage.getItem(STORAGE_KEYS.WORKSPACE);
 
     if (savedWorkspaceId) {
       const savedWorkspace = workspaces.find((w) => w.id === savedWorkspaceId);
@@ -171,16 +185,98 @@ const ProjectSidebar: React.FC = () => {
     // Only auto-select if no workspace is selected AND none was saved
     if (!currentWorkspace && !savedWorkspaceId) {
       setCurrentWorkspace(workspaces[0] as any);
-      localStorage.setItem('selectedWorkspaceId', workspaces[0].id);
+      localStorage.setItem(STORAGE_KEYS.WORKSPACE, workspaces[0].id);
     }
   }, [workspaces, currentWorkspace, setCurrentWorkspace]);
 
-  // Auto-expand current space
+  // 2. SPACE RESTORATION
+  useEffect(() => {
+    if (!allSpaces || allSpaces.length === 0 || !currentWorkspace) return;
+
+    const savedSpaceId = localStorage.getItem(STORAGE_KEYS.SPACE);
+
+    if (savedSpaceId && !currentSpace) {
+      const savedSpace = allSpaces.find(
+        (s) => s.id === savedSpaceId && s.workspaceId === currentWorkspace.id
+      );
+      if (savedSpace) {
+        setCurrentSpace(savedSpace as any);
+      }
+    }
+  }, [allSpaces, currentSpace, currentWorkspace, setCurrentSpace]);
+
+  // 3. FOLDER RESTORATION
+  useEffect(() => {
+    if (!allFolders || allFolders.length === 0 || !currentSpace) return;
+
+    const savedFolderId = localStorage.getItem(STORAGE_KEYS.FOLDER);
+
+    if (savedFolderId && !currentFolder && setCurrentFolder) {
+      const savedFolder = allFolders.find(
+        (f) => f.id === savedFolderId && f.spaceId === currentSpace.id
+      );
+      if (savedFolder) {
+        setCurrentFolder(savedFolder as any);
+      }
+    }
+  }, [allFolders, currentFolder, currentSpace, setCurrentFolder]);
+
+  // 4. PROJECT RESTORATION
+  useEffect(() => {
+    if (!allProjects || allProjects.length === 0) return;
+
+    const savedProjectId = localStorage.getItem(STORAGE_KEYS.PROJECT);
+
+    if (savedProjectId) {
+      const savedProject = allProjects.find((p) => p.id === savedProjectId);
+      if (savedProject) {
+        setCurrentProject(savedProject as any);
+      }
+    }
+  }, [allProjects, setCurrentProject]);
+
+  // ============================================================================
+  // AUTO-EXPAND CURRENT SPACE
+  // ============================================================================
   useEffect(() => {
     if (currentSpace) {
       setExpandedSpaces((prev) => new Set([...prev, currentSpace.id]));
     }
   }, [currentSpace]);
+
+  // ============================================================================
+  // HANDLER FUNCTIONS WITH PERSISTENCE
+  // ============================================================================
+
+  const handleWorkspaceChange = (workspace: any) => {
+    setCurrentWorkspace(workspace);
+    localStorage.setItem(STORAGE_KEYS.WORKSPACE, workspace.id);
+
+    // Clear child selections
+    localStorage.removeItem(STORAGE_KEYS.SPACE);
+    localStorage.removeItem(STORAGE_KEYS.FOLDER);
+    localStorage.removeItem(STORAGE_KEYS.PROJECT);
+  };
+
+  const handleSpaceChange = (space: any) => {
+    setCurrentSpace(space);
+    localStorage.setItem(STORAGE_KEYS.SPACE, space.id);
+
+    // Clear child selections
+    localStorage.removeItem(STORAGE_KEYS.FOLDER);
+  };
+
+  const handleFolderChange = (folder: any) => {
+    if (setCurrentFolder) {
+      setCurrentFolder(folder);
+      localStorage.setItem(STORAGE_KEYS.FOLDER, folder.id);
+    }
+  };
+
+  const handleProjectChange = (project: any) => {
+    setCurrentProject(project);
+    localStorage.setItem(STORAGE_KEYS.PROJECT, project.id);
+  };
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -189,18 +285,6 @@ const ProjectSidebar: React.FC = () => {
 
   const isProjectActive = (projectId: string) =>
     location.pathname.includes(`/project/${projectId}`);
-
-  useEffect(() => {
-    console.log('Workspaces:', workspaces);
-  }, [workspaces]);
-
-  useEffect(() => {
-    console.log('Spaces:', allSpaces);
-  }, [allSpaces]);
-
-  useEffect(() => {
-    console.log('Projects:', allProjects);
-  }, [allProjects]);
 
   const totalChatUnread = chatUnreadData
     ? Object.values(chatUnreadData).reduce((sum, count) => sum + count, 0)
@@ -231,6 +315,12 @@ const ProjectSidebar: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // Clear all selections on logout
+    localStorage.removeItem(STORAGE_KEYS.WORKSPACE);
+    localStorage.removeItem(STORAGE_KEYS.SPACE);
+    localStorage.removeItem(STORAGE_KEYS.FOLDER);
+    localStorage.removeItem(STORAGE_KEYS.PROJECT);
+
     logout();
     navigate('/signin');
   };
@@ -245,7 +335,9 @@ const ProjectSidebar: React.FC = () => {
     setMemberModal({ isOpen: true, entityType, entityId, entityName });
   };
 
-  // Loading state
+  // ============================================================================
+  // LOADING STATE
+  // ============================================================================
   if (isInitializing || workspacesLoading) {
     return (
       <aside
@@ -266,6 +358,9 @@ const ProjectSidebar: React.FC = () => {
     );
   }
 
+  // ============================================================================
+  // RENDER
+  // ============================================================================
   return (
     <>
       {/* Mobile overlay */}
@@ -285,10 +380,7 @@ const ProjectSidebar: React.FC = () => {
         {/* Workspace Selector */}
         <WorkspaceSelector
           currentWorkspace={currentWorkspace}
-          onWorkspaceChange={(workspace) => {
-            setCurrentWorkspace(workspace);
-            localStorage.setItem('selectedWorkspaceId', workspace.id);
-          }}
+          onWorkspaceChange={handleWorkspaceChange}
           onCreateNew={() => setIsCreateWorkspaceModalOpen(true)}
           showFull={showFull}
         />
@@ -351,40 +443,32 @@ const ProjectSidebar: React.FC = () => {
               badge: totalChatUnread > 0 ? totalChatUnread : undefined,
             },
             { icon: CheckSquare, label: 'My Tasks', path: '/my-tasks' },
-
-            // ✅ MEMBER MANAGEMENT (BUTTON, NOT LINK)
             {
               icon: PersonStandingIcon,
               label: 'Member Management',
               onClick: () => {
                 if (!currentWorkspace) return;
-
-                // Set context (optional, for state management)
                 setManagementEntity({
                   entityType: 'workspace',
                   entityId: currentWorkspace.id,
                   entityName: currentWorkspace.name,
                 });
-
-                // ✅ FIXED: Navigate with URL parameters
                 navigate(`/member-management/workspace/${currentWorkspace.id}`);
               },
             },
-
             { icon: FileText, label: 'Docs', path: '/docs' },
             { icon: BarChart3, label: 'Dashboards', path: '/dashboards' },
           ].map((item) => {
             const Icon = item.icon;
 
-            // ✅ BUTTON ITEM
             if ('onClick' in item) {
               return (
                 <button
                   key={item.label}
                   onClick={item.onClick}
                   className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5
-            text-[#9ca3af] hover:bg-[#25282c] hover:text-white
-            ${!showFull ? 'justify-center px-2' : ''}`}
+                    text-[#9ca3af] hover:bg-[#25282c] hover:text-white
+                    ${!showFull ? 'justify-center px-2' : ''}`}
                   title={!showFull ? item.label : undefined}
                 >
                   <Icon className="w-[18px] h-[18px]" />
@@ -393,16 +477,14 @@ const ProjectSidebar: React.FC = () => {
               );
             }
 
-            // ✅ LINK ITEM
             const active = isActive(item.path);
-
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5
-          ${active ? 'bg-[#7c3aed]/20 text-[#a78bfa]' : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}
-          ${!showFull ? 'justify-center px-2' : ''}`}
+                  ${active ? 'bg-[#7c3aed]/20 text-[#a78bfa]' : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}
+                  ${!showFull ? 'justify-center px-2' : ''}`}
                 title={!showFull ? item.label : undefined}
               >
                 <Icon className="w-[18px] h-[18px]" />
@@ -473,8 +555,9 @@ const ProjectSidebar: React.FC = () => {
                         onToggle={toggleSpace}
                         onMouseEnter={() => setHoveredSpace(space.id)}
                         onMouseLeave={() => setHoveredSpace(null)}
-                        setCurrentSpace={setCurrentSpace}
-                        setCurrentProject={setCurrentProject}
+                        setCurrentSpace={handleSpaceChange}
+                        setCurrentProject={handleProjectChange}
+                        setCurrentFolder={handleFolderChange}
                         setIsCreateProjectModalOpen={setIsCreateProjectModalOpen}
                         isProjectActive={isProjectActive}
                         onManageMembers={openMemberModal}
