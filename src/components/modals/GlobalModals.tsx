@@ -1,8 +1,6 @@
 import React from 'react';
 import CreateSpaceModal from './CreateSpaceModal';
 import CreateProjectModal from './CreateProjectModal';
-import CreateSprintModal from './CreateSprintModal';
-import InviteMemberModal from './InviteMemberModalv1';
 import CreateTaskModal from '../tasks/CreateTaskModal';
 import { useProjectContext } from '../../context/ProjectContext';
 
@@ -12,9 +10,6 @@ const GlobalModals: React.FC = () => {
     setIsCreateSpaceModalOpen,
     isCreateProjectModalOpen,
     setIsCreateProjectModalOpen,
-    isCreateTaskModalOpen,
-    setIsCreateTaskModalOpen,
-    createTaskInitialStatus,
   } = useProjectContext();
 
   return (
@@ -27,6 +22,8 @@ const GlobalModals: React.FC = () => {
         isOpen={isCreateProjectModalOpen}
         onClose={() => setIsCreateProjectModalOpen(false)}
       />
+
+      <CreateTaskModal />
     </>
   );
 };
