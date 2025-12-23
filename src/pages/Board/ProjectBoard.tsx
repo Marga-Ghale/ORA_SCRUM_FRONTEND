@@ -203,12 +203,15 @@ const ProjectBoard: React.FC = () => {
                       <button
                         key={user.id}
                         onClick={() => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            assigneeIds: prev.assigneeIds.includes(user.id as any)
-                              ? prev.assigneeIds.filter((id) => id !== (user.id as any))
-                              : [...prev.assigneeIds, user.id],
-                          }));
+                          setFilters(
+                            (prev) =>
+                              ({
+                                ...prev,
+                                assigneeIds: prev.assigneeIds.includes(user.id as any)
+                                  ? prev.assigneeIds.filter((id) => id !== (user.id as any))
+                                  : [...prev.assigneeIds, user.id],
+                              }) as any
+                          );
                         }}
                         className={`w-8 h-8 rounded-full overflow-hidden transition-all ${
                           filters.assigneeIds.includes(user.id as any)
@@ -347,12 +350,15 @@ const ProjectBoard: React.FC = () => {
                     <button
                       key={user.id}
                       onClick={() => {
-                        setFilters((prev) => ({
-                          ...prev,
-                          assigneeIds: prev.assigneeIds.includes(user.id as any)
-                            ? prev.assigneeIds.filter((id) => id !== (user.id as any))
-                            : [...prev.assigneeIds, user.id],
-                        }));
+                        setFilters(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              assigneeIds: prev.assigneeIds.includes(user.id as any)
+                                ? prev.assigneeIds.filter((id) => id !== (user.id as any))
+                                : [...prev.assigneeIds, user.id],
+                            }) as any
+                        );
                       }}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                         filters.assigneeIds.includes(user.id as any)
@@ -405,7 +411,7 @@ const ProjectBoard: React.FC = () => {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden px-6 py-4">
+        <div className="flex-1 overflow-hidden py-5">
           {tasksLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
