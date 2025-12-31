@@ -470,7 +470,7 @@ const HomeDashboard: React.FC = () => {
                       workspace={workspace}
                       spacesCount={workspace.id === firstWorkspaceId ? spaces?.length || 0 : 0}
                       projectsCount={workspace.id === firstWorkspaceId ? projects?.length || 0 : 0}
-                      onClick={() => navigate(`/workspace/${workspace.id}`)}
+                      // onClick={() => navigate(`/workspace/${workspace.id}`)}
                     />
                   ))}
                 </div>

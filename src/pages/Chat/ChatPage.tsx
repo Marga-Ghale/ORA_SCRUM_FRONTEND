@@ -77,7 +77,13 @@ const ChatPage: React.FC = () => {
 
   const handleSendMessage = (content: string, parentId?: string) => {
     if (!channelId) return;
-    sendMessage.mutate({ channelId, content, parentId });
+    sendMessage.mutate({
+      channelId,
+      content,
+      parentId,
+      currentUserId: '',
+      currentUser: undefined,
+    });
   };
 
   const handleEditMessage = (messageId: string, content: string) => {

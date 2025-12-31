@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/hooks/api/useChat.ts
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -323,27 +324,30 @@ export function useSendMessage() {
       content,
       messageType = 'text',
       parentId,
+      currentUserId,
+      currentUser,
     }: {
       channelId: string;
       content: string;
       messageType?: string;
       parentId?: string;
+      currentUserId: string; // ADD THIS
+      currentUser: ChatUser; // ADD THIS
     }) =>
       apiClient.post<ChatMessage>(`/chat/channels/${channelId}/messages`, {
         content,
         messageType,
         parentId,
       }),
+    // Line 281 - useSendMessage
     onMutate: async ({ channelId, content, parentId }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.chat.messages(channelId) });
+      // Use the SAME key format as useMessages
+      const queryKey = queryKeys.chat.messages(channelId, 50, 0); // MATCH THE FORMAT
 
-      // Snapshot the previous value
-      const previousMessages = queryClient.getQueryData<ChatMessage[]>(
-        queryKeys.chat.messages(channelId)
-      );
+      await queryClient.cancelQueries({ queryKey });
 
-      // Optimistically add the new message
+      const previousMessages = queryClient.getQueryData<ChatMessage[]>(queryKey);
+
       const optimisticMessage: ChatMessage = {
         id: `temp-${Date.now()}`,
         channelId,
@@ -357,37 +361,20 @@ export function useSendMessage() {
         reactions: [],
       };
 
-      queryClient.setQueryData<ChatMessage[]>(queryKeys.chat.messages(channelId), (old) =>
+      queryClient.setQueryData<ChatMessage[]>(queryKey, (old) =>
         old ? [optimisticMessage, ...old] : [optimisticMessage]
       );
 
-      return { previousMessages, channelId };
+      return { previousMessages, channelId, queryKey }; // Return queryKey
     },
     onError: (_err, { channelId }, context) => {
-      // Rollback on error
       if (context?.previousMessages) {
-        queryClient.setQueryData(queryKeys.chat.messages(channelId), context.previousMessages);
+        queryClient.setQueryData(context.queryKey, context.previousMessages); // Use saved queryKey
       }
       toast.error('Failed to send message');
     },
-    onSuccess: (newMessage, { channelId, parentId }) => {
-      // Update the optimistic message with the real one
-      queryClient.setQueryData<ChatMessage[]>(
-        queryKeys.chat.messages(channelId),
-        (old) => old?.map((msg) => (msg.id.startsWith('temp-') ? newMessage : msg)) || [newMessage]
-      );
-
-      // If it's a thread reply, invalidate thread
-      if (parentId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.chat.thread(parentId) });
-      }
-
-      // Update channels to show latest message
-      queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
-    },
     onSettled: (_, __, { channelId }) => {
-      // Always refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(channelId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(channelId, 50, 0) }); // MATCH
     },
   });
 }
