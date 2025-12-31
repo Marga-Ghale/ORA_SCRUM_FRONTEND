@@ -23,6 +23,7 @@ import {
   Notification,
   useDeleteAllNotifications,
   groupNotificationsByDate,
+  getNotificationLink,
 } from '../../hooks/api/useNotifications';
 import PageMeta from '../../components/common/PageMeta';
 
@@ -66,21 +67,29 @@ const NotificationPage: React.FC = () => {
     [filteredNotifications]
   );
 
+  // const handleNotificationClick = (notification: Notification) => {
+  //   // Mark as read
+  //   if (!notification.read) {
+  //     markRead.mutate(notification.id);
+  //   }
+
+  //   // Navigate based on action
+  //   const { data } = notification;
+  //   if (data?.action === 'view_task' && data.taskId) {
+  //     navigate(`/task/${data.taskId}`);
+  //   } else if (data?.action === 'view_project' && data.projectId) {
+  //     navigate(`/project/${data.projectId}/board`);
+  //   } else if (data?.action === 'view_chat' && data.channelId) {
+  //     navigate(`/chat/${data.channelId}`);
+  //   }
+  // };
+
   const handleNotificationClick = (notification: Notification) => {
-    // Mark as read
     if (!notification.read) {
       markRead.mutate(notification.id);
     }
 
-    // Navigate based on action
-    const { data } = notification;
-    if (data?.action === 'view_task' && data.taskId) {
-      navigate(`/task/${data.taskId}`);
-    } else if (data?.action === 'view_project' && data.projectId) {
-      navigate(`/project/${data.projectId}/board`);
-    } else if (data?.action === 'view_chat' && data.channelId) {
-      navigate(`/chat/${data.channelId}`);
-    }
+    navigate(getNotificationLink(notification));
   };
 
   const formatTime = (dateString: string) => {
