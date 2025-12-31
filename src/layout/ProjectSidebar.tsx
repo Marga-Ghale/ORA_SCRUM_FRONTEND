@@ -10,8 +10,6 @@ import {
   Settings,
   Users,
   LogOut,
-  BarChart3,
-  FileText,
   Zap,
   MessageSquare,
   BellElectric,
