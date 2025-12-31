@@ -14,16 +14,19 @@ import {
   ArrowRight,
   Target,
   Award,
+  PieChart,
+  ActivityIcon,
 } from 'lucide-react';
 import { useMyMemberships, useEffectiveMembers } from '../../hooks/api/useMembers';
-import { useWorkspaces } from '../../hooks/api/useWorkspaces';
-import { useSpacesByWorkspace } from '../../hooks/api/useSpaces';
-import { useProjectsBySpace } from '../../hooks/api/useProjects';
+import { useAllAccessibleEntities } from '../../hooks/api/useAccessibleEntities';
 
 import PageMeta from '../../components/common/PageMeta';
-import { useAutoStatus } from '../../hooks/api/useStatus';
 import { useCurrentUser } from '../../hooks/useUsers';
-import { useMyFolders } from '../../hooks/api/useFolder';
+import { TaskActivityChart } from '../../components/charts/TaskActivityChart';
+import { TaskStatusChart } from '../../components/charts/TaskStatusChart';
+import { TaskPriorityChart } from '../../components/charts/TaskPriorityChart';
+import { ActivityFeed } from '../../components/common/ActivityFeed';
+import { useMyTasks } from '../../hooks/api/useTasks';
 
 // Status Badge Component
 const StatusBadge: React.FC<{ status?: string }> = ({ status = 'offline' }) => {
@@ -221,7 +224,7 @@ interface ProjectCardProps {
   project: {
     id: string;
     name: string;
-    key: string;
+    key?: string;
     description?: string;
   };
   onClick?: () => void;
@@ -235,7 +238,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
     >
       <div className="flex items-center gap-3 mb-2">
         <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-          <span className="text-xs font-bold text-white">{project.key}</span>
+          <span className="text-xs font-bold text-white">{project.key || 'P'}</span>
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-gray-900 dark:text-white truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
@@ -253,34 +256,22 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
 const HomeDashboard: React.FC = () => {
   const navigate = useNavigate();
 
-  // // Auto-manage user status
-  // useAutoStatus();
-
   // Fetch current user
   const { data: currentUser, isLoading: userLoading } = useCurrentUser();
+
+  // ✅ USE ACCESSIBLE ENTITIES HOOK
+  const {
+    workspaces,
+    spaces,
+    folders,
+    projects,
+    isLoading: entitiesLoading,
+  } = useAllAccessibleEntities();
 
   // Fetch user memberships
   const { data: memberships, isLoading: membershipsLoading } = useMyMemberships();
 
-  // Fetch workspaces
-  const { data: workspaces, isLoading: workspacesLoading } = useWorkspaces();
-
-  // Fetch spaces for the first workspace
-  const firstWorkspaceId = workspaces?.[0]?.id;
-  const { data: spaces } = useSpacesByWorkspace(firstWorkspaceId || '', {
-    enabled: !!firstWorkspaceId,
-  });
-
-  // Fetch folders
-  const { data: folders } = useMyFolders();
-
-  // Fetch projects for the first space
-  const firstSpaceId = spaces?.[0]?.id;
-  const { data: projects, isLoading: projectsLoading } = useProjectsBySpace(firstSpaceId || '', {
-    enabled: !!firstSpaceId,
-  });
-
-  // Fetch team members for first project
+  // Fetch team members for first accessible project
   const firstProjectId = projects?.[0]?.id;
   const { data: projectMembers, isLoading: membersLoading } = useEffectiveMembers(
     'project',
@@ -288,23 +279,36 @@ const HomeDashboard: React.FC = () => {
     { enabled: !!firstProjectId }
   );
 
-  // Calculate comprehensive stats
+  // ✅ CALCULATE STATS FROM ACCESSIBLE ENTITIES
   const stats = useMemo(() => {
-    const totalSpaces = spaces?.length || 0;
-    const totalProjects = projects?.length || 0;
     const onlineMembers = projectMembers?.filter((m) => m.user?.status === 'online').length || 0;
     const totalMembers = projectMembers?.length || 0;
 
     return {
-      workspaces: workspaces?.length || 0,
-      spaces: totalSpaces,
-      folders: folders?.length || 0,
-      projects: totalProjects,
+      workspaces: workspaces.length,
+      spaces: spaces.length,
+      folders: folders.length,
+      projects: projects.length,
       memberships: memberships?.length || 0,
       onlineMembers,
       totalMembers,
     };
   }, [workspaces, spaces, folders, projects, memberships, projectMembers]);
+
+  // ✅ CALCULATE SPACES AND PROJECTS PER WORKSPACE
+  const workspaceStats = useMemo(() => {
+    return workspaces.map((workspace) => {
+      const workspaceSpaces = spaces.filter((s) => s.workspaceId === workspace.id);
+      const spaceIds = workspaceSpaces.map((s) => s.id);
+      const workspaceProjects = projects.filter((p) => spaceIds.includes(p.spaceId));
+
+      return {
+        workspaceId: workspace.id,
+        spacesCount: workspaceSpaces.length,
+        projectsCount: workspaceProjects.length,
+      };
+    });
+  }, [workspaces, spaces, projects]);
 
   // Calculate status distribution
   const statusDistribution = useMemo(() => {
@@ -320,7 +324,9 @@ const HomeDashboard: React.FC = () => {
     );
   }, [projectMembers]);
 
-  const isLoading = userLoading || workspacesLoading || membershipsLoading;
+  const isLoading = userLoading || entitiesLoading || membershipsLoading;
+
+  const { data: myTasks } = useMyTasks();
 
   return (
     <>
@@ -357,11 +363,10 @@ const HomeDashboard: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatsCard
-              title="Workspaces"
+              title="Accessible Workspaces"
               value={stats.workspaces}
               icon={Briefcase}
               trend="Your workspaces"
-              onClick={() => navigate('/workspaces')}
             />
             <StatsCard
               title="Active Projects"
@@ -369,7 +374,6 @@ const HomeDashboard: React.FC = () => {
               icon={FolderKanban}
               trend="In progress"
               trendUp={stats.projects > 0}
-              onClick={() => navigate('/projects')}
             />
             <StatsCard
               title="Team Members"
@@ -446,7 +450,7 @@ const HomeDashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Your Workspaces
+                    Your Accessible Workspaces
                   </h2>
                 </div>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -454,7 +458,7 @@ const HomeDashboard: React.FC = () => {
                 </span>
               </div>
 
-              {workspacesLoading ? (
+              {entitiesLoading ? (
                 <div className="space-y-3">
                   {[...Array(2)].map((_, i) => (
                     <div key={i} className="animate-pulse">
@@ -462,22 +466,26 @@ const HomeDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              ) : workspaces && workspaces.length > 0 ? (
+              ) : workspaces.length > 0 ? (
                 <div className="space-y-3">
-                  {workspaces.slice(0, 3).map((workspace) => (
-                    <WorkspaceCard
-                      key={workspace.id}
-                      workspace={workspace}
-                      spacesCount={workspace.id === firstWorkspaceId ? spaces?.length || 0 : 0}
-                      projectsCount={workspace.id === firstWorkspaceId ? projects?.length || 0 : 0}
-                      // onClick={() => navigate(`/workspace/${workspace.id}`)}
-                    />
-                  ))}
+                  {workspaces.slice(0, 3).map((workspace) => {
+                    const wStats = workspaceStats.find((s) => s.workspaceId === workspace.id);
+                    return (
+                      <WorkspaceCard
+                        key={workspace.id}
+                        workspace={workspace}
+                        spacesCount={wStats?.spacesCount || 0}
+                        projectsCount={wStats?.projectsCount || 0}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <Briefcase className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400 mb-4">No workspaces yet</p>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">
+                    No accessible workspaces yet
+                  </p>
                   <button className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
                     Create Workspace
                   </button>
@@ -491,7 +499,7 @@ const HomeDashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Target className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Active Projects
+                    Your Accessible Projects
                   </h2>
                 </div>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -499,7 +507,7 @@ const HomeDashboard: React.FC = () => {
                 </span>
               </div>
 
-              {projectsLoading ? (
+              {entitiesLoading ? (
                 <div className="space-y-3">
                   {[...Array(4)].map((_, i) => (
                     <div key={i} className="animate-pulse">
@@ -507,20 +515,20 @@ const HomeDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              ) : projects && projects.length > 0 ? (
+              ) : projects.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {projects.slice(0, 6).map((project) => (
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      onClick={() => navigate(`/project/${project.id}`)}
+                      onClick={() => navigate(`/project/${project.id}/board`)}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <Target className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">No projects yet</p>
+                  <p className="text-gray-500 dark:text-gray-400">No accessible projects yet</p>
                 </div>
               )}
             </div>
@@ -555,7 +563,7 @@ const HomeDashboard: React.FC = () => {
                 <div className="text-center py-12">
                   <Users className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Create a project to see team members
+                    You need access to a project to see team members
                   </p>
                 </div>
               ) : !projectMembers || projectMembers.length === 0 ? (
@@ -623,59 +631,84 @@ const HomeDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Activity Timeline */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Recent Activity
-              </h2>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {membershipsLoading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-start gap-3 animate-pulse">
-                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0" />
-                    <div className="flex-1">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                    </div>
-                  </div>
-                ))}
+        {/* Analytics Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Task Activity Trends */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Task Activity (Last 7 Days)
+                </h3>
               </div>
-            ) : memberships && memberships.length > 0 ? (
-              memberships.slice(0, 6).map((membership, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <Activity className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      Joined as{' '}
-                      <span className="font-medium capitalize text-brand-600 dark:text-brand-400">
-                        {membership.role}
-                      </span>
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 capitalize">
-                      {membership.entityType} · Entity ID: {membership.entityId.substring(0, 8)}...
-                    </p>
-                  </div>
-                  <span className="text-xs text-gray-400 flex-shrink-0">Recent</span>
-                </div>
-              ))
+            </div>
+            {myTasks && myTasks.length > 0 ? (
+              <TaskActivityChart tasks={myTasks} />
             ) : (
-              <div className="text-center py-12">
-                <Activity className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">No recent activity</p>
+              <div className="flex items-center justify-center h-[280px] text-gray-400">
+                No task data available
               </div>
             )}
+          </div>
+
+          {/* Task Status Distribution */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Status Distribution
+                </h3>
+              </div>
+            </div>
+            {myTasks && myTasks.length > 0 ? (
+              <TaskStatusChart tasks={myTasks} />
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-400">
+                No task data available
+              </div>
+            )}
+          </div>
+
+          {/* Priority Distribution */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Priority Breakdown
+                </h3>
+              </div>
+            </div>
+            {myTasks && myTasks.length > 0 ? (
+              <TaskPriorityChart tasks={myTasks} />
+            ) : (
+              <div className="flex items-center justify-center h-[280px] text-gray-400">
+                No task data available
+              </div>
+            )}
+          </div>
+
+          {/* Recent Activity Feed */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <ActivityIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Recent Activity
+                </h3>
+              </div>
+              <button
+                onClick={() => navigate('/notifications')}
+                className="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+              >
+                View All
+              </button>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+              <ActivityFeed />
+            </div>
           </div>
         </div>
       </div>
