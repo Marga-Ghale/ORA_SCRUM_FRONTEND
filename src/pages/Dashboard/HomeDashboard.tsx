@@ -7,7 +7,6 @@ import {
   Activity,
   TrendingUp,
   BarChart3,
-  Calendar,
   Folder,
   Layers,
   Briefcase,

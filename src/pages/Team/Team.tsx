@@ -1,6 +1,6 @@
 // ✅ COMPLETE REPLACEMENT: src/pages/Team/Team.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   UserPlus,
   Search,
@@ -145,13 +145,24 @@ const Team: React.FC = () => {
   } = useAllAccessibleEntities();
 
   // ✅ Entity selection state
-  const [selectedEntityType, setSelectedEntityType] = useState<EntityType>('workspace');
-  const [selectedEntityId, setSelectedEntityId] = useState<string>('');
-  const [selectedEntityName, setSelectedEntityName] = useState<string>('');
+
   const [showEntityDropdown, setShowEntityDropdown] = useState(false);
 
+  const [selectedEntityType, setSelectedEntityType] = useState<EntityType>(() => {
+    const saved = localStorage.getItem('team-selected-entity-type');
+    return (saved as EntityType) || 'workspace';
+  });
+
+  const [selectedEntityId, setSelectedEntityId] = useState<string>(() => {
+    return localStorage.getItem('team-selected-entity-id') || '';
+  });
+
+  const [selectedEntityName, setSelectedEntityName] = useState<string>(() => {
+    return localStorage.getItem('team-selected-entity-name') || '';
+  });
+
   // ✅ Set default entity from context
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentProject?.id && selectedEntityId === '') {
       setSelectedEntityType('project');
       setSelectedEntityId(currentProject.id);
@@ -276,6 +287,11 @@ const Team: React.FC = () => {
     setSelectedEntityId(option.id);
     setSelectedEntityName(option.name);
     setShowEntityDropdown(false);
+
+    // ✅ Save to localStorage
+    localStorage.setItem('team-selected-entity-type', option.type);
+    localStorage.setItem('team-selected-entity-id', option.id);
+    localStorage.setItem('team-selected-entity-name', option.name);
   };
 
   if (entitiesLoading || membersLoading) {
