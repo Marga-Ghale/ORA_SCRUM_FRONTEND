@@ -54,6 +54,8 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
       channelId: channel.id,
       content: replyContent.trim(),
       parentId: parentMessage.id,
+      currentUserId: '',
+      currentUser: undefined,
     });
 
     setReplyContent('');
@@ -71,7 +73,7 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
 
   if (!isOpen || !parentMessage) return null;
 
-  const parentUserName = parentMessage.user?.name || 'Unknown';
+  const parentUserName = parentMessage.user?.Name || 'Unknown';
 
   return (
     <div className="w-[400px] h-full flex flex-col bg-white dark:bg-[#1a1d21]  border-gray-200 dark:border-[#2a2e33]">
