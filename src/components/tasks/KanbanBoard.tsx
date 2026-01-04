@@ -1,4 +1,4 @@
-// src/components/tasks/KanbanBoard.tsx - Fully Responsive Version
+// src/components/tasks/KanbanBoard.tsx - Professional ClickUp-style Kanban
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -6,6 +6,12 @@ import { Task, TaskStatus, STATUS_COLUMNS } from '../../types/project';
 import TaskCard from './TaskCard';
 import { MoreVertical, Plus, TrendingUp, Calendar, EyeOff, Trash2 } from 'lucide-react';
 import { useProjectContext } from '../../context/ProjectContext';
+import toast from 'react-hot-toast';
+import { ConfirmModal } from '../modals/ConfirmModal';
+
+const getErrorMessage = (error: any): string => {
+  return error?.message || 'An unexpected error occurred';
+};
 
 const ItemTypes = {
   TASK: 'task',
@@ -14,10 +20,13 @@ const ItemTypes = {
 interface DraggableTaskCardProps {
   task: Task;
   index: number;
+  moveCard: (dragIndex: number, hoverIndex: number) => void;
 }
 
-const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index }) => {
-  const [{ isDragging }, drag, preview] = useDrag({
+const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index, moveCard }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.TASK,
     item: () => ({ id: task.id, status: task.status, index }),
     collect: (monitor) => ({
@@ -25,18 +34,66 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index }) =>
     }),
   });
 
+  const [{ isOver }, drop] = useDrop({
+    accept: ItemTypes.TASK,
+    hover: (item: { id: string; status: TaskStatus; index: number }, monitor) => {
+      if (!ref.current) return;
+
+      const dragIndex = item.index;
+      const hoverIndex = index;
+
+      // Don't replace items with themselves
+      if (dragIndex === hoverIndex && item.status === task.status) return;
+
+      // Determine rectangle on screen
+      const hoverBoundingRect = ref.current?.getBoundingClientRect();
+
+      // Get vertical middle
+      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+
+      // Determine mouse position
+      const clientOffset = monitor.getClientOffset();
+
+      // Get pixels to the top
+      const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
+
+      // Only perform the move when the mouse has crossed half of the items height
+      // When dragging downwards, only move when the cursor is below 50%
+      // When dragging upwards, only move when the cursor is above 50%
+
+      // Dragging downwards
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+
+      // Dragging upwards
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+      // Time to actually perform the action
+      if (item.status === task.status) {
+        moveCard(dragIndex, hoverIndex);
+        item.index = hoverIndex;
+      }
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+    }),
+  });
+
+  drag(drop(ref));
+
   return (
     <div
-      ref={preview as unknown as React.Ref<HTMLDivElement>}
-      className="mb-2 sm:mb-2.5 transition-transform"
+      ref={ref}
+      className={`
+        mb-2.5 transition-all duration-200 ease-out
+        ${isDragging ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}
+        ${isOver ? 'mt-4' : ''}
+      `}
     >
       <div
-        ref={drag as unknown as React.Ref<HTMLDivElement>}
-        style={{
-          opacity: isDragging ? 0.4 : 1,
-          transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-          transition: 'transform 0.15s ease, opacity 0.15s ease',
-        }}
+        className={`
+          transition-all duration-200
+          ${isDragging ? 'rotate-3 scale-105 cursor-grabbing' : 'rotate-0 scale-100 cursor-grab'}
+        `}
       >
         <TaskCard task={task as any} isDragging={isDragging} />
       </div>
@@ -141,6 +198,7 @@ interface KanbanColumnProps {
   name: string;
   color: string;
   tasks: Task[];
+  allTasks: Task[];
   moveTask: (taskId: string, toStatus: TaskStatus, toIndex: number) => void;
   onAddTask: (status: TaskStatus) => void;
   onHideColumn: (status: TaskStatus) => void;
@@ -152,6 +210,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   name,
   color,
   tasks,
+  allTasks,
   moveTask,
   onAddTask,
   onHideColumn,
@@ -159,21 +218,44 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sortedTasks, setSortedTasks] = useState<Task[]>(tasks);
-  const [isDropping, setIsDropping] = useState(false);
 
   useEffect(() => {
     setSortedTasks(tasks);
   }, [tasks]);
 
+  const moveCard = useCallback((dragIndex: number, hoverIndex: number) => {
+    setSortedTasks((prevTasks) => {
+      const updatedTasks = [...prevTasks];
+      const [removed] = updatedTasks.splice(dragIndex, 1);
+      updatedTasks.splice(hoverIndex, 0, removed);
+      return updatedTasks;
+    });
+  }, []);
+
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ItemTypes.TASK,
     drop: (item: { id: string; status: TaskStatus; index: number }, monitor) => {
-      if (!monitor.didDrop() && item.status !== status) {
-        setIsDropping(true);
-        // Immediately move task for instant feedback
-        moveTask(item.id, status, sortedTasks.length);
-        // Reset dropping state after animation
-        setTimeout(() => setIsDropping(false), 300);
+      if (!monitor.didDrop()) {
+        // Find the task being moved
+        const movedTask = allTasks.find((t) => t.id === item.id);
+
+        // Calculate the drop index
+        const dropIndex = sortedTasks.findIndex((t) => t.id === item.id);
+        const finalIndex = dropIndex !== -1 ? dropIndex : sortedTasks.length;
+
+        // If it's a parent task, move it and all its subtasks
+        if (movedTask && !movedTask.parentTaskId) {
+          moveTask(item.id, status, finalIndex);
+
+          // Find and move all subtasks
+          const subtasks = allTasks.filter((t) => t.parentTaskId === item.id);
+          subtasks.forEach((subtask, idx) => {
+            moveTask(subtask.id, status, finalIndex + idx + 1);
+          });
+        } else {
+          // Just move the subtask
+          moveTask(item.id, status, finalIndex);
+        }
       }
     },
     collect: (monitor) => ({
@@ -208,36 +290,34 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   };
 
   return (
-    <div className="flex flex-col min-w-[260px] max-w-[260px] sm:min-w-[300px] sm:max-w-[300px] lg:min-w-[320px] lg:max-w-[320px] bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-      {/* Column Header - Compact on mobile */}
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+    <div className="flex flex-col min-w-[280px] max-w-[280px] sm:min-w-[320px] sm:max-w-[320px] lg:min-w-[340px] lg:max-w-[340px] bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200 hover:shadow-md">
+      {/* Column Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div
-            className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm flex-shrink-0"
+            className="w-2.5 h-2.5 rounded-full shadow-sm flex-shrink-0 animate-pulse"
             style={{ backgroundColor: color }}
           />
-          <h3 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm truncate">
-            {name}
-          </h3>
-          <span className="flex items-center justify-center min-w-[20px] sm:min-w-[22px] h-4 sm:h-5 px-1 sm:px-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-400 flex-shrink-0">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{name}</h3>
+          <span className="flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-400 flex-shrink-0">
             {sortedTasks.length}
           </span>
         </div>
-        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => onAddTask(status)}
-            className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all"
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all hover:scale-110"
             title="Add task"
           >
-            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Plus className="w-4 h-4" />
           </button>
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all"
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all hover:scale-110"
               title="More options"
             >
-              <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <MoreVertical className="w-4 h-4" />
             </button>
             <ColumnMenu
               isOpen={menuOpen}
@@ -253,53 +333,52 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </div>
       </div>
 
-      {/* Column Content - Adjusted height for mobile */}
+      {/* Column Content */}
       <div
         ref={drop as unknown as React.Ref<HTMLDivElement>}
         className={`
-          flex-1 p-2 sm:p-3 overflow-y-auto custom-scrollbar transition-all duration-200
-          ${isActive ? 'bg-brand-50/50 dark:bg-brand-950/30 ring-2 ring-brand-500 ring-inset' : ''}
-          ${isDropping ? 'bg-brand-50 dark:bg-brand-950/50' : ''}
+          flex-1 p-3 overflow-y-auto custom-scrollbar transition-all duration-300
+          ${isActive ? 'bg-brand-50/30 dark:bg-brand-950/20 ring-2 ring-brand-400 ring-inset' : ''}
         `}
         style={{
-          maxHeight: 'calc(100vh - 260px)',
-          minHeight: '150px',
+          maxHeight: 'calc(100vh - 280px)',
+          minHeight: '200px',
         }}
       >
         {sortedTasks.length === 0 ? (
           <div
             className={`
-              flex flex-col items-center justify-center h-24 sm:h-32 border-2 border-dashed rounded-xl
-              transition-all duration-200 cursor-pointer group
+              flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-xl
+              transition-all duration-300 cursor-pointer group
               ${
                 isActive
-                  ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-950/40 scale-[1.02]'
+                  ? 'border-brand-400 bg-brand-50/50 dark:bg-brand-950/30 scale-105'
                   : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
               }
             `}
             onClick={() => onAddTask(status)}
           >
             <Plus
-              className={`w-5 h-5 sm:w-6 sm:h-6 mb-1 sm:mb-2 transition-all ${
+              className={`w-6 h-6 mb-2 transition-all ${
                 isActive
-                  ? 'text-brand-500 scale-110'
-                  : 'text-gray-400 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-500'
+                  ? 'text-brand-500 scale-125'
+                  : 'text-gray-400 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-500 group-hover:scale-110'
               }`}
             />
             <span
-              className={`text-xs sm:text-sm font-medium transition-colors ${
+              className={`text-sm font-medium transition-colors ${
                 isActive
                   ? 'text-brand-600 dark:text-brand-400'
                   : 'text-gray-400 dark:text-gray-600 group-hover:text-gray-600 dark:group-hover:text-gray-400'
               }`}
             >
-              {isActive ? 'Drop task here' : 'Add a task'}
+              {isActive ? 'Drop here' : 'Add task'}
             </span>
           </div>
         ) : (
-          <div className={`transition-all duration-200 ${isActive ? 'scale-[0.98]' : ''}`}>
+          <div className="space-y-0">
             {sortedTasks.map((task, index) => (
-              <DraggableTaskCard key={task.id} task={task} index={index} />
+              <DraggableTaskCard key={task.id} task={task} index={index} moveCard={moveCard} />
             ))}
           </div>
         )}
@@ -321,6 +400,10 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
     useProjectContext();
 
   const [hiddenColumns, setHiddenColumns] = useState<Set<TaskStatus>>(new Set());
+  const [showClearColumnModal, setShowClearColumnModal] = useState(false);
+  const [columnToClear, setColumnToClear] = useState<{ status: TaskStatus; count: number } | null>(
+    null
+  );
 
   const filteredTasks = tasks.filter((task) => {
     if (filters.search && !task.title.toLowerCase().includes(filters.search.toLowerCase()))
@@ -331,7 +414,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
     )
       return false;
     if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) return false;
-    if (filters.types.length > 0 && !filters.types.includes(task.type)) return false;
+    if (filters.types.length > 0 && !filters.types.includes(task.type!)) return false;
     if (
       filters.labelIds.length > 0 &&
       (!task.labelIds || !task.labelIds.some((l) => filters.labelIds.includes(l as any)))
@@ -359,22 +442,31 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
   const handleClearColumn = useCallback(
     (status: TaskStatus) => {
       const columnTasks = filteredTasks.filter((task) => task.status === status);
-      if (
-        window.confirm(
-          `Are you sure you want to delete ${columnTasks.length} task${columnTasks.length !== 1 ? 's' : ''} from "${status}"?`
-        )
-      ) {
-        columnTasks.forEach((task) => deleteTask(task.id));
-      }
+      setColumnToClear({ status, count: columnTasks.length });
+      setShowClearColumnModal(true);
     },
-    [filteredTasks, deleteTask]
+    [filteredTasks]
   );
+
+  const confirmClearColumn = async () => {
+    if (!columnToClear) return;
+
+    const columnTasks = filteredTasks.filter((task) => task.status === columnToClear.status);
+
+    try {
+      await Promise.all(columnTasks.map((task) => deleteTask(task.id)));
+      setShowClearColumnModal(false);
+      setColumnToClear(null);
+      toast.success(`Cleared ${columnToClear.count} task${columnToClear.count !== 1 ? 's' : ''}`);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
 
   const handleShowAllColumns = useCallback(() => {
     setHiddenColumns(new Set());
   }, []);
 
-  // Optimized move task handler
   const handleMoveTask = useCallback(
     (taskId: string, toStatus: TaskStatus, toIndex: number) => {
       moveTask(taskId, toStatus, toIndex);
@@ -384,24 +476,24 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Hidden columns indicator - Compact on mobile */}
+      {/* Hidden columns indicator */}
       {hiddenColumns.size > 0 && (
-        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 px-2 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg">
-          <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-          <span className="text-xs sm:text-sm font-medium text-amber-700 dark:text-amber-300">
+        <div className="flex items-center gap-3 mb-4 px-3 py-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl animate-in fade-in slide-in-from-top duration-200">
+          <EyeOff className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
             {hiddenColumns.size} column{hiddenColumns.size !== 1 ? 's' : ''} hidden
           </span>
           <button
             onClick={handleShowAllColumns}
-            className="ml-auto text-xs sm:text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors flex-shrink-0"
+            className="ml-auto text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors flex-shrink-0"
           >
             Show All
           </button>
         </div>
       )}
 
-      {/* Kanban columns - Horizontal scroll with better mobile UX */}
-      <div className="flex gap-2.5 sm:gap-3 lg:gap-4 overflow-x-auto pb-3 sm:pb-4 custom-scrollbar snap-x snap-mandatory">
+      {/* Kanban columns */}
+      <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
         {visibleColumns.map((column) => {
           const columnTasks = filteredTasks
             .filter((task) => task.status === column.id)
@@ -414,6 +506,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
                 name={column.name}
                 color={column.color}
                 tasks={columnTasks}
+                allTasks={filteredTasks}
                 moveTask={handleMoveTask}
                 onAddTask={handleAddTask}
                 onHideColumn={handleHideColumn}
@@ -423,6 +516,19 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
           );
         })}
       </div>
+
+      <ConfirmModal
+        isOpen={showClearColumnModal}
+        onConfirm={confirmClearColumn}
+        onCancel={() => {
+          setShowClearColumnModal(false);
+          setColumnToClear(null);
+        }}
+        title="Clear Column"
+        message={`Are you sure you want to delete ${columnToClear?.count || 0} task${columnToClear?.count !== 1 ? 's' : ''} from this column? This action cannot be undone.`}
+        confirmText="Clear Column"
+        variant="danger"
+      />
     </div>
   );
 };
