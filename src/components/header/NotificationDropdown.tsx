@@ -19,6 +19,9 @@ import {
   NotificationType,
 } from '../../hooks/api/useNotifications';
 import { useWebSocket } from '../../hooks/api/useWebsocket';
+import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../lib/api';
+import { ConfirmModal } from '../modals/ConfirmModal';
 
 // ============================================
 // Notification Item Component
@@ -40,6 +43,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   const config = getNotificationConfig(notification.type);
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true });
   const [showActions, setShowActions] = useState(false);
+
+  const [showClearAllModal, setShowClearAllModal] = useState(false);
 
   return (
     <div
@@ -308,6 +313,7 @@ export default function NotificationDropdown() {
   const deleteNotification = useDeleteNotification();
   const { playSound } = useNotificationSound();
   const { showNotification: showBrowserNotification, hasPermission } = useBrowserNotifications();
+  const [showClearAllModal, setShowClearAllModal] = useState(false);
 
   // WebSocket for real-time updates
   const { isConnected } = useWebSocket({
@@ -387,20 +393,43 @@ export default function NotificationDropdown() {
   };
 
   const handleMarkAsRead = async (id: string) => {
-    await markAsRead.mutateAsync(id);
+    try {
+      await markAsRead.mutateAsync(id);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteNotification.mutateAsync(id);
+    try {
+      await deleteNotification.mutateAsync(id);
+      toast.success('Notification deleted');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   };
 
   const handleMarkAllRead = async () => {
-    await markAllAsRead.mutateAsync();
+    try {
+      await markAllAsRead.mutateAsync();
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   };
 
+  // Update handleClearAll
   const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to clear all notifications?')) {
+    setShowClearAllModal(true);
+  };
+
+  const confirmClearAll = async () => {
+    try {
       await clearAll.mutateAsync();
+      setShowClearAllModal(false);
+      toast.success('All notifications cleared');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -553,6 +582,15 @@ export default function NotificationDropdown() {
             >
               Clear All
             </button>
+            <ConfirmModal
+              isOpen={showClearAllModal}
+              onConfirm={confirmClearAll}
+              onCancel={() => setShowClearAllModal(false)}
+              title="Clear All Notifications"
+              message="Are you sure you want to clear all notifications? This action cannot be undone."
+              confirmText="Clear All"
+              variant="danger"
+            />
           </div>
         )}
       </Dropdown>

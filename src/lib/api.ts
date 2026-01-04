@@ -238,3 +238,7 @@ export const api = apiClient.getAxiosInstance();
 export type { ApiError };
 
 export default apiClient;
+
+export const getErrorMessage = (error: any): string => {
+  return error?.message || 'An unexpected error occurred';
+};
