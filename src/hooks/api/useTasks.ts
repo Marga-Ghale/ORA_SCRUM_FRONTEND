@@ -358,6 +358,9 @@ const taskApi = {
 
   bulkMoveToSprint: (data: BulkMoveToSprintRequest) =>
     apiClient.post<{ message: string }>('/tasks/bulk/move-sprint', data),
+
+  updateTaskPositionAndStatus: (id: string, status: string, position: number) =>
+    apiClient.patch<TaskResponse>(`/tasks/${id}/move`, { status, position }),
 };
 
 // ============================================
@@ -901,6 +904,21 @@ export const useBulkMoveToSprint = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
+    },
+  });
+};
+
+export const useUpdateTaskPositionAndStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status, position }: { id: string; status: string; position: number }) =>
+      taskApi.updateTaskPositionAndStatus(id, status, position),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(data.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.byProject(data.projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
 };
