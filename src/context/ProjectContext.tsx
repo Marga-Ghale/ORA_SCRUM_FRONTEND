@@ -32,6 +32,7 @@ import {
 import { User } from '../hooks/useUsers';
 import { Label } from '../hooks/api/useLabels';
 import { dateToISO } from '../utils/dateUtils';
+import { useWebSocket } from '../hooks/api/useWebsocket';
 
 // ============================================
 // Context Type
@@ -301,6 +302,38 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const updateTaskMutation = useUpdateTask();
   const updateTaskStatusMutation = useUpdateTaskStatus();
   const deleteTaskMutation = useDeleteTask();
+
+  const wsHookResult = useWebSocket({
+    onMessage: (message) => {
+      console.log('📨 WebSocket:', message.type, message.payload);
+
+      // ✅ When task is updated, force immediate refetch
+      if (message.type === 'task_updated' && currentProject?.id) {
+        const data = message.payload || message.data || {};
+
+        // ✅ FIXED: Check data.task.projectId (not data.projectId)
+        if (data.task?.projectId === currentProject.id) {
+          console.log('🔄 Task updated in current project - refetching');
+          refetchTasks();
+        }
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (currentProject?.id && wsHookResult.joinRoom) {
+      const room = `project:${currentProject.id}`;
+      wsHookResult.joinRoom(room);
+      console.log(`[ProjectContext] Joined room: ${room}`);
+
+      return () => {
+        if (wsHookResult.leaveRoom) {
+          wsHookResult.leaveRoom(room);
+          console.log(`[ProjectContext] Left room: ${room}`);
+        }
+      };
+    }
+  }, [currentProject?.id, wsHookResult.joinRoom, wsHookResult.leaveRoom]);
 
   // ============================================
   // Computed Values
