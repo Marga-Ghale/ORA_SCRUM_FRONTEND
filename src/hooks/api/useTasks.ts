@@ -359,10 +359,18 @@ const taskApi = {
   bulkMoveToSprint: (data: BulkMoveToSprintRequest) =>
     apiClient.post<{ message: string }>('/tasks/bulk/move-sprint', data),
 
-  updateTaskPositionAndStatus: (id: string, status: string, position: number) =>
-    apiClient.patch<TaskResponse>(`/tasks/${id}/move`, { status, position }),
-};
+  updateTaskPositionAndStatus: (id: string, status: string, position: number) => {
+    console.log('🚀 updateTaskPositionAndStatus called with:', { id, status, position });
+    console.log('🚀 typeof position:', typeof position);
+    console.log('🚀 position value:', position);
 
+    const payload = { status, position };
+    console.log('📦 Payload object:', payload);
+    console.log('📦 Payload JSON:', JSON.stringify(payload));
+
+    return apiClient.patch<TaskResponse>(`/tasks/${id}/move`, payload);
+  },
+};
 // ============================================
 // Query Hooks
 // ============================================
@@ -506,20 +514,6 @@ export const useCreateTask = () => {
           }),
         });
       }
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
-    },
-  });
-};
-
-export const useUpdateTask = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateTaskRequest }) => taskApi.update(id, data),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(data.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.byProject(data.projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
@@ -908,12 +902,49 @@ export const useBulkMoveToSprint = () => {
   });
 };
 
+// ✅ FIXED: In your useTasks.ts file
+
 export const useUpdateTaskPositionAndStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status, position }: { id: string; status: string; position: number }) =>
-      taskApi.updateTaskPositionAndStatus(id, status, position),
+    mutationFn: ({ id, status, position }: { id: string; status: string; position: number }) => {
+      console.log('🎯 Mutation called with:', { id, status, position });
+      console.log('🎯 typeof position:', typeof position);
+
+      // Ensure position is a number
+      const numericPosition = Number(position);
+      if (isNaN(numericPosition)) {
+        console.error('❌ position is NaN!', position);
+        throw new Error('Invalid position: not a number');
+      }
+
+      console.log('✅ Calling taskApi with:', { id, status, position: numericPosition });
+      return taskApi.updateTaskPositionAndStatus(id, status, numericPosition);
+    },
+    onSuccess: (data) => {
+      console.log('✅ Mutation success:', data);
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(data.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.byProject(data.projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+    onError: (error) => {
+      console.error('❌ Mutation error:', error);
+    },
+  });
+};
+
+// In UpdateTaskRequest interface - already has position, but make sure Update uses it
+export const useUpdateTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateTaskRequest & { position?: number } }) =>
+      // ✅ If position is provided, use the move endpoint
+      data.position !== undefined
+        ? taskApi.updateTaskPositionAndStatus(id, data.status || 'todo', data.position)
+        : taskApi.update(id, data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.byProject(data.projectId) });
