@@ -585,6 +585,60 @@ export const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
     (col) => columns.includes(col.id) && !hiddenColumns.has(col.id)
   );
 
+  // const handleTaskMove = useCallback(
+  //   async (
+  //     taskId: string,
+  //     fromStatus: TaskStatus,
+  //     toStatus: TaskStatus,
+  //     toIndex: number,
+  //     subtaskIds?: string[]
+  //   ) => {
+  //     console.log('🚀 handleTaskMove:', { taskId, fromStatus, toStatus, toIndex, subtaskIds });
+
+  //     setUpdatingColumns((prev) => new Set([...prev, toStatus, fromStatus]));
+
+  //     try {
+  //       // Move the main task
+  //       await updatePositionMutation.mutateAsync({
+  //         id: taskId,
+  //         status: toStatus,
+  //         position: toIndex,
+  //       });
+
+  //       // If moving to a different column and task has subtasks, move them too
+  //       if (fromStatus !== toStatus && subtaskIds && subtaskIds.length > 0) {
+  //         console.log('📦 Moving subtasks:', subtaskIds);
+
+  //         // Move each subtask right after the parent
+  //         for (let i = 0; i < subtaskIds.length; i++) {
+  //           await updatePositionMutation.mutateAsync({
+  //             id: subtaskIds[i],
+  //             status: toStatus,
+  //             position: toIndex + i + 1,
+  //           });
+  //         }
+  //       }
+
+  //       const statusName = STATUS_COLUMNS.find((c) => c.id === toStatus)?.name;
+  //       toast.success(`Moved to ${statusName}`, { duration: 2000 });
+
+  //       await refetchTasks();
+  //     } catch (error) {
+  //       console.error('❌ Move failed:', error);
+  //       toast.error(getErrorMessage(error));
+  //       await refetchTasks();
+  //     } finally {
+  //       setUpdatingColumns((prev) => {
+  //         const next = new Set(prev);
+  //         next.delete(toStatus);
+  //         next.delete(fromStatus);
+  //         return next;
+  //       });
+  //     }
+  //   },
+  //   [updatePositionMutation, refetchTasks]
+  // );
+
   const handleTaskMove = useCallback(
     async (
       taskId: string,
@@ -605,17 +659,27 @@ export const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
           position: toIndex,
         });
 
-        // If moving to a different column and task has subtasks, move them too
+        // If moving to a different column and task has subtasks, try to move them too
         if (fromStatus !== toStatus && subtaskIds && subtaskIds.length > 0) {
           console.log('📦 Moving subtasks:', subtaskIds);
 
-          // Move each subtask right after the parent
+          // Move each subtask right after the parent - silently ignore errors
           for (let i = 0; i < subtaskIds.length; i++) {
-            await updatePositionMutation.mutateAsync({
-              id: subtaskIds[i],
-              status: toStatus,
-              position: toIndex + i + 1,
-            });
+            try {
+              await updatePositionMutation.mutateAsync({
+                id: subtaskIds[i],
+                status: toStatus,
+                position: toIndex + i + 1,
+              });
+            } catch (subtaskError: any) {
+              // Silently ignore 404 errors for subtasks that don't exist in DB
+              if (subtaskError?.status === 404) {
+                console.log(`⏭️  Subtask ${subtaskIds[i]} not found in DB, skipping`);
+                continue;
+              }
+              // Log other errors but don't break the flow
+              console.warn(`⚠️  Failed to move subtask ${subtaskIds[i]}:`, subtaskError);
+            }
           }
         }
 
@@ -625,7 +689,11 @@ export const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
         await refetchTasks();
       } catch (error) {
         console.error('❌ Move failed:', error);
-        toast.error(getErrorMessage(error));
+
+        // Only show toast error if it's a real error (not 404 for subtasks)
+        const errorMessage = getErrorMessage(error);
+        toast.error(`Failed to move task: ${errorMessage}`);
+
         await refetchTasks();
       } finally {
         setUpdatingColumns((prev) => {
