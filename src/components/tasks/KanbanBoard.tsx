@@ -1,14 +1,13 @@
-// src/components/tasks/KanbanBoard.tsx - FINAL PRODUCTION VERSION
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Task, TaskStatus, STATUS_COLUMNS } from '../../types/project';
 import TaskCard from './TaskCard';
 import { MoreVertical, Plus, TrendingUp, Calendar, EyeOff, Trash2, Loader2 } from 'lucide-react';
 import { useProjectContext } from '../../context/ProjectContext';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../modals/ConfirmModal';
-import { useDeleteTask, useUpdateTask } from '../../hooks/api/useTasks';
+import { useDeleteTask, useUpdateTaskPositionAndStatus } from '../../hooks/api/useTasks';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
 const getErrorMessage = (error: any): string => {
   return error?.message || 'An unexpected error occurred';
@@ -23,15 +22,17 @@ interface DragItem {
   status: TaskStatus;
   index: number;
   fromColumn: TaskStatus;
+  originalIndex: number;
   type: string;
 }
 
-interface TaskWithLocalPosition extends Task {
-  localPosition: number;
+interface DropIndicatorState {
+  status: TaskStatus | null;
+  index: number;
 }
 
 interface DraggableTaskCardProps {
-  task: TaskWithLocalPosition;
+  task: Task;
   index: number;
   status: TaskStatus;
   onHover: (
@@ -42,17 +43,23 @@ interface DraggableTaskCardProps {
   ) => void;
 }
 
+// ============================================
+// DRAGGABLE TASK CARD
+// ============================================
+
 const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index, status, onHover }) => {
   const ref = useRef<HTMLDivElement>(null);
 
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.TASK,
     item: (): DragItem => {
+      console.log(`🎬 START DRAG: ${task.title} from ${status}[${index}]`);
       return {
         id: task.id,
-        status,
         index,
+        status,
         fromColumn: status,
+        originalIndex: index,
         type: ItemTypes.TASK,
       };
     },
@@ -72,22 +79,23 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index, stat
       const dragStatus = item.status;
       const hoverStatus = status;
 
-      const hoverBoundingRect = ref.current.getBoundingClientRect();
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
-
-      if (!clientOffset) return;
-
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
-
       if (dragStatus === hoverStatus) {
-        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
-        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+        if (dragIndex === hoverIndex) return;
+
+        const hoverBoundingRect = ref.current.getBoundingClientRect();
+        const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+        const clientOffset = monitor.getClientOffset();
+        if (!clientOffset) return;
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY * 0.6) return;
+        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY * 1.4) return;
       }
 
-      onHover(dragIndex, hoverIndex, dragStatus, hoverStatus);
       item.index = hoverIndex;
       item.status = hoverStatus;
+
+      onHover(dragIndex, hoverIndex, dragStatus, hoverStatus);
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
@@ -99,23 +107,24 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({ task, index, stat
   return (
     <div
       ref={ref}
-      className={`
-        transition-all duration-200 ease-out mb-2.5
-        ${isDragging ? 'opacity-0' : 'opacity-100'}
-      `}
+      className={`transition-all duration-150 ease-out ${
+        isDragging ? 'opacity-0 h-0 mb-0' : 'opacity-100 mb-2'
+      }`}
     >
       <div
-        className={`
-          transition-all duration-150
-          ${isDragging ? 'scale-105 rotate-1 cursor-grabbing' : 'scale-100 rotate-0 cursor-grab'}
-          ${isOver && !isDragging ? 'scale-[1.02]' : ''}
-        `}
+        className={`transition-all duration-100 ${
+          isDragging ? 'scale-105 rotate-1 cursor-grabbing' : 'scale-100 rotate-0 cursor-grab'
+        } ${isOver && !isDragging ? 'scale-[0.98]' : ''}`}
       >
         <TaskCard task={task as any} isDragging={isDragging} />
       </div>
     </div>
   );
 };
+
+// ============================================
+// COLUMN MENU
+// ============================================
 
 interface ColumnMenuProps {
   isOpen: boolean;
@@ -128,7 +137,7 @@ interface ColumnMenuProps {
   onSortByDueDate: () => void;
 }
 
-const ColumnMenu: React.FC<ColumnMenuProps> = ({
+export const ColumnMenu: React.FC<ColumnMenuProps> = ({
   isOpen,
   onClose,
   status,
@@ -146,6 +155,7 @@ const ColumnMenu: React.FC<ColumnMenuProps> = ({
         onClose();
       }
     };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
@@ -209,11 +219,15 @@ const ColumnMenu: React.FC<ColumnMenuProps> = ({
   );
 };
 
+// ============================================
+// KANBAN COLUMN
+// ============================================
+
 interface KanbanColumnProps {
   status: TaskStatus;
   name: string;
   color: string;
-  tasks: TaskWithLocalPosition[];
+  tasks: Task[];
   onTaskMove: (
     taskId: string,
     fromStatus: TaskStatus,
@@ -230,9 +244,10 @@ interface KanbanColumnProps {
     hoverStatus: TaskStatus
   ) => void;
   isUpdating: boolean;
+  dropIndicator: DropIndicatorState | null;
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({
+export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   status,
   name,
   color,
@@ -243,31 +258,38 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onClearColumn,
   onHover,
   isUpdating,
+  dropIndicator,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [localTasks, setLocalTasks] = useState<TaskWithLocalPosition[]>(tasks);
-
-  useEffect(() => {
-    setLocalTasks(tasks);
-  }, [tasks]);
 
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ItemTypes.TASK,
+    hover: (item: DragItem) => {
+      if (item.status !== status && tasks.length === 0) {
+        item.status = status;
+        item.index = 0;
+        onHover(-1, 0, item.fromColumn, status);
+      }
+    },
     drop: (item: DragItem, monitor) => {
-      if (monitor.didDrop()) return;
+      if (monitor.didDrop()) {
+        console.log('⏭️  Drop already handled by child');
+        return;
+      }
 
       const fromStatus = item.fromColumn;
       const toStatus = status;
-      const dropIndex = item.index;
+      const toIndex = item.index;
 
-      // ✅ CRITICAL FIX: Always call onTaskMove with correct parameters
-      console.log(`🎯 DROP: ${item.id} from ${fromStatus} to ${toStatus} at index ${dropIndex}`);
-      onTaskMove(item.id, fromStatus, toStatus, dropIndex);
-    },
-    hover: (item: DragItem) => {
-      if (item.status !== status && localTasks.length === 0) {
-        item.status = status;
-        item.index = 0;
+      console.log(`🎯 COLUMN DROP: ${item.id} from ${fromStatus}→${toStatus} at index ${toIndex}`);
+
+      const positionChanged = toIndex !== item.originalIndex;
+      const statusChanged = fromStatus !== toStatus;
+
+      if (positionChanged || statusChanged) {
+        onTaskMove(item.id, fromStatus, toStatus, toIndex);
+      } else {
+        console.log('⏭️  No change detected, skipping API call');
       }
     },
     collect: (monitor) => ({
@@ -277,6 +299,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   });
 
   const isActive = isOver && canDrop;
+  const showDropIndicator = dropIndicator?.status === status;
 
   const handleSortByPriority = () => {
     const priorityOrder: Record<string, number> = {
@@ -286,30 +309,28 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
       low: 3,
       none: 4,
     };
-    const sorted = [...localTasks].sort(
+    const sorted = [...tasks].sort(
       (a, b) => (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2)
     );
-
     sorted.forEach((task, index) => {
       onTaskMove(task.id, status, status, index);
     });
   };
 
   const handleSortByDueDate = () => {
-    const sorted = [...localTasks].sort((a, b) => {
+    const sorted = [...tasks].sort((a, b) => {
       if (!a.dueDate) return 1;
       if (!b.dueDate) return -1;
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
-
     sorted.forEach((task, index) => {
       onTaskMove(task.id, status, status, index);
     });
   };
 
   return (
-    <div className="flex flex-col min-w-[280px] max-w-[280px] sm:min-w-[320px] sm:max-w-[320px] lg:min-w-[340px] lg:max-w-[340px] bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200 hover:shadow-md">
-      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+    <div className="flex flex-col min-w-[260px] max-w-[260px] sm:min-w-[280px] sm:max-w-[280px] lg:min-w-[300px] lg:max-w-[300px] bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200 hover:shadow-md">
+      <div className="flex items-center justify-between p-3.5 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div
             className="w-2.5 h-2.5 rounded-full shadow-sm flex-shrink-0"
@@ -317,7 +338,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
           />
           <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{name}</h3>
           <span className="flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-400 flex-shrink-0">
-            {localTasks.length}
+            {tasks.length}
           </span>
           {isUpdating && (
             <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500 dark:text-blue-400 flex-shrink-0" />
@@ -343,7 +364,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               isOpen={menuOpen}
               onClose={() => setMenuOpen(false)}
               status={status}
-              tasksCount={localTasks.length}
+              tasksCount={tasks.length}
               onClearColumn={() => onClearColumn(status)}
               onHideColumn={() => onHideColumn(status)}
               onSortByPriority={handleSortByPriority}
@@ -352,40 +373,34 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
           </div>
         </div>
       </div>
-
       <div
         ref={drop as unknown as React.Ref<HTMLDivElement>}
-        className={`
-          flex-1 p-3 overflow-y-auto custom-scrollbar transition-all duration-200
-          ${isActive ? 'bg-brand-50/40 dark:bg-brand-950/30 ring-2 ring-brand-400/60 ring-inset' : ''}
-        `}
+        className={`flex-1 p-2.5 overflow-y-auto custom-scrollbar transition-all duration-150 ${
+          isActive ? 'bg-brand-50/40 dark:bg-brand-950/30 ring-2 ring-brand-400/60 ring-inset' : ''
+        }`}
         style={{
           maxHeight: 'calc(100vh - 280px)',
           minHeight: '200px',
         }}
       >
-        {localTasks.length === 0 ? (
+        {tasks.length === 0 ? (
           <div
-            className={`
-              flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-xl
-              transition-all duration-200 cursor-pointer group
-              ${
-                isActive
-                  ? 'border-brand-400 bg-brand-50/60 dark:bg-brand-950/40 scale-[1.02]'
-                  : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-              }
-            `}
+            className={`flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg transition-all duration-200 cursor-pointer group ${
+              isActive
+                ? 'border-brand-400 bg-brand-50/60 dark:bg-brand-950/40 scale-[1.02]'
+                : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+            }`}
             onClick={() => onAddTask(status)}
           >
             <Plus
-              className={`w-6 h-6 mb-2 transition-all ${
+              className={`w-5 h-5 mb-1.5 transition-all ${
                 isActive
                   ? 'text-brand-500 scale-125 animate-pulse'
                   : 'text-gray-400 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-500 group-hover:scale-110'
               }`}
             />
             <span
-              className={`text-sm font-medium transition-all ${
+              className={`text-xs font-medium transition-all ${
                 isActive
                   ? 'text-brand-600 dark:text-brand-400 font-semibold'
                   : 'text-gray-400 dark:text-gray-600 group-hover:text-gray-600 dark:group-hover:text-gray-400'
@@ -395,80 +410,70 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             </span>
           </div>
         ) : (
-          <>
-            {isActive && (
-              <div className="h-1 mb-2 bg-brand-400/60 dark:bg-brand-500/60 rounded-full animate-pulse" />
-            )}
+          <div className="space-y-0">
+            {tasks.map((task, index) => (
+              <React.Fragment key={task.id}>
+                {showDropIndicator && dropIndicator.index === index && (
+                  <div className="h-10 mb-2 border-2 border-dashed border-brand-400 dark:border-brand-500 bg-brand-50/50 dark:bg-brand-950/30 rounded-lg animate-pulse flex items-center justify-center">
+                    <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
+                      Drop here
+                    </span>
+                  </div>
+                )}
 
-            <div className="space-y-0">
-              {localTasks.map((task, index) => (
-                <DraggableTaskCard
-                  key={task.id}
-                  task={task}
-                  index={index}
-                  status={status}
-                  onHover={onHover}
-                />
-              ))}
-            </div>
+                <DraggableTaskCard task={task} index={index} status={status} onHover={onHover} />
+              </React.Fragment>
+            ))}
 
-            {isActive && (
-              <div className="h-1 mt-2 bg-brand-400/60 dark:bg-brand-500/60 rounded-full animate-pulse" />
+            {showDropIndicator && dropIndicator.index === tasks.length && (
+              <div className="h-10 mt-2 border-2 border-dashed border-brand-400 dark:border-brand-500 bg-brand-50/50 dark:bg-brand-950/30 rounded-lg animate-pulse flex items-center justify-center">
+                <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
+                  Drop here
+                </span>
+              </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
   );
 };
 
+// ============================================
+// MAIN KANBAN BOARD
+// ============================================
+
 interface KanbanBoardProps {
   tasks: Task[];
   columns?: TaskStatus[];
 }
 
-const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
+export const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
   tasks,
   columns = ['backlog', 'todo', 'in_progress', 'in_review', 'done'],
 }) => {
   const { filters, setIsCreateTaskModalOpen, setCreateTaskInitialStatus, refetchTasks } =
     useProjectContext();
-  const updateTaskMutation = useUpdateTask();
+  const updatePositionMutation = useUpdateTaskPositionAndStatus();
   const deleteTaskMutation = useDeleteTask();
 
   const [hiddenColumns, setHiddenColumns] = useState<Set<TaskStatus>>(new Set());
   const [showClearColumnModal, setShowClearColumnModal] = useState(false);
-  const [columnToClear, setColumnToClear] = useState<{ status: TaskStatus; count: number } | null>(
-    null
-  );
+  const [columnToClear, setColumnToClear] = useState<{
+    status: TaskStatus;
+    count: number;
+  } | null>(null);
 
-  // ✅ LOCAL POSITION STATE - Frontend only, never sent to backend
-  const [localPositions, setLocalPositions] = useState<
-    Record<string, { status: TaskStatus; position: number }>
-  >({});
   const [isUpdating, setIsUpdating] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
-  // ✅ Initialize local positions from tasks
-  useEffect(() => {
-    const positions: Record<string, { status: TaskStatus; position: number }> = {};
-    tasks.forEach((task, index) => {
-      if (!localPositions[task.id]) {
-        positions[task.id] = {
-          status: task.status,
-          position: index,
-        };
-      }
-    });
-    if (Object.keys(positions).length > 0) {
-      setLocalPositions((prev) => ({ ...prev, ...positions }));
-    }
-  }, [tasks.map((t) => t.id).join(',')]);
+  const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
+    status: null,
+    index: -1,
+  });
 
-  // ✅ Build tasksByColumn with local positions + subtasks follow parent
   const tasksByColumn = useMemo(() => {
     const filteredTasks = tasks.filter((task) => {
-      // Apply filters
       if (filters.search && !task.title.toLowerCase().includes(filters.search.toLowerCase()))
         return false;
       if (
@@ -488,7 +493,6 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
       return true;
     });
 
-    // ✅ Separate parent tasks and subtasks
     const parentTasks = filteredTasks.filter((t) => !t.parentTaskId);
     const subtasksMap = new Map<string, Task[]>();
 
@@ -501,7 +505,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
         subtasksMap.get(subtask.parentTaskId!)!.push(subtask);
       });
 
-    const grouped: Record<TaskStatus, TaskWithLocalPosition[]> = {
+    const grouped: Record<TaskStatus, Task[]> = {
       backlog: [],
       todo: [],
       in_progress: [],
@@ -510,163 +514,64 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
       cancelled: [],
     };
 
-    // ✅ Group parent tasks by their LOCAL position status
     parentTasks.forEach((task) => {
-      const localPos = localPositions[task.id];
-      const effectiveStatus = localPos?.status ?? task.status;
-      const localPosition = localPos?.position ?? 0;
-
-      if (grouped[effectiveStatus]) {
-        grouped[effectiveStatus].push({ ...task, localPosition });
-
-        // ✅ Add subtasks right after parent with same status
-        const taskSubtasks = subtasksMap.get(task.id) || [];
-        taskSubtasks.forEach((subtask, subIndex) => {
-          grouped[effectiveStatus].push({
-            ...subtask,
-            localPosition: localPosition + 0.1 + subIndex * 0.01,
-          });
-        });
-      }
+      grouped[task.status]?.push(task);
+      const subs = subtasksMap.get(task.id) || [];
+      subs.forEach((sub) => grouped[task.status]?.push(sub));
     });
 
-    // ✅ Sort by local position
     Object.keys(grouped).forEach((status) => {
-      grouped[status as TaskStatus].sort((a, b) => a.localPosition - b.localPosition);
+      grouped[status as TaskStatus].sort((a, b) => a.position - b.position);
     });
 
     return grouped;
-  }, [tasks, filters, localPositions]);
+  }, [tasks, filters]);
 
   const visibleColumns = STATUS_COLUMNS.filter(
     (col) => columns.includes(col.id) && !hiddenColumns.has(col.id)
   );
 
-  // ✅ Handle hover during drag (instant UI update for position preview)
   const handleHover = useCallback(
     (dragIndex: number, hoverIndex: number, dragStatus: TaskStatus, hoverStatus: TaskStatus) => {
-      setLocalPositions((prev) => {
-        const newPositions = { ...prev };
-        const draggedTask = tasksByColumn[dragStatus][dragIndex];
-
-        if (!draggedTask) return prev;
-
-        const draggedTaskId = draggedTask.id;
-
-        if (dragStatus === hoverStatus) {
-          // ✅ Reorder within same column - just local position update
-          const columnTasks = [...tasksByColumn[dragStatus]];
-          const positions = columnTasks.map((t, i) => {
-            if (t.id === draggedTaskId) return hoverIndex;
-            if (i >= Math.min(dragIndex, hoverIndex) && i <= Math.max(dragIndex, hoverIndex)) {
-              return dragIndex > hoverIndex ? i + 1 : i - 1;
-            }
-            return i;
-          });
-
-          columnTasks.forEach((task, i) => {
-            newPositions[task.id] = { status: dragStatus, position: positions[i] };
-          });
-        } else {
-          // ✅ Move to different column - update status in local state
-          newPositions[draggedTaskId] = { status: hoverStatus, position: hoverIndex };
-
-          // Update positions in target column
-          tasksByColumn[hoverStatus].forEach((task, i) => {
-            if (i >= hoverIndex) {
-              newPositions[task.id] = { status: hoverStatus, position: i + 1 };
-            }
-          });
-
-          // ✅ Move subtasks with parent
-          if (!draggedTask.parentTaskId) {
-            const subtasks = tasks.filter((t) => t.parentTaskId === draggedTaskId);
-            subtasks.forEach((subtask, subIndex) => {
-              newPositions[subtask.id] = {
-                status: hoverStatus,
-                position: hoverIndex + 0.1 + subIndex * 0.01,
-              };
-            });
-          }
-        }
-
-        return newPositions;
+      setDropIndicator({
+        status: hoverStatus,
+        index: hoverIndex,
       });
     },
-    [tasksByColumn, tasks]
+    []
   );
 
-  // ✅ Handle task drop - ALWAYS call API if status changed
   const handleTaskMove = useCallback(
     async (taskId: string, fromStatus: TaskStatus, toStatus: TaskStatus, toIndex: number) => {
-      console.log(`🚀 handleTaskMove called: ${taskId} from ${fromStatus} to ${toStatus}`);
+      console.log(
+        `🚀 handleTaskMove: ${taskId} from ${fromStatus}→${toStatus} at index ${toIndex}`
+      );
 
       setIsUpdating(true);
       setUpdatingTaskId(taskId);
+      setDropIndicator({ status: null, index: -1 });
 
       try {
-        // ✅ Update local position immediately for instant feedback
-        setLocalPositions((prev) => ({
-          ...prev,
-          [taskId]: { status: toStatus, position: toIndex },
-        }));
+        await updatePositionMutation.mutateAsync({
+          id: taskId,
+          status: toStatus,
+          position: toIndex,
+        });
 
-        // ✅ CRITICAL: ALWAYS call API if status changed (different column)
-        if (fromStatus !== toStatus) {
-          console.log(
-            `✅ API CALL: Updating task ${taskId} status from ${fromStatus} to ${toStatus}`
-          );
+        const statusName = STATUS_COLUMNS.find((c) => c.id === toStatus)?.name;
+        toast.success(`Moved to ${statusName}`, { duration: 2000 });
 
-          await updateTaskMutation.mutateAsync({
-            id: taskId,
-            data: { status: toStatus },
-          });
-
-          // ✅ Move subtasks with parent task
-          const task = tasks.find((t) => t.id === taskId);
-          if (task && !task.parentTaskId) {
-            const subtasks = tasks.filter((t) => t.parentTaskId === taskId);
-            console.log(`🔗 Moving ${subtasks.length} subtasks with parent`);
-
-            for (const subtask of subtasks) {
-              await updateTaskMutation.mutateAsync({
-                id: subtask.id,
-                data: { status: toStatus },
-              });
-
-              setLocalPositions((prev) => ({
-                ...prev,
-                [subtask.id]: { status: toStatus, position: toIndex + 0.1 },
-              }));
-            }
-          }
-
-          toast.success(`Task moved to ${STATUS_COLUMNS.find((c) => c.id === toStatus)?.name}`, {
-            duration: 2000,
-            icon: '✅',
-          });
-
-          // ✅ Refresh tasks to get updated data
-          await refetchTasks();
-        } else {
-          // ✅ Same column - only local position update, no API call
-          console.log(`📍 Local position update only: ${taskId} at index ${toIndex}`);
-        }
+        await refetchTasks();
       } catch (error) {
-        console.error('❌ Error moving task:', error);
-        toast.error(getErrorMessage(error), { duration: 3000 });
-
-        // ✅ Rollback local position on error
-        setLocalPositions((prev) => ({
-          ...prev,
-          [taskId]: { status: fromStatus, position: toIndex },
-        }));
+        console.error('❌ Move failed:', error);
+        toast.error(getErrorMessage(error));
+        await refetchTasks();
       } finally {
         setIsUpdating(false);
         setUpdatingTaskId(null);
       }
     },
-    [updateTaskMutation, tasks, refetchTasks]
+    [updatePositionMutation, refetchTasks]
   );
 
   const handleAddTask = useCallback(
@@ -694,7 +599,6 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
     if (!columnToClear) return;
 
     const columnTasks = tasksByColumn[columnToClear.status];
-
     try {
       await Promise.all(columnTasks.map((task) => deleteTaskMutation.mutateAsync(task.id)));
       setShowClearColumnModal(false);
@@ -730,12 +634,12 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
         <div className="flex items-center gap-2 mb-4 px-3 py-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl animate-in fade-in slide-in-from-top duration-200">
           <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400 flex-shrink-0" />
           <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-            Updating task status...
+            Updating task...
           </span>
         </div>
       )}
 
-      <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
+      <div className="flex gap-3.5 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
         {visibleColumns.map((column) => (
           <div key={column.id} className="snap-start">
             <KanbanColumn
@@ -751,6 +655,7 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
               isUpdating={
                 isUpdating && tasksByColumn[column.id].some((t) => t.id === updatingTaskId)
               }
+              dropIndicator={dropIndicator}
             />
           </div>
         ))}
@@ -764,7 +669,9 @@ const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
           setColumnToClear(null);
         }}
         title="Clear Column"
-        message={`Are you sure you want to delete ${columnToClear?.count || 0} task${columnToClear?.count !== 1 ? 's' : ''} from this column? This action cannot be undone.`}
+        message={`Are you sure you want to delete ${
+          columnToClear?.count || 0
+        } task${columnToClear?.count !== 1 ? 's' : ''} from this column? This action cannot be undone.`}
         confirmText="Clear Column"
         variant="danger"
       />

@@ -427,7 +427,6 @@ export default function NotificationDropdown() {
     try {
       await clearAll.mutateAsync();
       setShowClearAllModal(false);
-      toast.success('All notifications cleared');
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
