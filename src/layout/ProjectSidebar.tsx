@@ -332,24 +332,30 @@ const ProjectSidebar: React.FC = () => {
     e?.stopPropagation();
     setMemberModal({ isOpen: true, entityType, entityId, entityName });
   };
-
   // ============================================================================
   // LOADING STATE
   // ============================================================================
   if (isInitializing || workspacesLoading) {
     return (
       <aside
-        className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 bg-[#1a1d21] border-r border-[#2a2e33] transition-all duration-200 ${showFull ? 'w-[260px]' : 'w-[60px]'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 
+          bg-white dark:bg-[#1a1d21] 
+          border-r border-gray-200 dark:border-[#2a2e33] 
+          transition-all duration-300 ease-in-out
+          ${showFull ? 'w-[280px]' : 'w-[72px]'} 
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} 
+          lg:translate-x-0
+          shadow-lg lg:shadow-none`}
       >
-        <div className="p-3 animate-pulse">
-          <div className="flex items-center gap-3 p-2">
-            <div className="w-8 h-8 rounded-lg bg-[#2a2e33]" />
-            {showFull && <div className="h-4 bg-[#2a2e33] rounded flex-1" />}
+        <div className="p-4 animate-pulse">
+          <div className="flex items-center gap-3 p-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gray-200 dark:bg-[#2a2e33]" />
+            {showFull && <div className="h-5 bg-gray-200 dark:bg-[#2a2e33] rounded-lg flex-1" />}
           </div>
         </div>
-        <div className="px-2 space-y-1">
+        <div className="px-3 space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-8 bg-[#2a2e33] rounded-md animate-pulse" />
+            <div key={i} className="h-10 bg-gray-200 dark:bg-[#2a2e33] rounded-xl animate-pulse" />
           ))}
         </div>
       </aside>
@@ -363,42 +369,60 @@ const ProjectSidebar: React.FC = () => {
     <>
       {/* Mobile overlay */}
       {isMobileOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={toggleMobileSidebar} />
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          onClick={toggleMobileSidebar}
+        />
       )}
 
       <aside
         className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 flex flex-col
-          bg-[#1a1d21] border-r border-[#2a2e33] transition-all duration-200
-          ${showFull ? 'w-[260px]' : 'w-[60px]'}
+          bg-white dark:bg-[#1a1d21] 
+          border-r border-gray-200 dark:border-[#2a2e33] 
+          transition-all duration-300 ease-in-out
+          ${showFull ? 'w-[280px]' : 'w-[72px]'}
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0`}
+          lg:translate-x-0
+          shadow-2xl lg:shadow-none`}
         onMouseEnter={() => !isExpanded && setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Workspace Selector */}
-        <WorkspaceSelector
-          currentWorkspace={currentWorkspace}
-          onWorkspaceChange={handleWorkspaceChange}
-          onCreateNew={() => setIsCreateWorkspaceModalOpen(true)}
-          showFull={showFull}
-        />
+        <div className="transition-all duration-200">
+          <WorkspaceSelector
+            currentWorkspace={currentWorkspace}
+            onWorkspaceChange={handleWorkspaceChange}
+            onCreateNew={() => setIsCreateWorkspaceModalOpen(true)}
+            showFull={showFull}
+          />
+        </div>
 
         {/* Workspace Actions */}
         {currentWorkspace && showFull && (
-          <div className="px-2 py-1 border-b border-[#2a2e33]">
-            <div className="flex items-center gap-1">
+          <div className="px-3 py-2 border-b border-gray-200 dark:border-[#2a2e33]">
+            <div className="flex items-center gap-2">
               <button
                 onClick={(e) =>
                   openMemberModal('workspace', currentWorkspace.id, currentWorkspace.name, e)
                 }
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs text-[#9ca3af] hover:bg-[#25282c] hover:text-white transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium
+                  text-gray-600 dark:text-[#9ca3af] 
+                  bg-gray-100 dark:bg-[#25282c] 
+                  hover:bg-gray-200 dark:hover:bg-[#2a2e33] 
+                  hover:text-gray-900 dark:hover:text-white 
+                  transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>Invite</span>
               </button>
               <button
                 onClick={() => navigate(`/member-management/workspace/${currentWorkspace.id}`)}
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs text-[#9ca3af] hover:bg-[#25282c] hover:text-white transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium
+                  text-gray-600 dark:text-[#9ca3af] 
+                  bg-gray-100 dark:bg-[#25282c] 
+                  hover:bg-gray-200 dark:hover:bg-[#2a2e33] 
+                  hover:text-gray-900 dark:hover:text-white 
+                  transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Users className="w-3.5 h-3.5" />
                 <span>Manage</span>
@@ -408,24 +432,43 @@ const ProjectSidebar: React.FC = () => {
         )}
 
         {/* Search */}
-        <div className={`p-2 ${!showFull ? 'px-1.5' : ''}`}>
+        <div className={`p-3 ${!showFull ? 'px-2' : ''}`}>
           {showFull ? (
-            <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md bg-[#25282c] hover:bg-[#2a2e33] text-[#6b7280] text-sm transition-colors">
-              <Search className="w-4 h-4" />
+            <button
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl 
+              bg-gray-100 dark:bg-[#25282c] 
+              hover:bg-gray-200 dark:hover:bg-[#2a2e33] 
+              text-gray-600 dark:text-[#6b7280] 
+              hover:text-gray-900 dark:hover:text-white
+              text-sm font-medium transition-all duration-200 group"
+            >
+              <Search className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
               <span>Search</span>
-              <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-[#1a1d21] text-[#6b7280]">
+              <kbd
+                className="ml-auto text-[10px] px-2 py-1 rounded-md 
+                bg-white dark:bg-[#1a1d21] 
+                text-gray-500 dark:text-[#6b7280]
+                border border-gray-300 dark:border-[#2a2e33]
+                font-mono"
+              >
                 ⌘K
               </kbd>
             </button>
           ) : (
-            <button className="w-full p-2 rounded-md hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors flex justify-center">
-              <Search className="w-5 h-5" />
+            <button
+              className="w-full p-3 rounded-xl 
+              hover:bg-gray-100 dark:hover:bg-[#2a2e33] 
+              text-gray-600 dark:text-[#6b7280] 
+              hover:text-gray-900 dark:hover:text-white 
+              transition-all duration-200 flex justify-center group"
+            >
+              <Search className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
             </button>
           )}
         </div>
 
         {/* Main Navigation */}
-        <nav className="px-2 py-1 border-b border-[#2a2e33]">
+        <nav className="px-3 py-2 border-b border-gray-200 dark:border-[#2a2e33]">
           {[
             { icon: Home, label: 'Home', path: '/' },
             {
@@ -454,8 +497,6 @@ const ProjectSidebar: React.FC = () => {
                 navigate(`/member-management/workspace/${currentWorkspace.id}`);
               },
             },
-            // { icon: FileText, label: 'Docs', path: '/docs' },
-            // { icon: BarChart3, label: 'Dashboards', path: '/dashboards' },
           ].map((item) => {
             const Icon = item.icon;
 
@@ -464,12 +505,15 @@ const ProjectSidebar: React.FC = () => {
                 <button
                   key={item.label}
                   onClick={item.onClick}
-                  className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5
-                    text-[#9ca3af] hover:bg-[#25282c] hover:text-white
-                    ${!showFull ? 'justify-center px-2' : ''}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1 group
+                    text-gray-700 dark:text-[#9ca3af] 
+                    hover:bg-gray-100 dark:hover:bg-[#25282c] 
+                    hover:text-gray-900 dark:hover:text-white
+                    active:scale-[0.98]
+                    ${!showFull ? 'justify-center px-3' : ''}`}
                   title={!showFull ? item.label : undefined}
                 >
-                  <Icon className="w-[18px] h-[18px]" />
+                  <Icon className="w-[19px] h-[19px] group-hover:scale-110 transition-transform duration-200" />
                   {showFull && <span>{item.label}</span>}
                 </button>
               );
@@ -480,13 +524,45 @@ const ProjectSidebar: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5
-                  ${active ? 'bg-[#7c3aed]/20 text-[#a78bfa]' : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}
-                  ${!showFull ? 'justify-center px-2' : ''}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1 group relative overflow-hidden
+                  ${
+                    active
+                      ? 'bg-violet-100 dark:bg-[#7c3aed]/20 text-violet-700 dark:text-[#a78bfa] shadow-sm'
+                      : 'text-gray-700 dark:text-[#9ca3af] hover:bg-gray-100 dark:hover:bg-[#25282c] hover:text-gray-900 dark:hover:text-white'
+                  }
+                  ${!showFull ? 'justify-center px-3' : ''}
+                  active:scale-[0.98]`}
                 title={!showFull ? item.label : undefined}
               >
-                <Icon className="w-[18px] h-[18px]" />
-                {showFull && <span className="flex-1">{item.label}</span>}
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-violet-600 dark:bg-[#7c3aed] rounded-r-full" />
+                )}
+                <Icon
+                  className={`w-[19px] h-[19px] transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`}
+                />
+                {showFull && (
+                  <span className="flex-1 flex items-center justify-between">
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span
+                        className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full 
+                        bg-violet-600 dark:bg-[#7c3aed] text-white text-[10px] font-bold
+                        animate-pulse"
+                      >
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </span>
+                )}
+                {!showFull && item.badge && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full 
+                    bg-violet-600 dark:bg-[#7c3aed] text-white text-[9px] font-bold border-2 border-white dark:border-[#1a1d21]
+                    animate-pulse"
+                  >
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -498,16 +574,20 @@ const ProjectSidebar: React.FC = () => {
             <>
               {/* Section Header */}
               <div
-                className={`sticky top-0 bg-[#1a1d21] z-10 px-2 py-2 ${!showFull ? 'px-1.5' : ''}`}
+                className={`sticky top-0 bg-white/95 dark:bg-[#1a1d21]/95 backdrop-blur-sm z-10 px-3 py-3 border-b border-gray-200/50 dark:border-[#2a2e33]/50 ${!showFull ? 'px-2' : ''}`}
               >
                 {showFull ? (
-                  <div className="flex items-center justify-between px-2.5">
-                    <span className="text-xs font-medium text-[#6b7280] uppercase tracking-wide">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-bold text-gray-500 dark:text-[#6b7280] uppercase tracking-wider">
                       Spaces
                     </span>
                     <button
                       onClick={() => setIsCreateSpaceModalOpen(true)}
-                      className="p-1 rounded hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors"
+                      className="p-1.5 rounded-lg 
+                        hover:bg-gray-100 dark:hover:bg-[#2a2e33] 
+                        text-gray-600 dark:text-[#6b7280] 
+                        hover:text-gray-900 dark:hover:text-white 
+                        transition-all duration-200 hover:scale-110 active:scale-95"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -515,7 +595,11 @@ const ProjectSidebar: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => setIsCreateSpaceModalOpen(true)}
-                    className="w-full p-2 rounded-md hover:bg-[#2a2e33] text-[#6b7280] hover:text-white transition-colors flex justify-center"
+                    className="w-full p-2.5 rounded-xl 
+                      hover:bg-gray-100 dark:hover:bg-[#2a2e33] 
+                      text-gray-600 dark:text-[#6b7280] 
+                      hover:text-gray-900 dark:hover:text-white 
+                      transition-all duration-200 flex justify-center hover:scale-110 active:scale-95"
                     title="Add Space"
                   >
                     <Plus className="w-5 h-5" />
@@ -524,55 +608,70 @@ const ProjectSidebar: React.FC = () => {
               </div>
 
               {/* Spaces List */}
-              <div className="px-2 pb-2">
+              <div className="px-3 pb-3">
                 {spacesLoading ? (
-                  <div className="space-y-2 px-2 py-4">
+                  <div className="space-y-2 py-4">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-8 bg-[#2a2e33] rounded-md animate-pulse" />
+                      <div
+                        key={i}
+                        className="h-10 bg-gray-200 dark:bg-[#2a2e33] rounded-xl animate-pulse"
+                      />
                     ))}
                   </div>
                 ) : spacesForCurrentWorkspace && spacesForCurrentWorkspace.length > 0 ? (
-                  spacesForCurrentWorkspace.map((space) => {
-                    const isSpaceExpanded = expandedSpaces.has(space.id);
-                    const isHovered = hoveredSpace === space.id;
-                    const spaceProjects = projectsBySpaceId[space.id] || [];
+                  <div className="space-y-1">
+                    {spacesForCurrentWorkspace.map((space) => {
+                      const isSpaceExpanded = expandedSpaces.has(space.id);
+                      const isHovered = hoveredSpace === space.id;
+                      const spaceProjects = projectsBySpaceId[space.id] || [];
 
-                    return (
-                      <SpaceItem
-                        key={space.id}
-                        space={space}
-                        projects={spaceProjects}
-                        folders={foldersBySpaceId[space.id] || []}
-                        projectsByFolderId={projectsByFolderId}
-                        isSpaceExpanded={isSpaceExpanded}
-                        isHovered={isHovered}
-                        showFull={showFull}
-                        currentSpace={currentSpace}
-                        projectsLoading={projectsLoading}
-                        foldersLoading={foldersLoading}
-                        onToggle={toggleSpace}
-                        onMouseEnter={() => setHoveredSpace(space.id)}
-                        onMouseLeave={() => setHoveredSpace(null)}
-                        setCurrentSpace={handleSpaceChange}
-                        setCurrentProject={handleProjectChange}
-                        setCurrentFolder={handleFolderChange}
-                        setIsCreateProjectModalOpen={setIsCreateProjectModalOpen}
-                        isProjectActive={isProjectActive}
-                        onManageMembers={openMemberModal}
-                      />
-                    );
-                  })
+                      return (
+                        <SpaceItem
+                          key={space.id}
+                          space={space}
+                          projects={spaceProjects}
+                          folders={foldersBySpaceId[space.id] || []}
+                          projectsByFolderId={projectsByFolderId}
+                          isSpaceExpanded={isSpaceExpanded}
+                          isHovered={isHovered}
+                          showFull={showFull}
+                          currentSpace={currentSpace}
+                          projectsLoading={projectsLoading}
+                          foldersLoading={foldersLoading}
+                          onToggle={toggleSpace}
+                          onMouseEnter={() => setHoveredSpace(space.id)}
+                          onMouseLeave={() => setHoveredSpace(null)}
+                          setCurrentSpace={handleSpaceChange}
+                          setCurrentProject={handleProjectChange}
+                          setCurrentFolder={handleFolderChange}
+                          setIsCreateProjectModalOpen={setIsCreateProjectModalOpen}
+                          isProjectActive={isProjectActive}
+                          onManageMembers={openMemberModal}
+                        />
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <div className="px-2 py-6 text-center">
-                    <div className="w-10 h-10 rounded-xl bg-[#25282c] flex items-center justify-center mx-auto mb-2">
-                      <Zap className="w-5 h-5 text-[#6b7280]" />
+                  <div className="px-2 py-8 text-center">
+                    <div
+                      className="w-12 h-12 rounded-2xl 
+                      bg-gradient-to-br from-violet-100 to-purple-100 dark:from-[#25282c] dark:to-[#2a2e33]
+                      flex items-center justify-center mx-auto mb-3
+                      group-hover:scale-110 transition-transform duration-300"
+                    >
+                      <Zap className="w-6 h-6 text-violet-600 dark:text-[#6b7280]" />
                     </div>
                     {showFull && (
                       <>
-                        <p className="text-sm text-[#6b7280] mb-2">No spaces yet</p>
+                        <p className="text-sm font-medium text-gray-600 dark:text-[#6b7280] mb-3">
+                          No spaces yet
+                        </p>
                         <button
                           onClick={() => setIsCreateSpaceModalOpen(true)}
-                          className="text-sm text-[#7c3aed] hover:text-[#a78bfa] font-medium transition-colors"
+                          className="text-sm text-violet-600 dark:text-[#7c3aed] 
+                            hover:text-violet-700 dark:hover:text-[#a78bfa] 
+                            font-semibold transition-colors duration-200
+                            hover:underline underline-offset-2"
                         >
                           Create a space
                         </button>
@@ -583,14 +682,25 @@ const ProjectSidebar: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="px-4 py-8 text-center">
+            <div className="px-4 py-12 text-center">
               {showFull && (
                 <>
-                  <Zap className="w-12 h-12 text-[#6b7280] mx-auto mb-3" />
-                  <p className="text-sm text-[#6b7280] mb-3">No workspace selected</p>
+                  <div
+                    className="w-16 h-16 rounded-2xl 
+                    bg-gradient-to-br from-violet-100 to-purple-100 dark:from-[#25282c] dark:to-[#2a2e33]
+                    flex items-center justify-center mx-auto mb-4"
+                  >
+                    <Zap className="w-8 h-8 text-violet-600 dark:text-[#6b7280]" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-[#6b7280] mb-4">
+                    No workspace selected
+                  </p>
                   <button
                     onClick={() => setIsCreateWorkspaceModalOpen(true)}
-                    className="text-sm text-[#7c3aed] hover:text-[#a78bfa] font-medium transition-colors"
+                    className="text-sm text-violet-600 dark:text-[#7c3aed] 
+                      hover:text-violet-700 dark:hover:text-[#a78bfa] 
+                      font-semibold transition-colors duration-200
+                      hover:underline underline-offset-2"
                   >
                     Create your first workspace
                   </button>
@@ -601,7 +711,7 @@ const ProjectSidebar: React.FC = () => {
         </div>
 
         {/* Bottom Navigation */}
-        <div className="border-t border-[#2a2e33] p-2">
+        <div className="border-t border-gray-200 dark:border-[#2a2e33] p-3">
           {[
             { icon: Users, label: 'Team', path: '/team' },
             { icon: Settings, label: 'Settings', path: '/settings' },
@@ -612,12 +722,17 @@ const ProjectSidebar: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors mb-0.5
-                  ${active ? 'bg-[#25282c] text-white' : 'text-[#9ca3af] hover:bg-[#25282c] hover:text-white'}
-                  ${!showFull ? 'justify-center px-2' : ''}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1 group
+                  ${
+                    active
+                      ? 'bg-gray-100 dark:bg-[#25282c] text-gray-900 dark:text-white'
+                      : 'text-gray-700 dark:text-[#9ca3af] hover:bg-gray-100 dark:hover:bg-[#25282c] hover:text-gray-900 dark:hover:text-white'
+                  }
+                  ${!showFull ? 'justify-center px-3' : ''}
+                  active:scale-[0.98]`}
                 title={!showFull ? item.label : undefined}
               >
-                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+                <Icon className="w-[19px] h-[19px] flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
                 {showFull && <span>{item.label}</span>}
               </Link>
             );
@@ -625,18 +740,26 @@ const ProjectSidebar: React.FC = () => {
         </div>
 
         {/* User Profile */}
-        <div className="border-t border-[#2a2e33] p-2 relative">
+        <div className="border-t border-gray-200 dark:border-[#2a2e33] p-3 relative">
           <button
             onClick={() => showFull && setShowUserMenu(!showUserMenu)}
-            className={`w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-[#25282c] transition-colors
+            className={`w-full flex items-center gap-3 p-2.5 rounded-xl 
+              hover:bg-gray-100 dark:hover:bg-[#25282c] 
+              transition-all duration-200 group
+              active:scale-[0.98]
               ${!showFull ? 'justify-center' : ''}`}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+            <div
+              className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 dark:from-[#7c3aed] dark:to-[#ec4899] 
+              flex items-center justify-center text-white text-xs font-bold flex-shrink-0
+              shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200
+              ring-2 ring-white dark:ring-[#1a1d21] ring-offset-1 ring-offset-gray-100 dark:ring-offset-[#1a1d21]"
+            >
               {user?.avatar ? (
                 <img
                   src={user.avatar}
                   alt={user.name}
-                  className="w-full h-full rounded-full object-cover"
+                  className="w-full h-full rounded-xl object-cover"
                 />
               ) : (
                 getInitials(user?.name || 'U')
@@ -645,11 +768,16 @@ const ProjectSidebar: React.FC = () => {
             {showFull && (
               <>
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
-                  <p className="text-xs text-[#6b7280] truncate">{user?.email || ''}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    {user?.name || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-[#6b7280] truncate">
+                    {user?.email || ''}
+                  </p>
                 </div>
                 <ChevronRight
-                  className={`w-4 h-4 text-[#6b7280] transition-transform ${showUserMenu ? 'rotate-90' : ''}`}
+                  className={`w-4 h-4 text-gray-400 dark:text-[#6b7280] transition-transform duration-200 
+                    ${showUserMenu ? 'rotate-90' : ''}`}
                 />
               </>
             )}
@@ -657,13 +785,23 @@ const ProjectSidebar: React.FC = () => {
 
           {/* User Menu */}
           {showUserMenu && showFull && (
-            <div className="absolute bottom-full left-2 right-2 mb-2 bg-[#25282c] border border-[#2a2e33] rounded-lg shadow-xl overflow-hidden">
-              <div className="p-1.5">
+            <div
+              className="absolute bottom-full left-3 right-3 mb-2 
+              bg-white dark:bg-[#25282c] 
+              border border-gray-200 dark:border-[#2a2e33] 
+              rounded-xl shadow-2xl overflow-hidden
+              animate-in slide-in-from-bottom-2 duration-200"
+            >
+              <div className="p-2">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium
+                    text-red-600 dark:text-red-400 
+                    hover:bg-red-50 dark:hover:bg-red-500/10 
+                    transition-all duration-200 group
+                    active:scale-[0.98]"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
                   <span>Sign out</span>
                 </button>
               </div>
