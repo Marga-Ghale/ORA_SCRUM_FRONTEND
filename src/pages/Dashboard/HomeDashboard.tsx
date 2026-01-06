@@ -331,7 +331,7 @@ const HomeDashboard: React.FC = () => {
     <>
       <PageMeta title="Dashboard | ORA SCRUM" description="Your project management dashboard" />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
+      <div className="max-w-full  space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
