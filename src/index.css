@@ -3,8 +3,6 @@ layer(base);
 
 @import 'tailwindcss';
 
-/* ✅ ADD TO YOUR GLOBAL CSS (e.g., src/index.css or src/styles/globals.css) */
-
 /* ============================================
    Toast Notification Animations
    ============================================ */
