@@ -22,7 +22,6 @@ import {
   Plus,
   Edit3,
   AlertTriangle,
-  RefreshCw,
 } from 'lucide-react';
 import { Dropdown } from '../ui/dropdown/Dropdown';
 import {
@@ -176,9 +175,9 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           {notification.data?.taskKey && (
             <>
               <span className="w-1 h-1 bg-gray-400 rounded-full" />
-              {/* <span className="font-mono text-brand-600 dark:text-brand-400 font-medium">
-                {notification.data.taskKey}
-              </span> */}
+              <span className="font-mono text-brand-600 dark:text-brand-400 font-medium">
+                {notification.data.daysOverdue}
+              </span>
             </>
           )}
         </div>
@@ -528,7 +527,7 @@ export default function NotificationDropdown() {
 
         {/* Connection indicator */}
         <span
-          className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border-2 border-white dark:border-gray-900 ${
+          className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900 ${
             isConnected ? 'bg-green-500' : 'bg-gray-400'
           }`}
           title={isConnected ? 'Connected' : 'Reconnecting...'}
