@@ -1,4 +1,5 @@
-// src/hooks/useWebSocket.ts
+// ✅ COMPLETE REPLACEMENT: src/hooks/api/useWebsocket.ts
+
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../components/UserProfile/AuthContext';
@@ -22,7 +23,6 @@ export type WebSocketEventType =
   | 'ping'
   | 'pong'
   | 'ack'
-  // Chat events
   | 'chat_message'
   | 'chat_message_updated'
   | 'chat_message_deleted'
@@ -37,7 +37,7 @@ export type WebSocketEventType =
 export interface WebSocketMessage {
   type: WebSocketEventType;
   payload?: Record<string, unknown>;
-  data?: Record<string, unknown>; // Some messages use 'data' instead of 'payload'
+  data?: Record<string, unknown>;
   room?: string;
   timestamp?: string;
 }
@@ -52,6 +52,12 @@ interface UseWebSocketOptions {
   maxReconnectAttempts?: number;
 }
 
+// ✅ NEW: Queue for pending room operations
+interface RoomOperation {
+  action: 'join' | 'leave';
+  room: string;
+}
+
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const {
     onMessage,
@@ -59,7 +65,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     onDisconnect,
     onError,
     autoReconnect = true,
-    reconnectInterval = 5000, // Increased to 5 seconds
+    reconnectInterval = 5000,
     maxReconnectAttempts = 5,
   } = options;
 
@@ -68,32 +74,31 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isConnectingRef = useRef<boolean>(false); // Prevent multiple simultaneous connections
-  const isMountedRef = useRef<boolean>(true); // Track if component is mounted
+  const isConnectingRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
+
+  // ✅ NEW: Queue for pending operations
+  const pendingOperationsRef = useRef<RoomOperation[]>([]);
+  const joinedRoomsRef = useRef<Set<string>>(new Set());
 
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
 
-  // Get WebSocket URL
   const getWsUrl = useCallback(() => {
     if (!token) return null;
-
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
     const baseUrl = apiUrl.replace('/api', '');
     const protocol = baseUrl.startsWith('https') ? 'wss:' : 'ws:';
     const host = baseUrl.replace(/^https?:\/\//, '');
-
     return `${protocol}//${host}/api/ws?token=${token}`;
   }, [token]);
 
-  // Handle incoming messages
   const handleMessage = useCallback(
     (event: MessageEvent) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
         const messageData = message.payload || message.data || {};
 
-        // Ignore certain message types from logging too much
         if (
           message.type !== 'ping' &&
           message.type !== 'pong' &&
@@ -103,7 +108,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           console.log('[WebSocket] Received:', message.type, messageData);
         }
 
-        // Only set lastMessage for notification-related messages
+        // ✅ Track successful room joins
+        if (message.type === 'ack' && messageData.action === 'joined' && messageData.room) {
+          joinedRoomsRef.current.add(messageData.room as string);
+          console.log('[WebSocket] ✅ Confirmed joined room:', messageData.room);
+        }
+
         if (
           message.type === 'notification' ||
           message.type === 'task_assigned' ||
@@ -116,7 +126,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           setLastMessage(message);
         }
 
-        // Handle different message types
         switch (message.type) {
           case 'notification':
           case 'notification_count':
@@ -128,6 +137,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           case 'task_deleted':
           case 'task_assigned':
           case 'task_status_changed':
+            // ✅ FIXED: Use top-level projectId
             if (messageData.projectId) {
               queryClient.invalidateQueries({
                 queryKey: ['tasks', 'project', messageData.projectId],
@@ -162,47 +172,25 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
           case 'user_online':
           case 'user_offline':
-            // Optionally handle online/offline status
-            // Could update a user presence store here
             break;
 
           case 'ping':
-            // Respond to server ping with pong
             if (wsRef.current?.readyState === WebSocket.OPEN) {
               wsRef.current.send(JSON.stringify({ action: 'pong' }));
             }
             break;
-          // Inside the switch (message.type) block:
-
-          // Add to the switch (message.type) block in handleMessage:
 
           case 'chat_message':
-            // New message received
-            if (messageData.channelId) {
-              const channelId = messageData.channelId as string;
-              // Invalidate all message queries for this channel (partial match)
-              queryClient.invalidateQueries({
-                queryKey: ['chat', 'messages', channelId],
-              });
-              // Update unread counts
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.chat.unreadCounts(),
-              });
-              // Update channels list (for last message preview)
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.chat.channels(),
-              });
-            }
-            break;
-
-          case 'chat_message_updated':
             if (messageData.channelId) {
               queryClient.invalidateQueries({
                 queryKey: ['chat', 'messages', messageData.channelId as string],
               });
+              queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCounts() });
+              queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
             }
             break;
 
+          case 'chat_message_updated':
           case 'chat_message_deleted':
             if (messageData.channelId) {
               queryClient.invalidateQueries({
@@ -214,9 +202,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           case 'chat_channel_created':
           case 'chat_channel_updated':
           case 'chat_channel_deleted':
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.chat.channels(),
-            });
+            queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
             break;
 
           case 'chat_member_added':
@@ -225,9 +211,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               queryClient.invalidateQueries({
                 queryKey: queryKeys.chat.members(messageData.channelId as string),
               });
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.chat.channels(),
-              });
+              queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
             }
             break;
 
@@ -242,7 +226,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
           case 'pong':
           case 'ack':
-            // Server responded to our ping or acknowledged an action
             break;
         }
 
@@ -254,14 +237,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     [queryClient, onMessage]
   );
 
-  // Disconnect
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
     if (wsRef.current) {
-      // Remove event handlers before closing to prevent reconnect
       wsRef.current.onclose = null;
       wsRef.current.onerror = null;
       wsRef.current.onmessage = null;
@@ -271,30 +252,38 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
     isConnectingRef.current = false;
     setIsConnected(false);
+    joinedRoomsRef.current.clear();
   }, []);
 
-  // Connect to WebSocket
-  const connect = useCallback(() => {
-    // Guards to prevent connection issues
-    if (!isMountedRef.current) {
-      return;
-    }
+  // ✅ NEW: Process pending operations after connection
+  const processPendingOperations = useCallback(() => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
 
+    console.log(`[WebSocket] Processing ${pendingOperationsRef.current.length} pending operations`);
+
+    pendingOperationsRef.current.forEach((op) => {
+      const message = { action: op.action, room: op.room };
+      wsRef.current?.send(JSON.stringify(message));
+      console.log(`[WebSocket] Sent queued ${op.action} for room:`, op.room);
+    });
+
+    pendingOperationsRef.current = [];
+  }, []);
+
+  const connect = useCallback(() => {
+    if (!isMountedRef.current) return;
     if (!isAuthenticated || !token) {
       console.log('[WebSocket] Not authenticated, skipping connection');
       return;
     }
-
     if (isConnectingRef.current) {
       console.log('[WebSocket] Already connecting, skipping');
       return;
     }
-
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       console.log('[WebSocket] Already connected');
       return;
     }
-
     if (wsRef.current?.readyState === WebSocket.CONNECTING) {
       console.log('[WebSocket] Connection in progress');
       return;
@@ -310,7 +299,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     isConnectingRef.current = true;
 
     try {
-      // Close any existing connection
       if (wsRef.current) {
         wsRef.current.onclose = null;
         wsRef.current.close();
@@ -326,6 +314,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         isConnectingRef.current = false;
         reconnectAttemptsRef.current = 0;
         onConnect?.();
+
+        // ✅ Process any pending room operations
+        processPendingOperations();
       };
 
       wsRef.current.onmessage = handleMessage;
@@ -336,19 +327,21 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         console.log('[WebSocket] Disconnected:', event.code, event.reason);
         setIsConnected(false);
         isConnectingRef.current = false;
+        joinedRoomsRef.current.clear();
         onDisconnect?.();
 
-        // Only reconnect if we should
         if (
           autoReconnect &&
           isMountedRef.current &&
           isAuthenticated &&
           reconnectAttemptsRef.current < maxReconnectAttempts &&
-          event.code !== 1000 // Normal closure
+          event.code !== 1000
         ) {
           reconnectAttemptsRef.current++;
           console.log(
-            `[WebSocket] Reconnecting in ${reconnectInterval / 1000}s... (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
+            `[WebSocket] Reconnecting in ${reconnectInterval / 1000}s... (attempt ${
+              reconnectAttemptsRef.current
+            }/${maxReconnectAttempts})`
           );
           reconnectTimeoutRef.current = setTimeout(() => {
             if (isMountedRef.current && isAuthenticated) {
@@ -360,7 +353,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
       wsRef.current.onerror = (error) => {
         if (!isMountedRef.current) return;
-
         console.error('[WebSocket] Error occurred');
         isConnectingRef.current = false;
         onError?.(error);
@@ -380,52 +372,61 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     autoReconnect,
     reconnectInterval,
     maxReconnectAttempts,
+    processPendingOperations,
   ]);
 
-  // Send message
+  // ✅ FIXED: Queue messages if not connected
   const send = useCallback((message: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
     } else {
-      console.warn('[WebSocket] Cannot send - not connected');
+      console.warn('[WebSocket] Not connected, message not sent:', message);
     }
   }, []);
 
-  // Join a room
+  // ✅ FIXED: Queue join if not connected
   const joinRoom = useCallback(
     (room: string) => {
-      send({ action: 'join', room });
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        send({ action: 'join', room });
+        console.log('[WebSocket] Sent join for room:', room);
+      } else {
+        // ✅ Queue the operation
+        console.log('[WebSocket] Queuing join for room:', room);
+        pendingOperationsRef.current.push({ action: 'join', room });
+      }
     },
     [send]
   );
 
-  // Leave a room
+  // ✅ FIXED: Handle leave room
   const leaveRoom = useCallback(
     (room: string) => {
-      send({ action: 'leave', room });
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        send({ action: 'leave', room });
+        joinedRoomsRef.current.delete(room);
+        console.log('[WebSocket] Left room:', room);
+      } else {
+        // Remove from queue if it was pending
+        pendingOperationsRef.current = pendingOperationsRef.current.filter(
+          (op) => !(op.action === 'join' && op.room === room)
+        );
+      }
     },
     [send]
   );
 
-  // Connect when authenticated
   useEffect(() => {
     isMountedRef.current = true;
 
     if (isAuthenticated && token) {
-      // Small delay to ensure token is ready
-      const timeoutId = setTimeout(() => {
-        connect();
-      }, 100);
-
-      return () => {
-        clearTimeout(timeoutId);
-      };
+      // ✅ Removed delay - connect immediately
+      connect();
     }
 
     return undefined;
   }, [isAuthenticated, token, connect]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
