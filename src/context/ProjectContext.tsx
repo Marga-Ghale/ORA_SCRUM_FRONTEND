@@ -1,4 +1,5 @@
-// src/context/ProjectContext.tsx
+// ✅ COMPLETE REPLACEMENT: src/context/ProjectContext.tsx
+
 import React, {
   createContext,
   useContext,
@@ -175,14 +176,14 @@ const mapTask = (task: any): Task => {
     actualHours: task.actualHours,
     blocked: task.blocked,
     position: task.position || 0,
-    startDate: dateToISO(task.startDate), // ✅ convert to string
-    dueDate: dateToISO(task.dueDate), // ✅ convert to string
-    completedAt: dateToISO(task.completedAt), // ✅ convert to string
+    startDate: dateToISO(task.startDate),
+    dueDate: dateToISO(task.dueDate),
+    completedAt: dateToISO(task.completedAt),
     sprintId: task.sprintId,
     parentTaskId: task.parentTaskId,
     watcherIds: task.watcherIds || [],
     createdBy: task.createdBy,
-    createdAt: dateToISO(task.createdAt), // ✅ convert to string
+    createdAt: dateToISO(task.createdAt),
     updatedAt: dateToISO(task.updatedAt),
     projectId: task.projectId,
     assignee: task.assignee || null,
@@ -303,33 +304,78 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const updateTaskStatusMutation = useUpdateTaskStatus();
   const deleteTaskMutation = useDeleteTask();
 
+  // ============================================
+  // WebSocket Integration
+  // ============================================
   const wsHookResult = useWebSocket({
     onMessage: (message) => {
-      console.log('📨 WebSocket:', message.type, message.payload);
+      const data = message.payload || message.data || {};
 
-      // ✅ When task is updated, force immediate refetch
+      // Log all messages except ping/pong
+      if (message.type !== 'ping' && message.type !== 'pong') {
+        console.log('📨 WebSocket:', message.type, data);
+      }
+
+      // ✅ FIXED: Check top-level projectId for task updates
       if (message.type === 'task_updated' && currentProject?.id) {
-        const data = message.payload || message.data || {};
-
-        // ✅ FIXED: Check data.task.projectId (not data.projectId)
-        if (data.task?.projectId === currentProject.id) {
+        if (data.projectId === currentProject.id) {
           console.log('🔄 Task updated in current project - refetching');
           refetchTasks();
         }
       }
+
+      // Handle task creation
+      if (message.type === 'task_created' && currentProject?.id) {
+        if (data.projectId === currentProject.id) {
+          console.log('🔄 Task created in current project - refetching');
+          refetchTasks();
+        }
+      }
+
+      // Handle task deletion
+      if (message.type === 'task_deleted' && currentProject?.id) {
+        if (data.projectId === currentProject.id) {
+          console.log('🔄 Task deleted in current project - refetching');
+          refetchTasks();
+        }
+      }
+
+      // Handle task status changes
+      if (message.type === 'task_status_changed' && currentProject?.id) {
+        if (data.projectId === currentProject.id) {
+          console.log('🔄 Task status changed in current project - refetching');
+          refetchTasks();
+        }
+      }
+
+      // Handle task assignments
+      if (message.type === 'task_assigned' && currentProject?.id) {
+        if (data.projectId === currentProject.id) {
+          console.log('🔄 Task assigned in current project - refetching');
+          refetchTasks();
+        }
+      }
+
+      // Handle comments
+      if (message.type === 'comment_added' && currentProject?.id) {
+        // Comments might not have projectId, so we check taskId
+        console.log('🔄 Comment added - refetching tasks');
+        refetchTasks();
+      }
     },
   });
 
+  // ✅ Join project room when project changes
   useEffect(() => {
     if (currentProject?.id && wsHookResult.joinRoom) {
       const room = `project:${currentProject.id}`;
+      console.log(`[ProjectContext] Joining room: ${room}`);
       wsHookResult.joinRoom(room);
-      console.log(`[ProjectContext] Joined room: ${room}`);
 
       return () => {
         if (wsHookResult.leaveRoom) {
+          console.log(`[ProjectContext] Leaving room: ${room}`);
           wsHookResult.leaveRoom(room);
-          console.log(`[ProjectContext] Left room: ${room}`);
         }
       };
     }
@@ -429,13 +475,11 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     (taskId: string, toStatus: TaskStatus) => {
       const backendStatus = mapStatusFromBackend(toStatus);
 
-      // Update task status and position
       updateTaskMutation.mutate(
         {
           id: taskId,
           data: {
             status: backendStatus,
-            // You might want to add position logic here if your backend supports it
           },
         },
         {
