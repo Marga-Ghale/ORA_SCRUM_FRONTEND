@@ -1,4 +1,5 @@
-import { X, ExternalLink } from 'lucide-react';
+/* eslint-disable react-refresh/only-export-components */
+import { X } from 'lucide-react';
 import toast, { Toast } from 'react-hot-toast';
 import {
   formatNotificationMessage,
