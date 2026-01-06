@@ -3,6 +3,87 @@ layer(base);
 
 @import 'tailwindcss';
 
+/* ✅ ADD TO YOUR GLOBAL CSS (e.g., src/index.css or src/styles/globals.css) */
+
+/* ============================================
+   Toast Notification Animations
+   ============================================ */
+
+/* Progress bar shrink animation */
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Slide in from right */
+@keyframes toast-enter {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Slide out to right */
+@keyframes toast-leave {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Animation classes */
+.animate-enter {
+  animation: toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+.animate-leave {
+  animation: toast-leave 0.25s cubic-bezier(0.06, 0.71, 0.55, 1) forwards;
+}
+
+/* Optional: Pulse animation for new notifications */
+@keyframes notification-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+}
+
+.notification-pulse {
+  animation: notification-pulse 2s ease-in-out infinite;
+}
+
+/* Optional: Bounce animation for toast icons */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.3s ease-out forwards;
+}
+
 /* ============================================
    CUSTOM SCROLLBAR STYLES
    ============================================ */
