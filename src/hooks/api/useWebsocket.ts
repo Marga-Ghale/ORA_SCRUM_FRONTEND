@@ -1,4 +1,4 @@
-// ✅ COMPLETE REPLACEMENT: src/hooks/api/useWebsocket.ts
+// ✅ FIXED: src/hooks/api/useWebsocket.ts - Handles multiple JSON messages per frame
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -52,7 +52,6 @@ interface UseWebSocketOptions {
   maxReconnectAttempts?: number;
 }
 
-// ✅ NEW: Queue for pending room operations
 interface RoomOperation {
   action: 'join' | 'leave';
   room: string;
@@ -77,7 +76,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const isConnectingRef = useRef<boolean>(false);
   const isMountedRef = useRef<boolean>(true);
 
-  // ✅ NEW: Queue for pending operations
   const pendingOperationsRef = useRef<RoomOperation[]>([]);
   const joinedRoomsRef = useRef<Set<string>>(new Set());
 
@@ -93,148 +91,166 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     return `${protocol}//${host}/api/ws?token=${token}`;
   }, [token]);
 
+  // ✅ FIXED: Extract message processing to separate function
+  const processMessage = useCallback(
+    (message: WebSocketMessage) => {
+      const messageData = message.payload || message.data || {};
+
+      if (
+        message.type !== 'ping' &&
+        message.type !== 'pong' &&
+        message.type !== 'user_online' &&
+        message.type !== 'user_offline'
+      ) {
+        console.log('[WebSocket] Received:', message.type, messageData);
+      }
+
+      // Track successful room joins
+      if (message.type === 'ack' && messageData.action === 'joined' && messageData.room) {
+        joinedRoomsRef.current.add(messageData.room as string);
+        console.log('[WebSocket] ✅ Confirmed joined room:', messageData.room);
+      }
+
+      if (
+        message.type === 'notification' ||
+        message.type === 'task_assigned' ||
+        message.type === 'task_created' ||
+        message.type === 'task_updated' ||
+        message.type === 'sprint_started' ||
+        message.type === 'sprint_completed' ||
+        message.type === 'comment_added'
+      ) {
+        setLastMessage(message);
+      }
+
+      switch (message.type) {
+        case 'notification':
+        case 'notification_count':
+          queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+          break;
+
+        case 'task_created':
+        case 'task_updated':
+        case 'task_deleted':
+        case 'task_assigned':
+        case 'task_status_changed':
+          if (messageData.projectId) {
+            queryClient.invalidateQueries({
+              queryKey: ['tasks', 'project', messageData.projectId],
+            });
+          }
+          if (messageData.sprintId) {
+            queryClient.invalidateQueries({
+              queryKey: ['tasks', 'sprint', messageData.sprintId],
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+          break;
+
+        case 'sprint_started':
+        case 'sprint_completed':
+          if (messageData.projectId) {
+            queryClient.invalidateQueries({
+              queryKey: ['sprints', 'project', messageData.projectId],
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+          break;
+
+        case 'comment_added':
+          if (messageData.taskId) {
+            queryClient.invalidateQueries({
+              queryKey: ['comments', 'task', messageData.taskId],
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+          break;
+
+        case 'user_online':
+        case 'user_offline':
+          break;
+
+        case 'ping':
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ action: 'pong' }));
+          }
+          break;
+
+        case 'chat_message':
+          if (messageData.channelId) {
+            queryClient.invalidateQueries({
+              queryKey: ['chat', 'messages', messageData.channelId as string],
+            });
+            queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCounts() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
+          }
+          break;
+
+        case 'chat_message_updated':
+        case 'chat_message_deleted':
+          if (messageData.channelId) {
+            queryClient.invalidateQueries({
+              queryKey: ['chat', 'messages', messageData.channelId as string],
+            });
+          }
+          break;
+
+        case 'chat_channel_created':
+        case 'chat_channel_updated':
+        case 'chat_channel_deleted':
+          queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
+          break;
+
+        case 'chat_member_added':
+        case 'chat_member_removed':
+          if (messageData.channelId) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.chat.members(messageData.channelId as string),
+            });
+            queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
+          }
+          break;
+
+        case 'chat_reaction_added':
+        case 'chat_reaction_removed':
+          if (messageData.channelId) {
+            queryClient.invalidateQueries({
+              queryKey: ['chat', 'messages', messageData.channelId as string],
+            });
+          }
+          break;
+
+        case 'pong':
+        case 'ack':
+          break;
+      }
+
+      onMessage?.(message);
+    },
+    [queryClient, onMessage]
+  );
+
+  // ✅ FIXED: Handle multiple JSON messages separated by newlines
   const handleMessage = useCallback(
     (event: MessageEvent) => {
       try {
-        const message: WebSocketMessage = JSON.parse(event.data);
-        const messageData = message.payload || message.data || {};
+        // Split by newlines and filter empty lines
+        const lines = event.data.split('\n').filter((line: string) => line.trim());
 
-        if (
-          message.type !== 'ping' &&
-          message.type !== 'pong' &&
-          message.type !== 'user_online' &&
-          message.type !== 'user_offline'
-        ) {
-          console.log('[WebSocket] Received:', message.type, messageData);
+        // Process each JSON message separately
+        for (const line of lines) {
+          try {
+            const message: WebSocketMessage = JSON.parse(line);
+            processMessage(message);
+          } catch (err) {
+            console.error('[WebSocket] Failed to parse message line:', err, 'Line:', line);
+          }
         }
-
-        // ✅ Track successful room joins
-        if (message.type === 'ack' && messageData.action === 'joined' && messageData.room) {
-          joinedRoomsRef.current.add(messageData.room as string);
-          console.log('[WebSocket] ✅ Confirmed joined room:', messageData.room);
-        }
-
-        if (
-          message.type === 'notification' ||
-          message.type === 'task_assigned' ||
-          message.type === 'task_created' ||
-          message.type === 'task_updated' ||
-          message.type === 'sprint_started' ||
-          message.type === 'sprint_completed' ||
-          message.type === 'comment_added'
-        ) {
-          setLastMessage(message);
-        }
-
-        switch (message.type) {
-          case 'notification':
-          case 'notification_count':
-            queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
-            break;
-
-          case 'task_created':
-          case 'task_updated':
-          case 'task_deleted':
-          case 'task_assigned':
-          case 'task_status_changed':
-            // ✅ FIXED: Use top-level projectId
-            if (messageData.projectId) {
-              queryClient.invalidateQueries({
-                queryKey: ['tasks', 'project', messageData.projectId],
-              });
-            }
-            if (messageData.sprintId) {
-              queryClient.invalidateQueries({
-                queryKey: ['tasks', 'sprint', messageData.sprintId],
-              });
-            }
-            queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
-            break;
-
-          case 'sprint_started':
-          case 'sprint_completed':
-            if (messageData.projectId) {
-              queryClient.invalidateQueries({
-                queryKey: ['sprints', 'project', messageData.projectId],
-              });
-            }
-            queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
-            break;
-
-          case 'comment_added':
-            if (messageData.taskId) {
-              queryClient.invalidateQueries({
-                queryKey: ['comments', 'task', messageData.taskId],
-              });
-            }
-            queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
-            break;
-
-          case 'user_online':
-          case 'user_offline':
-            break;
-
-          case 'ping':
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ action: 'pong' }));
-            }
-            break;
-
-          case 'chat_message':
-            if (messageData.channelId) {
-              queryClient.invalidateQueries({
-                queryKey: ['chat', 'messages', messageData.channelId as string],
-              });
-              queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCounts() });
-              queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
-            }
-            break;
-
-          case 'chat_message_updated':
-          case 'chat_message_deleted':
-            if (messageData.channelId) {
-              queryClient.invalidateQueries({
-                queryKey: ['chat', 'messages', messageData.channelId as string],
-              });
-            }
-            break;
-
-          case 'chat_channel_created':
-          case 'chat_channel_updated':
-          case 'chat_channel_deleted':
-            queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
-            break;
-
-          case 'chat_member_added':
-          case 'chat_member_removed':
-            if (messageData.channelId) {
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.chat.members(messageData.channelId as string),
-              });
-              queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
-            }
-            break;
-
-          case 'chat_reaction_added':
-          case 'chat_reaction_removed':
-            if (messageData.channelId) {
-              queryClient.invalidateQueries({
-                queryKey: ['chat', 'messages', messageData.channelId as string],
-              });
-            }
-            break;
-
-          case 'pong':
-          case 'ack':
-            break;
-        }
-
-        onMessage?.(message);
       } catch (error) {
-        console.error('[WebSocket] Failed to parse message:', error);
+        console.error('[WebSocket] Failed to process messages:', error);
       }
     },
-    [queryClient, onMessage]
+    [processMessage]
   );
 
   const disconnect = useCallback(() => {
@@ -255,7 +271,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     joinedRoomsRef.current.clear();
   }, []);
 
-  // ✅ NEW: Process pending operations after connection
   const processPendingOperations = useCallback(() => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return;
 
@@ -315,7 +330,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         reconnectAttemptsRef.current = 0;
         onConnect?.();
 
-        // ✅ Process any pending room operations
         processPendingOperations();
       };
 
@@ -375,7 +389,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     processPendingOperations,
   ]);
 
-  // ✅ FIXED: Queue messages if not connected
   const send = useCallback((message: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
@@ -384,14 +397,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   }, []);
 
-  // ✅ FIXED: Queue join if not connected
   const joinRoom = useCallback(
     (room: string) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         send({ action: 'join', room });
         console.log('[WebSocket] Sent join for room:', room);
       } else {
-        // ✅ Queue the operation
         console.log('[WebSocket] Queuing join for room:', room);
         pendingOperationsRef.current.push({ action: 'join', room });
       }
@@ -399,7 +410,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     [send]
   );
 
-  // ✅ FIXED: Handle leave room
   const leaveRoom = useCallback(
     (room: string) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -407,7 +417,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         joinedRoomsRef.current.delete(room);
         console.log('[WebSocket] Left room:', room);
       } else {
-        // Remove from queue if it was pending
         pendingOperationsRef.current = pendingOperationsRef.current.filter(
           (op) => !(op.action === 'join' && op.room === room)
         );
@@ -420,7 +429,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     isMountedRef.current = true;
 
     if (isAuthenticated && token) {
-      // ✅ Removed delay - connect immediately
       connect();
     }
 
