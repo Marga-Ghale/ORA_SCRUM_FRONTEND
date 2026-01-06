@@ -679,7 +679,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       setCurrentProject(mapProject(newProject));
       await refetchProjects();
     },
-    [currentProject, createProjectMutation, refetchProjects]
+    [currentSpace, createProjectMutation, refetchProjects]
   );
 
   const updateProject = useCallback(
