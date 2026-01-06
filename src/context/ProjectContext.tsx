@@ -667,18 +667,19 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const createProject = useCallback(
     async (projectData: { name: string; key: string; description?: string }) => {
       if (!currentFolder) {
-        throw new Error('No folder selected');
+        throw new Error('No Space selected');
       }
 
       const newProject = await createProjectMutation.mutateAsync({
-        folderId: currentFolder.id,
+        spaceId: currentSpace.id,
+        // folderId: currentFolder.id,
         data: projectData,
       });
 
       setCurrentProject(mapProject(newProject));
       await refetchProjects();
     },
-    [currentFolder, createProjectMutation, refetchProjects]
+    [currentSpace, createProjectMutation, refetchProjects]
   );
 
   const updateProject = useCallback(
