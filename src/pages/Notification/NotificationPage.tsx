@@ -422,7 +422,7 @@ const NotificationPage: React.FC = () => {
                                     rounded-lg text-[10px] sm:text-xs font-semibold border border-gray-200 dark:border-white/5
                                     hover:bg-gray-200 dark:hover:bg-[#222222] transition-colors"
                                 >
-                                  {notification.data.taskKey}
+                                  {notification.data.action}
                                   <ArrowUpRight
                                     className="w-2.5 h-2.5 sm:w-3 sm:h-3"
                                     strokeWidth={2.5}
