@@ -1,7 +1,29 @@
-// src/components/header/NotificationDropdown.tsx
+// ✅ COMPLETE REPLACEMENT: src/components/header/NotificationDropdown.tsx
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  Bell,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  MessageSquare,
+  UserPlus,
+  Trash2,
+  Check,
+  X,
+  Zap,
+  Play,
+  PartyPopper,
+  Hourglass,
+  Mail,
+  Building2,
+  AtSign,
+  Plus,
+  Edit3,
+  AlertTriangle,
+  RefreshCw,
+} from 'lucide-react';
 import { Dropdown } from '../ui/dropdown/Dropdown';
 import {
   useNotifications,
@@ -12,9 +34,9 @@ import {
   useDeleteNotification,
   useNotificationSound,
   useBrowserNotifications,
-  getNotificationConfig,
   getNotificationLink,
   groupNotificationsByDate,
+  formatNotificationMessage,
   Notification,
   NotificationType,
 } from '../../hooks/api/useNotifications';
@@ -22,6 +44,81 @@ import { useWebSocket } from '../../hooks/api/useWebsocket';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/api';
 import { ConfirmModal } from '../modals/ConfirmModal';
+
+// ============================================
+// Modern Icon Mapping
+// ============================================
+
+const NOTIFICATION_ICONS: Record<NotificationType, { icon: any; color: string; bgColor: string }> =
+  {
+    TASK_CREATED: { icon: Plus, color: 'text-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
+    TASK_ASSIGNED: {
+      icon: UserPlus,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    },
+    TASK_STATUS_CHANGED: {
+      icon: Zap,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+    },
+    TASK_UPDATED: {
+      icon: Edit3,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
+    },
+    TASK_COMMENTED: {
+      icon: MessageSquare,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+    },
+    TASK_DUE_SOON: {
+      icon: Clock,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    },
+    TASK_OVERDUE: {
+      icon: AlertTriangle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50 dark:bg-red-900/20',
+    },
+    TASK_DELETED: {
+      icon: Trash2,
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-50 dark:bg-gray-900/20',
+    },
+    SPRINT_STARTED: {
+      icon: Play,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+    },
+    SPRINT_COMPLETED: {
+      icon: PartyPopper,
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50 dark:bg-pink-900/20',
+    },
+    SPRINT_ENDING: {
+      icon: Hourglass,
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+    },
+    MENTION: { icon: AtSign, color: 'text-cyan-600', bgColor: 'bg-cyan-50 dark:bg-cyan-900/20' },
+    PROJECT_INVITATION: {
+      icon: Mail,
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-50 dark:bg-violet-900/20',
+    },
+    WORKSPACE_INVITATION: {
+      icon: Building2,
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-50 dark:bg-teal-900/20',
+    },
+    CHAT_MESSAGE: {
+      icon: MessageSquare,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+    },
+  };
 
 // ============================================
 // Notification Item Component
@@ -40,18 +137,18 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   onDelete,
   onClick,
 }) => {
-  const config = getNotificationConfig(notification.type);
+  const config = NOTIFICATION_ICONS[notification.type] || NOTIFICATION_ICONS.TASK_UPDATED;
+  const Icon = config.icon;
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true });
   const [showActions, setShowActions] = useState(false);
-
-  const [showClearAllModal, setShowClearAllModal] = useState(false);
+  const { title, message } = formatNotificationMessage(notification);
 
   return (
     <div
-      className={`relative flex gap-3 rounded-lg p-3 transition-colors cursor-pointer group ${
+      className={`group relative flex gap-3 rounded-lg p-3 transition-all duration-200 cursor-pointer border ${
         !notification.read
-          ? 'bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-          : 'hover:bg-gray-100 dark:hover:bg-white/5'
+          ? 'bg-blue-50/50 dark:bg-blue-900/5 border-blue-200/50 dark:border-blue-800/30 hover:bg-blue-50 dark:hover:bg-blue-900/10'
+          : 'bg-white dark:bg-gray-900 border-gray-200/50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50'
       }`}
       onClick={() => onClick(notification)}
       onMouseEnter={() => setShowActions(true)}
@@ -59,30 +156,29 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     >
       {/* Unread indicator */}
       {!notification.read && (
-        <span className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-blue-500" />
       )}
 
       {/* Icon */}
-      <span
-        className={`flex items-center justify-center w-10 h-10 rounded-full ${config.bgColor} text-lg flex-shrink-0`}
+      <div
+        className={`flex items-center justify-center w-10 h-10 rounded-lg ${config.bgColor} flex-shrink-0`}
       >
-        {config.icon}
-      </span>
+        <Icon className={`w-5 h-5 ${config.color}`} />
+      </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800 dark:text-white/90 line-clamp-1">
-          {notification.title}
-        </p>
-        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">
-          {notification.message}
-        </p>
-        <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">{title}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">{message}</p>
+        <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 dark:text-gray-500">
+          <Clock className="w-3 h-3" />
           <span>{timeAgo}</span>
           {notification.data?.taskKey && (
             <>
               <span className="w-1 h-1 bg-gray-400 rounded-full" />
-              <span className="font-mono text-brand-500">{notification.data.taskKey}</span>
+              {/* <span className="font-mono text-brand-600 dark:text-brand-400 font-medium">
+                {notification.data.taskKey}
+              </span> */}
             </>
           )}
         </div>
@@ -90,7 +186,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
       {/* Actions */}
       <div
-        className={`flex items-start gap-1 transition-opacity ${
+        className={`flex items-start gap-1 transition-opacity duration-200 ${
           showActions ? 'opacity-100' : 'opacity-0'
         }`}
       >
@@ -100,17 +196,10 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
               e.stopPropagation();
               onRead(notification.id);
             }}
-            className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="p-1.5 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
             title="Mark as read"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+            <Check className="w-4 h-4" />
           </button>
         )}
         <button
@@ -118,17 +207,10 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             e.stopPropagation();
             onDelete(notification.id);
           }}
-          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+          className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
           title="Delete"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          <X className="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -158,10 +240,16 @@ const NotificationGroup: React.FC<NotificationGroupProps> = ({
 
   return (
     <div className="mb-4">
-      <h6 className="px-3 mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-        {title}
-      </h6>
-      <div className="space-y-1">
+      <div className="flex items-center gap-2 px-1 mb-2">
+        <h6 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {title}
+        </h6>
+        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+        <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
+          {notifications.length}
+        </span>
+      </div>
+      <div className="space-y-2">
         {notifications.map((notification) => (
           <NotificationItem
             key={notification.id}
@@ -182,19 +270,17 @@ const NotificationGroup: React.FC<NotificationGroupProps> = ({
 
 const EmptyState: React.FC = () => (
   <div className="flex flex-col items-center justify-center py-12 text-center">
-    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-        />
-      </svg>
+    <div className="relative mb-4">
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
+        <Bell className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+      </div>
+      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+        <Check className="w-3 h-3 text-white" />
+      </div>
     </div>
-    <p className="text-gray-600 dark:text-gray-300 font-medium">No notifications</p>
-    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-[200px]">
-      When you get notifications, they'll show up here
+    <p className="text-gray-900 dark:text-gray-100 font-semibold text-base mb-1">All caught up!</p>
+    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[200px]">
+      No new notifications at the moment
     </p>
   </div>
 );
@@ -204,14 +290,14 @@ const EmptyState: React.FC = () => (
 // ============================================
 
 const LoadingSkeleton: React.FC = () => (
-  <div className="space-y-3 p-2">
-    {Array.from({ length: 4 }).map((_, i) => (
+  <div className="space-y-3 p-3">
+    {Array.from({ length: 3 }).map((_, i) => (
       <div key={i} className="flex gap-3 p-3 animate-pulse">
-        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+        <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
         <div className="flex-1">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-3/4" />
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mt-2" />
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
         </div>
       </div>
     ))}
@@ -253,34 +339,37 @@ const INVITATION_NOTIFICATION_TYPES: NotificationType[] = [
 ];
 
 const FilterTabs: React.FC<FilterTabsProps> = ({ activeFilter, onChange, counts }) => {
-  const tabs: { id: FilterType; label: string }[] = [
-    { id: 'all', label: 'All' },
-    { id: 'unread', label: 'Unread' },
-    { id: 'tasks', label: 'Tasks' },
-    { id: 'sprints', label: 'Sprints' },
-    { id: 'invitations', label: 'Invites' },
+  const tabs: { id: FilterType; label: string; icon: any }[] = [
+    { id: 'all', label: 'All', icon: Bell },
+    { id: 'unread', label: 'Unread', icon: AlertCircle },
+    { id: 'tasks', label: 'Tasks', icon: CheckCircle },
+    { id: 'sprints', label: 'Sprints', icon: Zap },
+    { id: 'invitations', label: 'Invites', icon: Mail },
   ];
 
   return (
-    <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-x-auto">
+    <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-lg overflow-x-auto">
       {tabs.map((tab) => {
         const count = counts[tab.id];
+        const isActive = activeFilter === tab.id;
+        const TabIcon = tab.icon;
         return (
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
-              activeFilter === tab.id
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
+              isActive
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50'
             }`}
           >
+            <TabIcon className="w-3.5 h-3.5" />
             {tab.label}
             {count > 0 && (
               <span
-                className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
-                  activeFilter === tab.id
-                    ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
+                className={`px-1.5 py-0.5 text-xs font-bold rounded-full ${
+                  isActive
+                    ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                 }`}
               >
@@ -304,7 +393,6 @@ export default function NotificationDropdown() {
   const navigate = useNavigate();
   const previousUnreadCount = useRef<number>(0);
 
-  // API hooks
   const { data: notifications = [], isLoading, refetch } = useNotifications();
   const { data: countData, refetch: refetchCount } = useNotificationCount();
   const markAsRead = useMarkNotificationRead();
@@ -315,15 +403,11 @@ export default function NotificationDropdown() {
   const { showNotification: showBrowserNotification, hasPermission } = useBrowserNotifications();
   const [showClearAllModal, setShowClearAllModal] = useState(false);
 
-  // WebSocket for real-time updates
   const { isConnected } = useWebSocket({
     onMessage: (message) => {
       if (message.type === 'notification') {
-        // Refetch notifications when we receive a WebSocket notification
         refetch();
         refetchCount();
-
-        // Play sound and show browser notification
         playSound();
         if (hasPermission()) {
           const data = message.data as { title?: string; message?: string };
@@ -338,7 +422,6 @@ export default function NotificationDropdown() {
   const unreadCount = countData?.unread || 0;
   const hasUnread = unreadCount > 0;
 
-  // Play sound for new notifications (polling fallback)
   useEffect(() => {
     if (unreadCount > previousUnreadCount.current && previousUnreadCount.current > 0) {
       playSound();
@@ -351,7 +434,6 @@ export default function NotificationDropdown() {
     previousUnreadCount.current = unreadCount;
   }, [unreadCount, playSound, showBrowserNotification, hasPermission]);
 
-  // Filter notifications based on active filter
   const getFilteredNotifications = (): Notification[] => {
     switch (activeFilter) {
       case 'unread':
@@ -367,7 +449,6 @@ export default function NotificationDropdown() {
     }
   };
 
-  // Calculate filter counts
   const filterCounts: Record<FilterType, number> = {
     all: notifications.length,
     unread: notifications.filter((n) => !n.read).length,
@@ -379,7 +460,6 @@ export default function NotificationDropdown() {
   const filteredNotifications = getFilteredNotifications();
   const groupedNotifications = groupNotificationsByDate(filteredNotifications);
 
-  // Handlers
   const toggleDropdown = () => setIsOpen(!isOpen);
   const closeDropdown = () => setIsOpen(false);
 
@@ -412,12 +492,12 @@ export default function NotificationDropdown() {
   const handleMarkAllRead = async () => {
     try {
       await markAllAsRead.mutateAsync();
+      toast.success('All notifications marked as read');
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
   };
 
-  // Update handleClearAll
   const handleClearAll = async () => {
     setShowClearAllModal(true);
   };
@@ -441,52 +521,37 @@ export default function NotificationDropdown() {
       >
         {/* Unread badge */}
         {hasUnread && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
+          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-white bg-red-500 rounded-full">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
 
-        {/* WebSocket connection indicator */}
+        {/* Connection indicator */}
         <span
-          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${
+          className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border-2 border-white dark:border-gray-900 ${
             isConnected ? 'bg-green-500' : 'bg-gray-400'
           }`}
-          title={isConnected ? 'Real-time updates active' : 'Polling for updates'}
+          title={isConnected ? 'Connected' : 'Reconnecting...'}
         />
 
-        {/* Bell icon */}
-        <svg
-          className="fill-current"
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            fillRule="evenodd"
-            clipRule="evenodd"
-            d="M10.75 2.29248C10.75 1.87827 10.4143 1.54248 10 1.54248C9.58583 1.54248 9.25004 1.87827 9.25004 2.29248V2.83613C6.08266 3.20733 3.62504 5.9004 3.62504 9.16748V14.4591H3.33337C2.91916 14.4591 2.58337 14.7949 2.58337 15.2091C2.58337 15.6234 2.91916 15.9591 3.33337 15.9591H4.37504H15.625H16.6667C17.0809 15.9591 17.4167 15.6234 17.4167 15.2091C17.4167 14.7949 17.0809 14.4591 16.6667 14.4591H16.375V9.16748C16.375 5.9004 13.9174 3.20733 10.75 2.83613V2.29248ZM14.875 14.4591V9.16748C14.875 6.47509 12.6924 4.29248 10 4.29248C7.30765 4.29248 5.12504 6.47509 5.12504 9.16748V14.4591H14.875ZM8.00004 17.7085C8.00004 18.1228 8.33583 18.4585 8.75004 18.4585H11.25C11.6643 18.4585 12 18.1228 12 17.7085C12 17.2943 11.6643 16.9585 11.25 16.9585H8.75004C8.33583 16.9585 8.00004 17.2943 8.00004 17.7085Z"
-            fill="currentColor"
-          />
-        </svg>
+        <Bell className="w-5 h-5" />
       </button>
 
       {/* Dropdown */}
       <Dropdown
         isOpen={isOpen}
         onClose={closeDropdown}
-        className="absolute -right-[240px] mt-[17px] flex h-[560px] w-[380px] flex-col rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-dark sm:w-[400px] lg:right-0"
+        className="absolute right-0 mt-2 flex h-[580px] w-[420px] flex-col rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl"
       >
         {/* Header */}
-        <div className="flex-shrink-0 p-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                Notifications
-              </h5>
+              <Bell className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+              <h5 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h5>
               {hasUnread && (
-                <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-600 rounded-full dark:bg-red-900/30 dark:text-red-400">
-                  {unreadCount} new
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  ({unreadCount} new)
                 </span>
               )}
             </div>
@@ -495,23 +560,16 @@ export default function NotificationDropdown() {
                 <button
                   onClick={handleMarkAllRead}
                   disabled={markAllAsRead.isPending}
-                  className="text-xs text-brand-500 hover:text-brand-600 font-medium disabled:opacity-50 transition-colors"
+                  className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 font-medium disabled:opacity-50 transition-colors px-2 py-1 rounded hover:bg-brand-50 dark:hover:bg-brand-900/20"
                 >
                   Mark all read
                 </button>
               )}
               <button
                 onClick={toggleDropdown}
-                className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -524,13 +582,13 @@ export default function NotificationDropdown() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <LoadingSkeleton />
           ) : filteredNotifications.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="p-2">
+            <div className="p-3">
               <NotificationGroup
                 title="Today"
                 notifications={groupedNotifications['Today'] || []}
@@ -565,7 +623,7 @@ export default function NotificationDropdown() {
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="flex-shrink-0 flex items-center gap-2 p-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex-shrink-0 flex items-center gap-2 p-3 border-t border-gray-200 dark:border-gray-800">
             <Link
               to="/notifications"
               onClick={closeDropdown}
@@ -580,18 +638,19 @@ export default function NotificationDropdown() {
             >
               Clear All
             </button>
-            <ConfirmModal
-              isOpen={showClearAllModal}
-              onConfirm={confirmClearAll}
-              onCancel={() => setShowClearAllModal(false)}
-              title="Clear All Notifications"
-              message="Are you sure you want to clear all notifications? This action cannot be undone."
-              confirmText="Clear All"
-              variant="danger"
-            />
           </div>
         )}
       </Dropdown>
+
+      <ConfirmModal
+        isOpen={showClearAllModal}
+        onConfirm={confirmClearAll}
+        onCancel={() => setShowClearAllModal(false)}
+        title="Clear All Notifications"
+        message="Are you sure you want to clear all notifications? This action cannot be undone."
+        confirmText="Clear All"
+        variant="danger"
+      />
     </div>
   );
 }

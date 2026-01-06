@@ -57,7 +57,12 @@ export const ActivityFeed: React.FC = () => {
               className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
               style={{ backgroundColor: config.hexBgColor }}
             >
-              <span className="text-lg">{config.icon}</span>
+              {/* Icon */}
+              <span
+                className={`flex items-center justify-center w-10 h-10 rounded-full ${config.bgColor} flex-shrink-0`}
+              >
+                <config.icon className={`w-5 h-5 ${config.color}`} />
+              </span>
             </div>
 
             {/* Content */}

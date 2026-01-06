@@ -1,9 +1,30 @@
-// src/hooks/api/useNotifications.ts
+/* eslint-disable no-case-declarations */
+// ✅ COMPLETE REPLACEMENT: src/hooks/api/useNotifications.ts
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { queryKeys } from '../../lib/query-client';
 import apiClient from '../../lib/api';
+import {
+  User,
+  Pencil,
+  MessageSquare,
+  RefreshCw,
+  Clock,
+  AlertTriangle,
+  Sparkles,
+  Trash2,
+  Rocket,
+  PartyPopper,
+  Hourglass,
+  AtSign,
+  Mail,
+  Building2,
+  Pin,
+  LucideIcon,
+  UserPlus,
+  Plus,
+} from 'lucide-react';
 
 // ============================================
 // Types
@@ -29,9 +50,13 @@ export type NotificationType =
 export interface NotificationData {
   taskId?: string;
   taskKey?: string;
+  taskTitle?: string;
   projectId?: string;
   sprintId?: string;
+  sprintName?: string;
   workspaceId?: string;
+  workspaceName?: string;
+  projectName?: string;
   channelId?: string;
   messageId?: string;
   commentId?: string;
@@ -41,11 +66,23 @@ export interface NotificationData {
   changes?: string[];
   daysUntilDue?: number;
   daysOverdue?: number;
+  daysRemaining?: number;
   isOverdue?: boolean;
   completedTasks?: number;
   totalTasks?: number;
-  daysRemaining?: number;
+
+  // ✅ NEW: User info fields
+  createdBy?: string;
+  createdByName?: string;
+  assignedBy?: string;
+  assignedByName?: string;
+  updatedBy?: string;
+  updatedByName?: string;
+  changedBy?: string;
+  changedByName?: string;
+  commentedBy?: string;
   mentionedBy?: string;
+
   [key: string]: unknown;
 }
 
@@ -66,7 +103,7 @@ export interface NotificationCount {
 }
 
 export interface NotificationConfig {
-  icon: string;
+  icon: LucideIcon;
   color: string;
   bgColor: string;
   hexColor: string;
@@ -80,123 +117,123 @@ export interface NotificationConfig {
 
 export const NOTIFICATION_CONFIG: Record<NotificationType, NotificationConfig> = {
   TASK_ASSIGNED: {
-    icon: '👤',
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-500/20',
-    hexColor: '#3b82f6',
-    hexBgColor: '#3b82f620',
+    icon: UserPlus,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    hexColor: '#9333ea',
+    hexBgColor: '#9333ea20',
     priority: 1,
   },
   TASK_UPDATED: {
-    icon: '✏️',
-    color: 'text-yellow-500',
-    bgColor: 'bg-yellow-500/20',
-    hexColor: '#eab308',
-    hexBgColor: '#eab30820',
+    icon: Pencil,
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
+    hexColor: '#4f46e5',
+    hexBgColor: '#4f46e520',
     priority: 3,
   },
   TASK_COMMENTED: {
-    icon: '💬',
-    color: 'text-green-500',
-    bgColor: 'bg-green-500/20',
-    hexColor: '#22c55e',
-    hexBgColor: '#22c55e20',
+    icon: MessageSquare,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50 dark:bg-green-900/20',
+    hexColor: '#16a34a',
+    hexBgColor: '#16a34a20',
     priority: 2,
   },
   TASK_STATUS_CHANGED: {
-    icon: '🔄',
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-500/20',
-    hexColor: '#a855f7',
-    hexBgColor: '#a855f720',
+    icon: RefreshCw,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+    hexColor: '#d97706',
+    hexBgColor: '#d9770620',
     priority: 3,
   },
   TASK_DUE_SOON: {
-    icon: '⏰',
-    color: 'text-orange-500',
-    bgColor: 'bg-orange-500/20',
-    hexColor: '#f97316',
-    hexBgColor: '#f9731620',
+    icon: Clock,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    hexColor: '#ea580c',
+    hexBgColor: '#ea580c20',
     priority: 1,
   },
   TASK_OVERDUE: {
-    icon: '🚨',
-    color: 'text-red-500',
-    bgColor: 'bg-red-500/20',
-    hexColor: '#ef4444',
-    hexBgColor: '#ef444420',
+    icon: AlertTriangle,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50 dark:bg-red-900/20',
+    hexColor: '#dc2626',
+    hexBgColor: '#dc262620',
     priority: 0,
   },
   TASK_CREATED: {
-    icon: '✨',
-    color: 'text-indigo-500',
-    bgColor: 'bg-indigo-500/20',
-    hexColor: '#6366f1',
-    hexBgColor: '#6366f120',
+    icon: Plus,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    hexColor: '#2563eb',
+    hexBgColor: '#2563eb20',
     priority: 4,
   },
   TASK_DELETED: {
-    icon: '🗑️',
-    color: 'text-gray-500',
-    bgColor: 'bg-gray-500/20',
-    hexColor: '#6b7280',
-    hexBgColor: '#6b728020',
+    icon: Trash2,
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50 dark:bg-gray-900/20',
+    hexColor: '#4b5563',
+    hexBgColor: '#4b556320',
     priority: 4,
   },
   SPRINT_STARTED: {
-    icon: '🚀',
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-500/20',
-    hexColor: '#a855f7',
-    hexBgColor: '#a855f720',
+    icon: Rocket,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+    hexColor: '#059669',
+    hexBgColor: '#05966920',
     priority: 1,
   },
   SPRINT_COMPLETED: {
-    icon: '🎉',
-    color: 'text-green-500',
-    bgColor: 'bg-green-500/20',
-    hexColor: '#22c55e',
-    hexBgColor: '#22c55e20',
+    icon: PartyPopper,
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-50 dark:bg-pink-900/20',
+    hexColor: '#db2777',
+    hexBgColor: '#db277720',
     priority: 1,
   },
   SPRINT_ENDING: {
-    icon: '⏳',
-    color: 'text-amber-500',
-    bgColor: 'bg-amber-500/20',
-    hexColor: '#f59e0b',
-    hexBgColor: '#f59e0b20',
+    icon: Hourglass,
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+    hexColor: '#ca8a04',
+    hexBgColor: '#ca8a0420',
     priority: 1,
   },
   MENTION: {
-    icon: '@',
-    color: 'text-pink-500',
-    bgColor: 'bg-pink-500/20',
-    hexColor: '#ec4899',
-    hexBgColor: '#ec489920',
+    icon: AtSign,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
+    hexColor: '#0891b2',
+    hexBgColor: '#0891b220',
     priority: 1,
   },
   PROJECT_INVITATION: {
-    icon: '📨',
-    color: 'text-indigo-500',
-    bgColor: 'bg-indigo-500/20',
-    hexColor: '#6366f1',
-    hexBgColor: '#6366f120',
+    icon: Mail,
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-50 dark:bg-violet-900/20',
+    hexColor: '#7c3aed',
+    hexBgColor: '#7c3aed20',
     priority: 1,
   },
   WORKSPACE_INVITATION: {
-    icon: '🏢',
-    color: 'text-teal-500',
-    bgColor: 'bg-teal-500/20',
-    hexColor: '#14b8a6',
-    hexBgColor: '#14b8a620',
+    icon: Building2,
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50 dark:bg-teal-900/20',
+    hexColor: '#0d9488',
+    hexBgColor: '#0d948820',
     priority: 1,
   },
   CHAT_MESSAGE: {
-    icon: '💬',
-    color: 'text-green-500',
-    bgColor: 'bg-green-500/20',
-    hexColor: '#22c55e',
-    hexBgColor: '#22c55e20',
+    icon: MessageSquare,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50 dark:bg-green-900/20',
+    hexColor: '#16a34a',
+    hexBgColor: '#16a34a20',
     priority: 2,
   },
 };
@@ -205,13 +242,10 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, NotificationConfig> =
 // Helper Functions
 // ============================================
 
-/**
- * Get notification display configuration
- */
 export function getNotificationConfig(type: NotificationType | string): NotificationConfig {
   return (
     NOTIFICATION_CONFIG[type as NotificationType] || {
-      icon: '📌',
+      icon: Pin,
       color: 'text-gray-500',
       bgColor: 'bg-gray-500/20',
       hexColor: '#6b7280',
@@ -219,6 +253,147 @@ export function getNotificationConfig(type: NotificationType | string): Notifica
       priority: 5,
     }
   );
+}
+
+/**
+ * ✅ ENHANCED: Format notification message with user names
+ */
+export function formatNotificationMessage(notification: Notification): {
+  title: string;
+  message: string;
+} {
+  const data = notification.data || {};
+
+  switch (notification.type) {
+    case 'TASK_CREATED':
+      return {
+        title: 'New Task Created',
+        message: data.createdByName
+          ? `${data.createdByName} created: ${data.taskTitle || 'a new task'}`
+          : `New task created: ${data.taskTitle || 'a task'}`,
+      };
+
+    case 'TASK_ASSIGNED':
+      return {
+        title: 'Task Assigned',
+        message: data.assignedByName
+          ? `${data.assignedByName} assigned you to: ${data.taskTitle || 'a task'}`
+          : `You've been assigned to: ${data.taskTitle || 'a task'}`,
+      };
+
+    case 'TASK_STATUS_CHANGED':
+      const oldStatus = data.oldStatus
+        ? String(data.oldStatus).replace(/_/g, ' ').toLowerCase()
+        : 'previous';
+      const newStatus = data.newStatus
+        ? String(data.newStatus).replace(/_/g, ' ').toLowerCase()
+        : 'new';
+      return {
+        title: 'Status Updated',
+        message: data.changedByName
+          ? `${data.changedByName} moved "${data.taskTitle || 'task'}" from ${oldStatus} to ${newStatus}`
+          : `"${data.taskTitle || 'Task'}" moved from ${oldStatus} to ${newStatus}`,
+      };
+
+    case 'TASK_UPDATED':
+      const changes = Array.isArray(data.changes) ? data.changes : [];
+      const changeText = changes.length > 0 ? changes.join(', ') : 'updated';
+      return {
+        title: 'Task Updated',
+        message: data.updatedByName
+          ? `${data.updatedByName} updated "${data.taskTitle || 'a task'}": ${changeText}`
+          : `"${data.taskTitle || 'Task'}" was updated: ${changeText}`,
+      };
+
+    case 'TASK_COMMENTED':
+      return {
+        title: 'New Comment',
+        message: data.commentedBy
+          ? `${data.commentedBy} commented on: ${data.taskTitle || 'a task'}`
+          : `New comment on: ${data.taskTitle || 'your task'}`,
+      };
+
+    case 'TASK_DUE_SOON':
+      const daysUntil = data.daysUntilDue || 0;
+      return {
+        title: 'Task Due Soon',
+        message: data.taskTitle
+          ? `"${data.taskTitle}" is due in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`
+          : `Task due in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`,
+      };
+
+    case 'TASK_OVERDUE':
+      const daysOver = data.daysOverdue || 0;
+      return {
+        title: 'Task Overdue',
+        message: data.taskTitle
+          ? `"${data.taskTitle}" is ${daysOver} day${daysOver !== 1 ? 's' : ''} overdue`
+          : `Task is ${daysOver} day${daysOver !== 1 ? 's' : ''} overdue`,
+      };
+
+    case 'TASK_DELETED':
+      return {
+        title: 'Task Deleted',
+        message: data.taskTitle
+          ? `"${data.taskTitle}" has been removed`
+          : 'A task has been deleted',
+      };
+
+    case 'SPRINT_STARTED':
+      return {
+        title: 'Sprint Started',
+        message: data.sprintName ? `"${data.sprintName}" has begun` : 'A new sprint has started',
+      };
+
+    case 'SPRINT_COMPLETED':
+      const completed = data.completedTasks || 0;
+      const total = data.totalTasks || 0;
+      return {
+        title: 'Sprint Completed',
+        message: data.sprintName
+          ? `"${data.sprintName}" - ${completed}/${total} tasks completed`
+          : 'Sprint has been completed',
+      };
+
+    case 'SPRINT_ENDING':
+      const remaining = data.daysRemaining || 0;
+      return {
+        title: 'Sprint Ending Soon',
+        message: data.sprintName
+          ? `"${data.sprintName}" ends in ${remaining} day${remaining !== 1 ? 's' : ''}`
+          : `Sprint ending in ${remaining} day${remaining !== 1 ? 's' : ''}`,
+      };
+
+    case 'MENTION':
+      return {
+        title: 'You Were Mentioned',
+        message: data.mentionedBy
+          ? `${data.mentionedBy} mentioned you in: ${data.taskTitle || 'a discussion'}`
+          : `You were mentioned in: ${data.taskTitle || 'a task'}`,
+      };
+
+    case 'PROJECT_INVITATION':
+      return {
+        title: 'Project Invitation',
+        message: data.projectName
+          ? `You've been invited to: ${data.projectName}`
+          : 'You have a new project invitation',
+      };
+
+    case 'WORKSPACE_INVITATION':
+      return {
+        title: 'Workspace Invitation',
+        message: data.workspaceName
+          ? `You've been invited to: ${data.workspaceName}`
+          : 'You have a new workspace invitation',
+      };
+
+    default:
+      return {
+        title: notification.title,
+        message: notification.message,
+      };
+  }
 }
 
 /**
@@ -480,9 +655,7 @@ export function useMarkAllNotificationsRead() {
 
       return { previousNotifications, previousCount };
     },
-    onSuccess: () => {
-      toast.success('All notifications marked as read');
-    },
+    onSuccess: () => {},
     onError: (_err, _vars, context) => {
       toast.error('Failed to mark notifications as read');
       if (context?.previousNotifications) {
@@ -708,8 +881,9 @@ export function useRealTimeNotifications(enabled = true) {
 
     // Show browser notification
     if (hasPermission()) {
-      showNotification(notification.title, {
-        body: notification.message,
+      const { title, message } = formatNotificationMessage(notification);
+      showNotification(title, {
+        body: message,
         tag: notification.id,
       });
     }
