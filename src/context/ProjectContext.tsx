@@ -667,7 +667,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const createProject = useCallback(
     async (projectData: { name: string; key: string; description?: string }) => {
       if (!currentFolder) {
-        throw new Error('No folder selected');
+        throw new Error('No Space selected');
       }
 
       const newProject = await createProjectMutation.mutateAsync({
