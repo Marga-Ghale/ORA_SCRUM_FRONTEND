@@ -98,11 +98,10 @@ interface ProjectContextType {
   deleteFolder: (folderId: string) => Promise<void>;
 
   // Project operations
-  createProject: (projectData: {
-    name: string;
-    key: string;
-    description?: string;
-  }) => Promise<void>;
+  createProject: (
+    spaceId: string,
+    projectData: { name: string; key: string; description?: string }
+  ) => Promise<void>;
   updateProject: (
     projectId: string,
     updates: { name?: string; description?: string }
@@ -665,21 +664,16 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Project Operations
   // ============================================
   const createProject = useCallback(
-    async (projectData: { name: string; key: string; description?: string }) => {
-      if (!currentFolder) {
-        throw new Error('No Space selected');
-      }
-
+    async (spaceId: string, projectData: { name: string; key: string; description?: string }) => {
       const newProject = await createProjectMutation.mutateAsync({
-        spaceId: currentSpace.id,
-        // folderId: currentFolder.id,
+        spaceId,
         data: projectData,
       });
 
       setCurrentProject(mapProject(newProject));
       await refetchProjects();
     },
-    [currentSpace, createProjectMutation, refetchProjects]
+    [createProjectMutation, refetchProjects]
   );
 
   const updateProject = useCallback(
