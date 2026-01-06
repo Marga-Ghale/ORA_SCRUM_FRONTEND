@@ -1,4 +1,6 @@
-// ✅ COMPLETE REPLACEMENT: src/components/header/NotificationDropdown.tsx
+// ✅ UPDATED: src/components/header/NotificationDropdown.tsx
+// Added real-time toast notifications when WebSocket messages arrive
+
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -43,6 +45,7 @@ import { useWebSocket } from '../../hooks/api/useWebsocket';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/api';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { showWebSocketNotificationToast } from '../../lib/NotificationToast';
 
 // ============================================
 // Modern Icon Mapping
@@ -176,7 +179,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             <>
               <span className="w-1 h-1 bg-gray-400 rounded-full" />
               <span className="font-mono text-brand-600 dark:text-brand-400 font-medium">
-                {notification.data.daysOverdue}
+                {notification.data.taskKey}
               </span>
             </>
           )}
@@ -402,17 +405,26 @@ export default function NotificationDropdown() {
   const { showNotification: showBrowserNotification, hasPermission } = useBrowserNotifications();
   const [showClearAllModal, setShowClearAllModal] = useState(false);
 
+  // ✅ UPDATED: WebSocket handler with toast notifications
   const { isConnected } = useWebSocket({
     onMessage: (message) => {
       if (message.type === 'notification') {
         refetch();
         refetchCount();
         playSound();
+
+        // ✅ Show toast notification with full details
+        const data = (message.payload || message.data || {}) as Record<string, unknown>;
+        const notificationType = (data.notificationType as NotificationType) || 'TASK_UPDATED';
+
+        // Show in-app toast notification
+        showWebSocketNotificationToast(notificationType, data, navigate);
+
+        // Also show browser notification if permitted
         if (hasPermission()) {
-          const data = message.data as { title?: string; message?: string };
-          showBrowserNotification(data.title || 'New Notification', {
-            body: data.message || 'You have a new notification',
-          });
+          const title = (data.title as string) || 'New Notification';
+          const body = (data.message as string) || 'You have a new notification';
+          showBrowserNotification(title, { body });
         }
       }
     },
@@ -424,14 +436,9 @@ export default function NotificationDropdown() {
   useEffect(() => {
     if (unreadCount > previousUnreadCount.current && previousUnreadCount.current > 0) {
       playSound();
-      if (hasPermission()) {
-        showBrowserNotification('New Notification', {
-          body: 'You have a new notification in ORA Scrum',
-        });
-      }
     }
     previousUnreadCount.current = unreadCount;
-  }, [unreadCount, playSound, showBrowserNotification, hasPermission]);
+  }, [unreadCount, playSound]);
 
   const getFilteredNotifications = (): Notification[] => {
     switch (activeFilter) {
