@@ -1,4 +1,4 @@
-// ✅ COMPLETE REPLACEMENT: src/context/ProjectContext.tsx - WITH FOLDERS
+// ✅ COMPLETE REPLACEMENT: src/context/ProjectContext.tsx
 
 import React, {
   createContext,
@@ -9,7 +9,7 @@ import React, {
   useEffect,
   useMemo,
 } from 'react';
-import { Task, TaskStatus, Project, Space, Workspace, Folder } from '../types/project';
+import { Task, TaskStatus, Project, Space, Workspace } from '../types/project';
 import { useAuth } from '../components/UserProfile/AuthContext';
 import { useCreateWorkspace, useWorkspaces } from '../hooks/api/useWorkspaces';
 import {
@@ -18,11 +18,10 @@ import {
   useSpacesByWorkspace,
   useUpdateSpace,
 } from '../hooks/api/useSpaces';
-
 import {
   useCreateProject,
   useDeleteProject,
-  useProjectsByFolder,
+  useProjectsBySpace,
   useUpdateProject,
 } from '../hooks/api/useProjects';
 import {
@@ -35,12 +34,6 @@ import { User } from '../hooks/useUsers';
 import { Label } from '../hooks/api/useLabels';
 import { dateToISO } from '../utils/dateUtils';
 import { useWebSocket } from '../hooks/api/useWebsocket';
-import {
-  useCreateFolder,
-  useDeleteFolder,
-  useFoldersBySpace,
-  useUpdateFolder,
-} from '../hooks/api/useFolder';
 
 // ============================================
 // Context Type
@@ -50,7 +43,6 @@ interface ProjectContextType {
   // Current selections
   currentWorkspace: Workspace | null;
   currentSpace: Space | null;
-  currentFolder: Folder | null;
   currentProject: Project | null;
   selectedTask: Task | null;
 
@@ -66,13 +58,10 @@ interface ProjectContextType {
 
   // Computed data
   allSpaces: Space[];
-  allFolders: Folder[];
-  allProjects: Project[];
 
   // Actions
   setCurrentWorkspace: (workspace: Workspace | null) => void;
   setCurrentSpace: (space: Space | null) => void;
-  setCurrentFolder: (folder: Folder | null) => void;
   setCurrentProject: (project: Project | null) => void;
   setSelectedTask: (task: Task | null) => void;
 
@@ -89,20 +78,11 @@ interface ProjectContextType {
   ) => Promise<void>;
   deleteSpace: (spaceId: string) => Promise<void>;
 
-  // Folder operations
-  createFolder: (folderData: { name: string; color?: string; icon?: string }) => Promise<void>;
-  updateFolder: (
-    folderId: string,
-    updates: { name?: string; description?: string; icon?: string; color?: string }
-  ) => Promise<void>;
-  deleteFolder: (folderId: string) => Promise<void>;
-
   // Project operations
-  createProject: (projectData: {
-    name: string;
-    key: string;
-    description?: string;
-  }) => Promise<void>;
+  createProject: (
+    spaceId: string,
+    projectData: { name: string; key: string; description?: string }
+  ) => Promise<void>;
   updateProject: (
     projectId: string,
     updates: { name?: string; description?: string }
@@ -134,8 +114,6 @@ interface ProjectContextType {
   // Modal states
   isCreateSpaceModalOpen: boolean;
   setIsCreateSpaceModalOpen: (open: boolean) => void;
-  isCreateFolderModalOpen: boolean;
-  setIsCreateFolderModalOpen: (open: boolean) => void;
   isCreateProjectModalOpen: boolean;
   setIsCreateProjectModalOpen: (open: boolean) => void;
   isCreateTaskModalOpen: boolean;
@@ -221,15 +199,6 @@ const mapSpace = (space: any): Space => ({
   projects: [],
 });
 
-const mapFolder = (folder: any): Folder => ({
-  id: folder.id,
-  name: folder.name,
-  icon: folder.icon || '📂',
-  color: folder.color || '#6366f1',
-  spaceId: folder.space_id,
-  projects: [],
-});
-
 const mapProject = (project: any): Project => ({
   id: project.id,
   name: project.name,
@@ -263,7 +232,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // ============================================
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [currentSpace, setCurrentSpace] = useState<Space | null>(null);
-  const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -284,7 +252,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Modal states
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isCreateSpaceModalOpen, setIsCreateSpaceModalOpen] = useState(false);
-  const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [createTaskInitialStatus, setCreateTaskInitialStatus] = useState<TaskStatus>('todo');
@@ -307,15 +274,12 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     { enabled: !!currentWorkspace?.id }
   );
 
-  // Fetch folders for current space
-  const { data: foldersData, refetch: refetchFolders } = useFoldersBySpace(currentSpace?.id || '', {
-    enabled: !!currentSpace?.id,
-  });
-
-  // Fetch projects for current folder
-  const { data: projectsData, refetch: refetchProjects } = useProjectsByFolder(
-    currentFolder?.id || '',
-    { enabled: !!currentFolder?.id }
+  // Fetch projects for current space
+  const { data: projectsData, refetch: refetchProjects } = useProjectsBySpace(
+    currentSpace?.id || '',
+    {
+      enabled: !!currentSpace?.id,
+    }
   );
 
   // Fetch tasks for current project
@@ -333,9 +297,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const createSpaceMutation = useCreateSpace();
   const updateSpaceMutation = useUpdateSpace();
   const deleteSpaceMutation = useDeleteSpace();
-  const createFolderMutation = useCreateFolder();
-  const updateFolderMutation = useUpdateFolder();
-  const deleteFolderMutation = useDeleteFolder();
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
@@ -355,7 +316,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         console.log('📨 WebSocket:', message.type, data);
       }
 
-      // Check top-level projectId for task updates
+      // ✅ FIXED: Check top-level projectId for task updates
       if (message.type === 'task_updated' && currentProject?.id) {
         if (data.projectId === currentProject.id) {
           console.log('🔄 Task updated in current project - refetching');
@@ -397,13 +358,14 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       // Handle comments
       if (message.type === 'comment_added' && currentProject?.id) {
+        // Comments might not have projectId, so we check taskId
         console.log('🔄 Comment added - refetching tasks');
         refetchTasks();
       }
     },
   });
 
-  // Join project room when project changes
+  // ✅ Join project room when project changes
   useEffect(() => {
     if (currentProject?.id && wsHookResult.joinRoom) {
       const room = `project:${currentProject.id}`;
@@ -427,16 +389,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     return spacesData.map(mapSpace);
   }, [spacesData]);
 
-  const allFolders = useMemo(() => {
-    if (!foldersData) return [];
-    return foldersData.map(mapFolder);
-  }, [foldersData]);
-
-  const allProjects = useMemo(() => {
-    if (!projectsData) return [];
-    return projectsData.map(mapProject);
-  }, [projectsData]);
-
   const tasks: Task[] = useMemo(() => {
     if (!tasksData) return [];
     return tasksData.map(mapTask);
@@ -449,7 +401,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (!isAuthenticated) {
       setCurrentWorkspace(null);
       setCurrentSpace(null);
-      setCurrentFolder(null);
       setCurrentProject(null);
       setIsInitializing(false);
       return;
@@ -499,26 +450,15 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [spacesData, currentWorkspace]);
 
   // ============================================
-  // Set current folder when folders load
-  // ============================================
-  useEffect(() => {
-    if (!currentSpace || !foldersData || foldersData.length === 0) return;
-    if (currentFolder) return;
-
-    const firstFolder = mapFolder(foldersData[0]);
-    setCurrentFolder(firstFolder);
-  }, [foldersData, currentSpace]);
-
-  // ============================================
   // Set current project when projects load
   // ============================================
   useEffect(() => {
-    if (!currentFolder || !projectsData || projectsData.length === 0) return;
+    if (!currentSpace || !projectsData || projectsData.length === 0) return;
     if (currentProject) return;
 
     const firstProject = mapProject(projectsData[0]);
     setCurrentProject(firstProject);
-  }, [projectsData, currentFolder]);
+  }, [projectsData, currentSpace]);
 
   // ============================================
   // Task Operations
@@ -606,7 +546,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
           setCurrentSpace(mapSpace(remainingSpaces[0]));
         } else {
           setCurrentSpace(null);
-          setCurrentFolder(null);
           setCurrentProject(null);
         }
       }
@@ -615,70 +554,19 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 
   // ============================================
-  // Folder Operations
-  // ============================================
-  const createFolder = useCallback(
-    async (folderData: { name: string; color?: string; icon?: string }) => {
-      if (!currentSpace) {
-        throw new Error('No space selected');
-      }
-
-      await createFolderMutation.mutateAsync({
-        spaceId: currentSpace.id,
-        data: folderData,
-      });
-
-      await refetchFolders();
-    },
-    [currentSpace, createFolderMutation, refetchFolders]
-  );
-
-  const updateFolder = useCallback(
-    async (
-      folderId: string,
-      updates: { name?: string; description?: string; icon?: string; color?: string }
-    ) => {
-      await updateFolderMutation.mutateAsync({ id: folderId, data: updates });
-      await refetchFolders();
-    },
-    [updateFolderMutation, refetchFolders]
-  );
-
-  const deleteFolder = useCallback(
-    async (folderId: string) => {
-      await deleteFolderMutation.mutateAsync(folderId);
-
-      if (currentFolder?.id === folderId) {
-        const remainingFolders = foldersData?.filter((f) => f.id !== folderId) || [];
-        if (remainingFolders.length > 0) {
-          setCurrentFolder(mapFolder(remainingFolders[0]));
-        } else {
-          setCurrentFolder(null);
-          setCurrentProject(null);
-        }
-      }
-    },
-    [deleteFolderMutation, currentFolder, foldersData]
-  );
-
-  // ============================================
   // Project Operations
   // ============================================
   const createProject = useCallback(
-    async (projectData: { name: string; key: string; description?: string }) => {
-      if (!currentFolder) {
-        throw new Error('No folder selected');
-      }
-
+    async (spaceId: string, projectData: { name: string; key: string; description?: string }) => {
       const newProject = await createProjectMutation.mutateAsync({
-        folderId: currentFolder.id,
+        spaceId,
         data: projectData,
       });
 
       setCurrentProject(mapProject(newProject));
       await refetchProjects();
     },
-    [currentFolder, createProjectMutation, refetchProjects]
+    [createProjectMutation, refetchProjects]
   );
 
   const updateProject = useCallback(
@@ -720,7 +608,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const value: ProjectContextType = {
     currentWorkspace,
     currentSpace,
-    currentFolder,
     currentProject,
     selectedTask,
     isInitializing,
@@ -730,11 +617,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     tasksError: tasksError as Error | null,
     refetchTasks,
     allSpaces,
-    allFolders,
-    allProjects,
     setCurrentWorkspace,
     setCurrentSpace,
-    setCurrentFolder,
     setCurrentProject,
     setSelectedTask,
     updateTaskStatus,
@@ -743,9 +627,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     createSpace,
     updateSpace,
     deleteSpace,
-    createFolder,
-    updateFolder,
-    deleteFolder,
     createProject,
     updateProject,
     deleteProject,
@@ -758,8 +639,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     closeTaskModal,
     isCreateSpaceModalOpen,
     setIsCreateSpaceModalOpen,
-    isCreateFolderModalOpen,
-    setIsCreateFolderModalOpen,
     isCreateProjectModalOpen,
     setIsCreateProjectModalOpen,
     isCreateTaskModalOpen,
