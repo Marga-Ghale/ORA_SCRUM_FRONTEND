@@ -15,6 +15,10 @@ import {
   BellElectric,
   UserPlus,
   PersonStandingIcon,
+  Bell,
+  PanelsTopLeftIcon,
+  LucideHammer,
+  Settings2,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
@@ -472,7 +476,7 @@ const ProjectSidebar: React.FC = () => {
           {[
             { icon: Home, label: 'Home', path: '/' },
             {
-              icon: BellElectric,
+              icon: Bell,
               label: 'Notifications',
               path: '/notifications',
               badge: unreadNotifications > 0 ? unreadNotifications : undefined,
@@ -485,7 +489,7 @@ const ProjectSidebar: React.FC = () => {
             },
             { icon: CheckSquare, label: 'My Tasks', path: '/my-tasks' },
             {
-              icon: PersonStandingIcon,
+              icon: Settings2,
               label: 'Member Management',
               onClick: () => {
                 if (!currentWorkspace) return;
