@@ -1,5 +1,4 @@
-// src/lib/NotificationToast.tsx (or wherever it is)
-
+// src/lib/NotificationToast.tsx
 import React from 'react';
 import { X } from 'lucide-react';
 import toast, { Toast } from 'react-hot-toast';
@@ -16,6 +15,7 @@ interface NotificationToastProps {
   notification: Notification;
   onNavigate?: (taskId: string, projectId?: string) => Promise<void>;
   onSimpleNavigate?: (path: string) => void;
+  onNavigateToSpace?: (spaceId: string) => Promise<void>; // NEW
 }
 
 export const NotificationToast: React.FC<NotificationToastProps> = ({
@@ -23,6 +23,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   notification,
   onNavigate,
   onSimpleNavigate,
+  onNavigateToSpace, // NEW
 }) => {
   const config = NOTIFICATION_CONFIG[notification.type] ?? NOTIFICATION_CONFIG.TASK_UPDATED;
   const Icon = config.icon;
@@ -38,10 +39,16 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 
     const taskId = notification.data?.taskId as string | undefined;
     const projectId = notification.data?.projectId as string | undefined;
+    const spaceId = notification.data?.spaceId as string | undefined; // NEW
 
     if (taskId && onNavigate) {
+      // Navigate to task with hierarchy
       await onNavigate(taskId, projectId);
+    } else if (spaceId && onNavigateToSpace) {
+      // NEW: Navigate directly to a space
+      await onNavigateToSpace(spaceId);
     } else {
+      // Fallback: simple link navigation
       const link = getNotificationLink(notification);
       if (link && onSimpleNavigate) {
         onSimpleNavigate(link);
@@ -115,11 +122,14 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   );
 };
 
-// Updated function to show toast with context
+// ============================================================================
+// SHOW TOAST FUNCTION
+// ============================================================================
 export function showNotificationToast(
   notification: Notification,
   onNavigate: (taskId: string, projectId?: string) => Promise<void>,
-  onSimpleNavigate: (path: string) => void
+  onSimpleNavigate: (path: string) => void,
+  onNavigateToSpace?: (spaceId: string) => Promise<void> // NEW
 ) {
   toast.custom(
     (t) => (
@@ -129,6 +139,7 @@ export function showNotificationToast(
           notification={notification}
           onNavigate={onNavigate}
           onSimpleNavigate={onSimpleNavigate}
+          onNavigateToSpace={onNavigateToSpace} // NEW
         />
       </div>
     ),
@@ -140,12 +151,15 @@ export function showNotificationToast(
   );
 }
 
-// Updated WebSocket toast function
+// ============================================================================
+// WEBSOCKET NOTIFICATION TOAST
+// ============================================================================
 export function showWebSocketNotificationToast(
   type: any,
   data: Record<string, unknown>,
   onNavigate: (taskId: string, projectId?: string) => Promise<void>,
-  onSimpleNavigate: (path: string) => void
+  onSimpleNavigate: (path: string) => void,
+  onNavigateToSpace?: (spaceId: string) => Promise<void> // NEW
 ) {
   const notification: Notification = {
     id: (data.id as string) ?? `ws-${Date.now()}`,
@@ -160,5 +174,5 @@ export function showWebSocketNotificationToast(
     createdAt: new Date().toISOString(),
   };
 
-  showNotificationToast(notification, onNavigate, onSimpleNavigate);
+  showNotificationToast(notification, onNavigate, onSimpleNavigate, onNavigateToSpace);
 }
