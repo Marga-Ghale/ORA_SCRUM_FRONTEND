@@ -39,6 +39,7 @@ import {
   formatNotificationMessage,
 } from '../../hooks/api/useNotifications';
 import PageMeta from '../../components/common/PageMeta';
+import { useNotificationNavigation } from '../../hooks/api/useNotificationNavigation';
 
 type FilterType = 'all' | 'unread' | 'mentions' | 'assigned' | 'comments';
 
@@ -149,6 +150,7 @@ const NotificationPage: React.FC = () => {
   const markAllRead = useMarkAllNotificationsRead();
   const deleteNotification = useDeleteNotification();
   const deleteAll = useDeleteAllNotifications();
+  const { navigateToTask } = useNotificationNavigation();
 
   // Filter notifications
   const filteredNotifications = useMemo(() => {
@@ -163,11 +165,19 @@ const NotificationPage: React.FC = () => {
     [filteredNotifications]
   );
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
       markRead.mutate(notification.id);
     }
-    navigate(getNotificationLink(notification));
+
+    const taskId = notification.data?.taskId as string | undefined;
+    const projectId = notification.data?.projectId as string | undefined;
+
+    if (taskId) {
+      await navigateToTask(taskId, projectId);
+    } else {
+      navigate(getNotificationLink(notification));
+    }
   };
 
   const formatTime = (dateString: string) => {

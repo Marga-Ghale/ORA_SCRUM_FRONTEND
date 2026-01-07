@@ -46,6 +46,7 @@ import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/api';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { showWebSocketNotificationToast } from '../../lib/NotificationToast';
+import { useNotificationNavigation } from '../../hooks/api/useNotificationNavigation';
 
 // ============================================
 // Modern Icon Mapping
@@ -469,13 +470,24 @@ export default function NotificationDropdown() {
   const toggleDropdown = () => setIsOpen(!isOpen);
   const closeDropdown = () => setIsOpen(false);
 
+  const { navigateToTask } = useNotificationNavigation();
+
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
       await markAsRead.mutateAsync(notification.id);
     }
-    const link = getNotificationLink(notification);
-    navigate(link);
+
     closeDropdown();
+
+    const taskId = notification.data?.taskId as string | undefined;
+    const projectId = notification.data?.projectId as string | undefined;
+
+    if (taskId) {
+      await navigateToTask(taskId, projectId);
+    } else {
+      const link = getNotificationLink(notification);
+      navigate(link);
+    }
   };
 
   const handleMarkAsRead = async (id: string) => {
