@@ -26,6 +26,8 @@ import { TaskStatusChart } from '../../components/charts/TaskStatusChart';
 import { TaskPriorityChart } from '../../components/charts/TaskPriorityChart';
 import { ActivityFeed } from '../../components/common/ActivityFeed';
 import { useMyTasks } from '../../hooks/api/useTasks';
+import { useProjectContext } from '../../context/ProjectContext';
+import { navigateToProject } from '../../utils/navigationHelpers';
 
 // Status Badge Component
 const StatusBadge: React.FC<{ status?: string }> = ({ status = 'offline' }) => {
@@ -254,6 +256,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
 
 const HomeDashboard: React.FC = () => {
   const navigate = useNavigate();
+
+  const { setCurrentWorkspace, setCurrentSpace, setCurrentFolder, setCurrentProject } =
+    useProjectContext();
 
   // Fetch current user
   const { data: currentUser, isLoading: userLoading } = useCurrentUser();
@@ -520,7 +525,14 @@ const HomeDashboard: React.FC = () => {
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      onClick={() => navigate(`/project/${project.id}/board`)}
+                      onClick={() =>
+                        navigateToProject(project.id, navigate, {
+                          setCurrentWorkspace,
+                          setCurrentSpace,
+                          setCurrentFolder,
+                          setCurrentProject,
+                        })
+                      }
                     />
                   ))}
                 </div>
