@@ -1,4 +1,4 @@
-// ✅ FIXED: src/components/notifications/NotificationToast.tsx
+// src/lib/NotificationToast.tsx (or wherever it is)
 
 import React from 'react';
 import { X } from 'lucide-react';
@@ -8,42 +8,44 @@ import {
   getNotificationLink,
   Notification,
   NOTIFICATION_CONFIG,
-  NotificationType,
   useMarkNotificationRead,
 } from '../hooks/api/useNotifications';
-
-// ============================================
-// Toast Notification Component
-// ============================================
 
 interface NotificationToastProps {
   t: Toast;
   notification: Notification;
-  onNavigate?: (path: string) => void;
+  onNavigate?: (taskId: string, projectId?: string) => Promise<void>;
+  onSimpleNavigate?: (path: string) => void;
 }
 
 export const NotificationToast: React.FC<NotificationToastProps> = ({
   t,
   notification,
   onNavigate,
+  onSimpleNavigate,
 }) => {
   const config = NOTIFICATION_CONFIG[notification.type] ?? NOTIFICATION_CONFIG.TASK_UPDATED;
-
   const Icon = config.icon;
   const { title, message } = formatNotificationMessage(notification);
-  const link = getNotificationLink(notification);
-
   const markAsRead = useMarkNotificationRead();
 
-  const handleNavigate = () => {
+  const handleNavigate = async () => {
     toast.dismiss(t.id);
 
     if (!notification.read) {
       markAsRead.mutate(notification.id);
     }
 
-    if (link && onNavigate) {
-      onNavigate(link);
+    const taskId = notification.data?.taskId as string | undefined;
+    const projectId = notification.data?.projectId as string | undefined;
+
+    if (taskId && onNavigate) {
+      await onNavigate(taskId, projectId);
+    } else {
+      const link = getNotificationLink(notification);
+      if (link && onSimpleNavigate) {
+        onSimpleNavigate(link);
+      }
     }
   };
 
@@ -67,14 +69,12 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     >
       <div className="p-4">
         <div className="flex items-start gap-3">
-          {/* Icon */}
           <div
             className={`flex-shrink-0 w-10 h-10 rounded-lg ${config.bgColor} flex items-center justify-center`}
           >
             <Icon className={`w-5 h-5 ${config.color}`} />
           </div>
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{title}</p>
             <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
@@ -82,7 +82,6 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
             </p>
           </div>
 
-          {/* Close button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -103,7 +102,6 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="h-1 bg-gray-100 dark:bg-gray-700">
         <div
           className="h-full rounded-full"
@@ -117,18 +115,21 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   );
 };
 
-// ============================================
-// Show Notification Toast
-// ============================================
-
+// Updated function to show toast with context
 export function showNotificationToast(
   notification: Notification,
-  navigate?: (path: string) => void
+  onNavigate: (taskId: string, projectId?: string) => Promise<void>,
+  onSimpleNavigate: (path: string) => void
 ) {
   toast.custom(
     (t) => (
       <div className="mt-16 flex justify-center px-4">
-        <NotificationToast t={t} notification={notification} onNavigate={navigate} />
+        <NotificationToast
+          t={t}
+          notification={notification}
+          onNavigate={onNavigate}
+          onSimpleNavigate={onSimpleNavigate}
+        />
       </div>
     ),
     {
@@ -139,14 +140,12 @@ export function showNotificationToast(
   );
 }
 
-// ============================================
-// WebSocket → Toast Bridge
-// ============================================
-
+// Updated WebSocket toast function
 export function showWebSocketNotificationToast(
-  type: NotificationType,
+  type: any,
   data: Record<string, unknown>,
-  navigate?: (path: string) => void
+  onNavigate: (taskId: string, projectId?: string) => Promise<void>,
+  onSimpleNavigate: (path: string) => void
 ) {
   const notification: Notification = {
     id: (data.id as string) ?? `ws-${Date.now()}`,
@@ -161,5 +160,5 @@ export function showWebSocketNotificationToast(
     createdAt: new Date().toISOString(),
   };
 
-  showNotificationToast(notification, navigate);
+  showNotificationToast(notification, onNavigate, onSimpleNavigate);
 }
