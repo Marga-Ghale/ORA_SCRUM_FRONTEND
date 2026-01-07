@@ -1,9 +1,11 @@
-// ✅ FIXED: src/hooks/api/useWebsocket.ts - Handles multiple JSON messages per frame
+// ✅ ENHANCED: src/hooks/api/useWebsocket.ts
+// Added message deduplication to prevent duplicate processing
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../components/UserProfile/AuthContext';
 import { queryKeys } from '../../lib/query-client';
+import { NotificationType } from './useNotifications';
 
 export type WebSocketEventType =
   | 'notification'
@@ -57,6 +59,85 @@ interface RoomOperation {
   room: string;
 }
 
+// ============================================
+// MESSAGE DEDUPLICATION
+// ============================================
+
+interface ProcessedMessage {
+  id: string;
+  timestamp: number;
+}
+
+const processedMessages = new Map<string, ProcessedMessage>();
+const MESSAGE_DEDUP_WINDOW_MS = 2000; // 2 second window
+
+/**
+ * Clean up old processed messages
+ */
+function cleanupProcessedMessages() {
+  const now = Date.now();
+  const entriesToDelete: string[] = [];
+
+  processedMessages.forEach((msg, id) => {
+    if (now - msg.timestamp > MESSAGE_DEDUP_WINDOW_MS) {
+      entriesToDelete.push(id);
+    }
+  });
+
+  entriesToDelete.forEach((id) => processedMessages.delete(id));
+}
+
+/**
+ * Check if message should be processed (not a duplicate)
+ */
+function shouldProcessMessage(message: WebSocketMessage): boolean {
+  cleanupProcessedMessages();
+
+  // Create a unique message ID based on type and content
+  const messageData = message.payload || message.data || {};
+  const notificationId = messageData.id as string | undefined;
+
+  // For notification messages, use the notification ID
+  if (message.type === 'notification' && notificationId) {
+    const messageId = `notification-${notificationId}`;
+
+    if (processedMessages.has(messageId)) {
+      console.log('⏭️ Skipping duplicate WebSocket message:', messageId);
+      return false;
+    }
+
+    processedMessages.set(messageId, {
+      id: messageId,
+      timestamp: Date.now(),
+    });
+
+    return true;
+  }
+
+  // For other messages, use type + key data
+  const taskId = messageData.taskId as string | undefined;
+  const projectId = messageData.projectId as string | undefined;
+  const channelId = messageData.channelId as string | undefined;
+
+  const messageId = `${message.type}-${taskId || projectId || channelId || Date.now()}`;
+
+  if (processedMessages.has(messageId)) {
+    console.log('⏭️ Skipping duplicate WebSocket message:', messageId);
+    return false;
+  }
+
+  processedMessages.set(messageId, {
+    id: messageId,
+    timestamp: Date.now(),
+  });
+
+  return true;
+}
+
+// ============================================
+// WEBSOCKET HOOK
+// ============================================
+
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const {
     onMessage,
@@ -91,9 +172,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     return `${protocol}//${host}/api/ws?token=${token}`;
   }, [token]);
 
-  // ✅ FIXED: Extract message processing to separate function
   const processMessage = useCallback(
     (message: WebSocketMessage) => {
+      // ✅ Check if we should process this message (deduplication)
+      if (!shouldProcessMessage(message)) {
+        return;
+      }
+
       const messageData = message.payload || message.data || {};
 
       if (
@@ -102,7 +187,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         message.type !== 'user_online' &&
         message.type !== 'user_offline'
       ) {
-        console.log('[WebSocket] Received:', message.type, messageData);
+        console.log('[WebSocket] Processing:', message.type, messageData);
       }
 
       // Track successful room joins
@@ -111,20 +196,26 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         console.log('[WebSocket] ✅ Confirmed joined room:', messageData.room);
       }
 
-      if (
-        message.type === 'notification' ||
-        message.type === 'task_assigned' ||
-        message.type === 'task_created' ||
-        message.type === 'task_updated' ||
-        message.type === 'sprint_started' ||
-        message.type === 'sprint_completed' ||
-        message.type === 'comment_added'
-      ) {
+      if (message.type === 'notification') {
         setLastMessage(message);
       }
 
       switch (message.type) {
         case 'notification':
+          queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+
+          if (messageData && typeof messageData === 'object') {
+            import('../../lib/NotificationToast').then(({ showWebSocketNotificationToast }) => {
+              showWebSocketNotificationToast(
+                message.type.toUpperCase() as NotificationType,
+                messageData
+              );
+            });
+          }
+          break;
+
+          break;
+
         case 'notification_count':
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
           break;
@@ -230,7 +321,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     [queryClient, onMessage]
   );
 
-  // ✅ FIXED: Handle multiple JSON messages separated by newlines
   const handleMessage = useCallback(
     (event: MessageEvent) => {
       try {

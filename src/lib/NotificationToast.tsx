@@ -1,5 +1,6 @@
 // ✅ FIXED: src/components/notifications/NotificationToast.tsx
 
+import React from 'react';
 import { X } from 'lucide-react';
 import toast, { Toast } from 'react-hot-toast';
 import {
@@ -18,7 +19,7 @@ import {
 interface NotificationToastProps {
   t: Toast;
   notification: Notification;
-  onNavigate?: (link: string) => void;
+  onNavigate?: (path: string) => void;
 }
 
 export const NotificationToast: React.FC<NotificationToastProps> = ({
@@ -26,7 +27,8 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   notification,
   onNavigate,
 }) => {
-  const config = NOTIFICATION_CONFIG[notification.type] || NOTIFICATION_CONFIG.TASK_UPDATED;
+  const config = NOTIFICATION_CONFIG[notification.type] ?? NOTIFICATION_CONFIG.TASK_UPDATED;
+
   const Icon = config.icon;
   const { title, message } = formatNotificationMessage(notification);
   const link = getNotificationLink(notification);
@@ -34,20 +36,14 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   const markAsRead = useMarkNotificationRead();
 
   const handleNavigate = () => {
-    console.log('🎯 Toast clicked, link:', link); // Debug
     toast.dismiss(t.id);
 
-    // Mark as read if notification is UNREAD
     if (!notification.read) {
       markAsRead.mutate(notification.id);
     }
 
-    // ✅ Navigate if link exists and callback is provided
     if (link && onNavigate) {
-      console.log('✅ Navigating to:', link);
       onNavigate(link);
-    } else {
-      console.warn('❌ No navigation:', { link, hasCallback: !!onNavigate });
     }
   };
 
@@ -122,15 +118,13 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 };
 
 // ============================================
-// Show Notification Toast (TOP-CENTER)
+// Show Notification Toast
 // ============================================
 
 export function showNotificationToast(
   notification: Notification,
   navigate?: (path: string) => void
 ) {
-  console.log('📨 Showing toast for notification:', notification);
-
   toast.custom(
     (t) => (
       <div className="mt-16 flex justify-center px-4">
@@ -146,7 +140,7 @@ export function showNotificationToast(
 }
 
 // ============================================
-// WebSocket → Toast Bridge (ENHANCED)
+// WebSocket → Toast Bridge
 // ============================================
 
 export function showWebSocketNotificationToast(
@@ -154,67 +148,18 @@ export function showWebSocketNotificationToast(
   data: Record<string, unknown>,
   navigate?: (path: string) => void
 ) {
-  console.log('🔌 WebSocket notification received:', { type, data });
-
-  // ✅ CRITICAL: Extract ALL possible navigation data from WebSocket payload
   const notification: Notification = {
-    id: (data.id as string) || `ws-${Date.now()}`,
-    userId: (data.userId as string) || '',
+    id: (data.id as string) ?? `ws-${Date.now()}`,
+    userId: (data.userId as string) ?? '',
     type,
-    title: (data.title as string) || 'New Notification',
-    message: (data.message as string) || '',
+    title: (data.title as string) ?? 'New Notification',
+    message: (data.message as string) ?? '',
     read: false,
     data: {
-      // ✅ Task-related data
-      taskId: data.taskId as string,
-      taskKey: data.taskKey as string,
-
-      // ✅ Project-related data
-      projectId: data.projectId as string,
-      projectKey: data.projectKey as string,
-
-      // ✅ Workspace-related data
-      workspaceId: data.workspaceId as string,
-      workspaceKey: data.workspaceKey as string,
-
-      // ✅ Sprint-related data
-      sprintId: data.sprintId as string,
-      sprintName: data.sprintName as string,
-
-      // ✅ Comment-related data
-      commentId: data.commentId as string,
-
-      // ✅ User-related data
-      assignedBy: data.assignedBy as string,
-      assignedTo: data.assignedTo as string,
-      assignedByName: data.assignedByName as string,
-      assignedToName: data.assignedToName as string,
-
-      // ✅ Status/Priority data
-      status: data.status as string,
-      oldStatus: data.oldStatus as string,
-      newStatus: data.newStatus as string,
-      priority: data.priority as string,
-
-      // ✅ Due date data
-      dueDate: data.dueDate as string,
-
-      // ✅ Invitation data
-      invitationId: data.invitationId as string,
-      invitationType: data.invitationType as string,
-
-      // ✅ Keep ALL original data for safety
       ...data,
-    } as any,
+    },
     createdAt: new Date().toISOString(),
   };
-
-  console.log('📋 Created notification object:', notification);
-  console.log('🔗 Navigation data:', {
-    projectId: notification.data?.projectId,
-    taskId: notification.data?.taskId,
-    workspaceId: notification.data?.workspaceId,
-  });
 
   showNotificationToast(notification, navigate);
 }
