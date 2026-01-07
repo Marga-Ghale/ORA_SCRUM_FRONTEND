@@ -180,7 +180,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             <>
               <span className="w-1 h-1 bg-gray-400 rounded-full" />
               <span className="font-mono text-brand-600 dark:text-brand-400 font-medium">
-                {notification.data.taskKey}
+                {notification.data.daysUntilDue}
               </span>
             </>
           )}
