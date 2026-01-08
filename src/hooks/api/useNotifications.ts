@@ -54,6 +54,7 @@ export interface NotificationData {
   projectId?: string;
   sprintId?: string;
   sprintName?: string;
+  spaceId?: string;
   workspaceId?: string;
   workspaceName?: string;
   projectName?: string;

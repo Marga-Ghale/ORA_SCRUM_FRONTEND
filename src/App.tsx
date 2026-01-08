@@ -1,4 +1,5 @@
-// src/App.tsx
+// src/App.tsx - CORRECT FIX
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/query-client';
@@ -19,7 +20,8 @@ import Team from './pages/Team/Team';
 import Settings from './pages/Settings/Settings';
 import UserProfiles from './pages/UserProfiles';
 import { AuthProvider } from './components/UserProfile/AuthContext';
-import { ProjectProvider } from './context/ProjectContext'; // ✅ Add this import
+import { ProjectProvider } from './context/ProjectContext';
+import { SidebarProvider } from './context/SidebarContext';
 import ProtectedRoute from './components/Protected/ProtectedRoute';
 import GuestRoute from './components/Protected/GuestRoute';
 import ToastProvider from './components/common/ToastProvider';
@@ -32,56 +34,26 @@ if (process.env.NODE_ENV === 'development') {
   setupLocatorUI();
 }
 
+// ✅ CORRECT: All providers wrap AppLayout
+const ProtectedLayout = () => (
+  <ProtectedRoute>
+    <SidebarProvider>
+      <ProjectProvider>
+        <ToastProvider />
+        <AppLayout />
+      </ProjectProvider>
+    </SidebarProvider>
+  </ProtectedRoute>
+);
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ToastProvider />
         <Router>
           <ScrollToTop />
           <Routes>
-            {/* Protected Routes with Dashboard Layout */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  {/* ✅ Wrap in ProjectProvider */}
-                  <ProjectProvider>
-                    <AppLayout />
-                  </ProjectProvider>
-                </ProtectedRoute>
-              }
-            >
-              {/* Main Pages */}
-              <Route index path="/" element={<HomeDashboard />} />
-              <Route path="/dashboard" element={<HomeDashboard />} />
-              <Route path="/notifications" element={<NotificationPage />} />
-
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/chat/:channelId" element={<ChatPage />} />
-
-              <Route
-                path="/member-management/:entityType/:entityId"
-                element={<MembersManagementPage />}
-              />
-              <Route path="/my-tasks" element={<MyTasks />} />
-
-              {/* Project Board Views */}
-              <Route path="/project/:projectId/board" element={<ProjectBoard />} />
-              <Route path="/board" element={<ProjectBoard />} />
-              <Route path="/backlog" element={<Backlog />} />
-
-              {/* Calendar */}
-              <Route path="/calendar" element={<Calendar />} />
-
-              {/* Team & Settings */}
-              <Route path="/team" element={<Team />} />
-              <Route path="/settings" element={<Settings />} />
-
-              {/* User Profile */}
-              <Route path="/profile" element={<UserProfiles />} />
-            </Route>
-
-            {/* Guest Only Routes (redirect to dashboard if logged in) */}
+            {/* Guest Routes */}
             <Route
               path="/signin"
               element={
@@ -99,7 +71,28 @@ export default function App() {
               }
             />
 
-            {/* Fallback Route */}
+            {/* Protected Routes */}
+            <Route element={<ProtectedLayout />}>
+              <Route index element={<HomeDashboard />} />
+              <Route path="/dashboard" element={<HomeDashboard />} />
+              <Route path="/notifications" element={<NotificationPage />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/chat/:channelId" element={<ChatPage />} />
+              <Route
+                path="/member-management/:entityType/:entityId"
+                element={<MembersManagementPage />}
+              />
+              <Route path="/my-tasks" element={<MyTasks />} />
+              <Route path="/project/:projectId/board" element={<ProjectBoard />} />
+              <Route path="/board" element={<ProjectBoard />} />
+              <Route path="/backlog" element={<Backlog />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/team" element={<Team />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<UserProfiles />} />
+            </Route>
+
+            {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
