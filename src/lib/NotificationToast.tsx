@@ -1,13 +1,13 @@
-// ✅ FINAL INTEGRATION: src/lib/NotificationToast.tsx
+// src/lib/NotificationToast.tsx - FIXED DATA EXTRACTION
 import React from 'react';
 import { X } from 'lucide-react';
 import toast, { Toast } from 'react-hot-toast';
 import {
   formatNotificationMessage,
-  Notification,
   NOTIFICATION_CONFIG,
   useMarkNotificationRead,
   NotificationType,
+  Notification,
 } from '../hooks/api/useNotifications';
 import { useNotificationNavigation } from '../hooks/api/useNotificationNavigation';
 
@@ -105,6 +105,39 @@ function shouldShowNotification(notification: Notification): {
 }
 
 // ============================================
+// HELPER: EXTRACT TASK DATA FROM NOTIFICATION
+// ============================================
+function extractTaskData(notification: Notification): { taskId?: string; projectId?: string } {
+  console.log('[NotificationToast] Full notification object:', notification);
+  console.log('[NotificationToast] notification.data:', notification.data);
+
+  // Try multiple possible data structures
+  const data = notification.data || {};
+
+  // Pattern 1: Direct fields
+  let taskId = data.taskId as string | undefined;
+  let projectId = data.projectId as string | undefined;
+
+  // Pattern 2: Nested in data.data
+  if (!taskId && data.data) {
+    const nestedData = data.data as Record<string, unknown>;
+    taskId = nestedData.taskId as string | undefined;
+    projectId = nestedData.projectId as string | undefined;
+  }
+
+  // Pattern 3: Nested in data.payload
+  if (!taskId && data.payload) {
+    const payloadData = data.payload as Record<string, unknown>;
+    taskId = payloadData.taskId as string | undefined;
+    projectId = payloadData.projectId as string | undefined;
+  }
+
+  console.log('[NotificationToast] Extracted:', { taskId, projectId });
+
+  return { taskId, projectId };
+}
+
+// ============================================
 // TOAST COMPONENT
 // ============================================
 
@@ -118,28 +151,30 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({ t, notific
   const handleNavigate = async () => {
     console.log('[NotificationToast] handleNavigate called', { notification });
 
-    if (!notification.read) {
-      console.log('[NotificationToast] Marking as read', notification.id);
-      await markAsRead.mutateAsync(notification.id);
-    }
+    try {
+      // Mark as read if needed
+      if (!notification.read) {
+        console.log('[NotificationToast] Marking as read', notification.id);
+        await markAsRead.mutateAsync(notification.id);
+      }
 
-    // Correctly extract taskId and projectId
-    const taskId = notification.data?.taskId ?? notification.data?.data?.taskId;
-    const projectId = notification.data?.projectId ?? notification.data?.data?.projectId;
+      // Extract task data
+      const { taskId, projectId } = extractTaskData(notification);
 
-    if (taskId) {
-      console.log('[NotificationToast] Navigating to task', { taskId, projectId });
-      try {
+      if (taskId) {
+        console.log('[NotificationToast] Navigating to task', { taskId, projectId });
         await navigateToTask(taskId, projectId);
         console.log('[NotificationToast] Navigation successful');
-      } catch (err) {
-        console.error('[NotificationToast] Navigation failed', err);
+      } else {
+        console.log('[NotificationToast] No taskId found, skipping navigation');
       }
-    } else {
-      console.log('[NotificationToast] No taskId found, skipping navigation');
-    }
 
-    toast.dismiss(t.id);
+      // Dismiss toast
+      toast.dismiss(t.id);
+    } catch (error) {
+      console.error('[NotificationToast] Navigation failed:', error);
+      toast.error('Failed to navigate to task');
+    }
   };
 
   return (
@@ -231,10 +266,17 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({ t, notific
 
 export function showNotificationToast(notification: Notification) {
   const { shouldShow, toastIdToDismiss } = shouldShowNotification(notification);
-  if (!shouldShow) return;
+  if (!shouldShow) {
+    console.log('[Toast] Skipping notification due to deduplication:', notification.id);
+    return;
+  }
 
-  if (toastIdToDismiss) toast.dismiss(toastIdToDismiss);
+  if (toastIdToDismiss) {
+    console.log('[Toast] Dismissing previous notification:', toastIdToDismiss);
+    toast.dismiss(toastIdToDismiss);
+  }
 
+  console.log('[Toast] Showing notification:', notification.id);
   toast.custom(
     (t) => (
       <div className="flex justify-center px-4 pointer-events-none">
@@ -249,6 +291,8 @@ export function showWebSocketNotificationToast(
   type: NotificationType,
   data: Record<string, unknown>
 ) {
+  console.log('[Toast] Creating WebSocket notification:', { type, data });
+
   const notification: Notification = {
     id: (data.id as string) ?? `ws-${Date.now()}`,
     userId: (data.userId as string) ?? '',
