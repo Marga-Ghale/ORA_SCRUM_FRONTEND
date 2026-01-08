@@ -19,7 +19,7 @@ import Team from './pages/Team/Team';
 import Settings from './pages/Settings/Settings';
 import UserProfiles from './pages/UserProfiles';
 import { AuthProvider } from './components/UserProfile/AuthContext';
-import { ProjectProvider } from './context/ProjectContext'; // ✅ Add this import
+import { ProjectProvider } from './context/ProjectContext';
 import ProtectedRoute from './components/Protected/ProtectedRoute';
 import GuestRoute from './components/Protected/GuestRoute';
 import ToastProvider from './components/common/ToastProvider';
@@ -36,72 +36,74 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ToastProvider />
         <Router>
-          <ScrollToTop />
-          <Routes>
-            {/* Protected Routes with Dashboard Layout */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  {/* ✅ Wrap in ProjectProvider */}
-                  <ProjectProvider>
-                    <AppLayout />
-                  </ProjectProvider>
-                </ProtectedRoute>
-              }
-            >
-              {/* Main Pages */}
-              <Route index path="/" element={<HomeDashboard />} />
-              <Route path="/dashboard" element={<HomeDashboard />} />
-              <Route path="/notifications" element={<NotificationPage />} />
+          {/* ✅ Wrap everything that may use ProjectContext */}
+          <ProjectProvider>
+            {/* Now ToastProvider and all pages have access to ProjectContext */}
+            <ToastProvider />
+            <ScrollToTop />
 
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/chat/:channelId" element={<ChatPage />} />
-
+            <Routes>
+              {/* Protected Routes with Dashboard Layout */}
               <Route
-                path="/member-management/:entityType/:entityId"
-                element={<MembersManagementPage />}
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                {/* Main Pages */}
+                <Route index path="/" element={<HomeDashboard />} />
+                <Route path="/dashboard" element={<HomeDashboard />} />
+                <Route path="/notifications" element={<NotificationPage />} />
+
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/chat/:channelId" element={<ChatPage />} />
+
+                <Route
+                  path="/member-management/:entityType/:entityId"
+                  element={<MembersManagementPage />}
+                />
+                <Route path="/my-tasks" element={<MyTasks />} />
+
+                {/* Project Board Views */}
+                <Route path="/project/:projectId/board" element={<ProjectBoard />} />
+                <Route path="/board" element={<ProjectBoard />} />
+                <Route path="/backlog" element={<Backlog />} />
+
+                {/* Calendar */}
+                <Route path="/calendar" element={<Calendar />} />
+
+                {/* Team & Settings */}
+                <Route path="/team" element={<Team />} />
+                <Route path="/settings" element={<Settings />} />
+
+                {/* User Profile */}
+                <Route path="/profile" element={<UserProfiles />} />
+              </Route>
+
+              {/* Guest Only Routes (redirect to dashboard if logged in) */}
+              <Route
+                path="/signin"
+                element={
+                  <GuestRoute>
+                    <SignIn />
+                  </GuestRoute>
+                }
               />
-              <Route path="/my-tasks" element={<MyTasks />} />
+              <Route
+                path="/signup"
+                element={
+                  <GuestRoute>
+                    <SignUp />
+                  </GuestRoute>
+                }
+              />
 
-              {/* Project Board Views */}
-              <Route path="/project/:projectId/board" element={<ProjectBoard />} />
-              <Route path="/board" element={<ProjectBoard />} />
-              <Route path="/backlog" element={<Backlog />} />
-
-              {/* Calendar */}
-              <Route path="/calendar" element={<Calendar />} />
-
-              {/* Team & Settings */}
-              <Route path="/team" element={<Team />} />
-              <Route path="/settings" element={<Settings />} />
-
-              {/* User Profile */}
-              <Route path="/profile" element={<UserProfiles />} />
-            </Route>
-
-            {/* Guest Only Routes (redirect to dashboard if logged in) */}
-            <Route
-              path="/signin"
-              element={
-                <GuestRoute>
-                  <SignIn />
-                </GuestRoute>
-              }
-            />
-            <Route
-              path="/signup"
-              element={
-                <GuestRoute>
-                  <SignUp />
-                </GuestRoute>
-              }
-            />
-
-            {/* Fallback Route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* Fallback Route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ProjectProvider>
         </Router>
       </AuthProvider>
     </QueryClientProvider>

@@ -1,20 +1,19 @@
-// ✅ FINAL VERSION: src/lib/NotificationToast.tsx
+// ✅ FINAL INTEGRATION: src/lib/NotificationToast.tsx
 import React from 'react';
 import { X } from 'lucide-react';
 import toast, { Toast } from 'react-hot-toast';
 import {
   formatNotificationMessage,
-  getNotificationLink,
   Notification,
   NOTIFICATION_CONFIG,
   useMarkNotificationRead,
   NotificationType,
 } from '../hooks/api/useNotifications';
+import { useNotificationNavigation } from '../hooks/api/useNotificationNavigation';
 
 interface NotificationToastProps {
   t: Toast;
   notification: Notification;
-  onSimpleNavigate?: (path: string) => void;
 }
 
 // ============================================
@@ -27,13 +26,9 @@ interface PendingNotification {
   dismissed: boolean;
 }
 
-// Store pending notifications with their task IDs
 const pendingNotifications = new Map<string, PendingNotification>();
-const DEDUP_WINDOW_MS = 1500; // 1.5 second deduplication window
+const DEDUP_WINDOW_MS = 1500; // 1.5 seconds
 
-/**
- * Notification priority ranking (lower = higher priority)
- */
 const NOTIFICATION_PRIORITY: Record<NotificationType, number> = {
   TASK_ASSIGNED: 1,
   TASK_STATUS_CHANGED: 2,
@@ -42,7 +37,7 @@ const NOTIFICATION_PRIORITY: Record<NotificationType, number> = {
   TASK_DELETED: 5,
   TASK_DUE_SOON: 6,
   TASK_OVERDUE: 7,
-  TASK_UPDATED: 100, // Lowest priority - only show if nothing else
+  TASK_UPDATED: 100,
   SPRINT_STARTED: 8,
   SPRINT_COMPLETED: 9,
   SPRINT_ENDING: 10,
@@ -52,26 +47,15 @@ const NOTIFICATION_PRIORITY: Record<NotificationType, number> = {
   CHAT_MESSAGE: 14,
 };
 
-/**
- * Clean up old pending notifications
- */
 function cleanupPendingNotifications() {
   const now = Date.now();
   const toDelete: string[] = [];
-
   pendingNotifications.forEach((pending, key) => {
-    if (now - pending.timestamp > DEDUP_WINDOW_MS) {
-      toDelete.push(key);
-    }
+    if (now - pending.timestamp > DEDUP_WINDOW_MS) toDelete.push(key);
   });
-
   toDelete.forEach((key) => pendingNotifications.delete(key));
 }
 
-/**
- * Check if notification should be shown (intelligent deduplication)
- * Returns: { shouldShow: boolean, toastIdToDismiss?: string }
- */
 function shouldShowNotification(notification: Notification): {
   shouldShow: boolean;
   toastIdToDismiss?: string;
@@ -79,104 +63,43 @@ function shouldShowNotification(notification: Notification): {
   cleanupPendingNotifications();
 
   const taskId = notification.data?.taskId as string | undefined;
-  if (!taskId) {
-    // No task ID - always show
-    return { shouldShow: true };
-  }
+  if (!taskId) return { shouldShow: true };
 
-  // ✅ SMART FILTER: Suppress TASK_UPDATED if it's just a status/assignment change
   if (notification.type === 'TASK_UPDATED') {
     const changes = notification.data?.changes as string[] | undefined;
-
-    if (changes && changes.length > 0) {
-      // Check if ONLY status was changed
-      if (
-        changes.length === 1 &&
-        (changes[0] === 'status' || changes[0].toLowerCase().includes('status'))
-      ) {
-        console.log(
-          `⏭️ Suppressing TASK_UPDATED - status change will be shown as TASK_STATUS_CHANGED`
-        );
-        return { shouldShow: false };
-      }
-
-      // Check if ONLY assignee was changed
-      if (
-        changes.length === 1 &&
-        (changes[0] === 'assignee' ||
-          changes[0] === 'assigned' ||
-          changes[0].toLowerCase().includes('assign'))
-      ) {
-        console.log(`⏭️ Suppressing TASK_UPDATED - assignment will be shown as TASK_ASSIGNED`);
-        return { shouldShow: false };
-      }
-
-      // If changes include status OR assignee among other fields
-      const hasStatusOrAssign = changes.some(
-        (c) =>
-          c === 'status' ||
-          c === 'assignee' ||
-          c === 'assigned' ||
-          c.toLowerCase().includes('status') ||
-          c.toLowerCase().includes('assign')
-      );
-
-      if (hasStatusOrAssign && changes.length <= 2) {
-        // If 2 or fewer changes and one is status/assign, suppress
-        console.log(`⏭️ Suppressing TASK_UPDATED - specific notification will cover it`);
-        return { shouldShow: false };
-      }
+    if (changes?.length === 1) {
+      const field = changes[0].toLowerCase();
+      if (field.includes('status') || field.includes('assign')) return { shouldShow: false };
     }
+    const hasStatusOrAssign = changes?.some(
+      (c) => c.toLowerCase().includes('status') || c.toLowerCase().includes('assign')
+    );
+    if (hasStatusOrAssign && (changes?.length ?? 0) <= 2) return { shouldShow: false };
   }
 
   const existing = pendingNotifications.get(taskId);
   const now = Date.now();
 
   if (!existing) {
-    // First notification for this task - add to pending and show
-    pendingNotifications.set(taskId, {
-      notification,
-      timestamp: now,
-      dismissed: false,
-    });
+    pendingNotifications.set(taskId, { notification, timestamp: now, dismissed: false });
     return { shouldShow: true };
   }
 
-  // Check if within deduplication window
   if (now - existing.timestamp > DEDUP_WINDOW_MS) {
-    // Outside window - show new notification
-    pendingNotifications.set(taskId, {
-      notification,
-      timestamp: now,
-      dismissed: false,
-    });
+    pendingNotifications.set(taskId, { notification, timestamp: now, dismissed: false });
     return { shouldShow: true };
   }
 
-  // Within deduplication window - compare priorities
   const existingPriority = NOTIFICATION_PRIORITY[existing.notification.type] ?? 999;
   const newPriority = NOTIFICATION_PRIORITY[notification.type] ?? 999;
 
   if (newPriority < existingPriority) {
-    // New notification has higher priority - dismiss old, show new
     const toastIdToDismiss = `notification-${existing.notification.id}`;
-    pendingNotifications.set(taskId, {
-      notification,
-      timestamp: now,
-      dismissed: false,
-    });
+    pendingNotifications.set(taskId, { notification, timestamp: now, dismissed: false });
     return { shouldShow: true, toastIdToDismiss };
   } else if (newPriority === existingPriority) {
-    // Same priority - keep existing, ignore new
-    console.log(
-      `⏭️ Skipping duplicate notification: ${notification.type} for task ${taskId} (same priority)`
-    );
     return { shouldShow: false };
   } else {
-    // Existing has higher priority - keep existing, ignore new
-    console.log(
-      `⏭️ Skipping lower priority notification: ${notification.type} for task ${taskId} (existing: ${existing.notification.type})`
-    );
     return { shouldShow: false };
   }
 }
@@ -185,28 +108,38 @@ function shouldShowNotification(notification: Notification): {
 // TOAST COMPONENT
 // ============================================
 
-export const NotificationToast: React.FC<NotificationToastProps> = ({
-  t,
-  notification,
-  onSimpleNavigate,
-}) => {
+export const NotificationToast: React.FC<NotificationToastProps> = ({ t, notification }) => {
   const config = NOTIFICATION_CONFIG[notification.type] ?? NOTIFICATION_CONFIG.TASK_UPDATED;
   const Icon = config.icon;
   const { title, message } = formatNotificationMessage(notification);
-
   const markAsRead = useMarkNotificationRead();
+  const { navigateToTask } = useNotificationNavigation();
 
   const handleNavigate = async () => {
-    toast.dismiss(t.id);
+    console.log('[NotificationToast] handleNavigate called', { notification });
 
     if (!notification.read) {
+      console.log('[NotificationToast] Marking as read', notification.id);
       await markAsRead.mutateAsync(notification.id);
     }
-    // Navigation is handled by the onSimpleNavigate callback
-    const link = getNotificationLink(notification);
-    if (link && onSimpleNavigate) {
-      onSimpleNavigate(link);
+
+    // Correctly extract taskId and projectId
+    const taskId = notification.data?.taskId ?? notification.data?.data?.taskId;
+    const projectId = notification.data?.projectId ?? notification.data?.data?.projectId;
+
+    if (taskId) {
+      console.log('[NotificationToast] Navigating to task', { taskId, projectId });
+      try {
+        await navigateToTask(taskId, projectId);
+        console.log('[NotificationToast] Navigation successful');
+      } catch (err) {
+        console.error('[NotificationToast] Navigation failed', err);
+      }
+    } else {
+      console.log('[NotificationToast] No taskId found, skipping navigation');
     }
+
+    toast.dismiss(t.id);
   };
 
   return (
@@ -230,15 +163,10 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
         hover:ring-offset-2
         dark:hover:ring-offset-gray-900
       `}
-      style={
-        {
-          '--tw-ring-color': config.hexColor,
-        } as React.CSSProperties
-      }
+      style={{ '--tw-ring-color': config.hexColor } as React.CSSProperties}
     >
       <div className="p-4">
         <div className="flex items-start gap-3">
-          {/* Icon with gradient background */}
           <div
             className={`
               flex-shrink-0 w-11 h-11 rounded-xl
@@ -254,7 +182,6 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
             <Icon className={`w-5 h-5 ${config.color}`} strokeWidth={2.5} />
           </div>
 
-          {/* Content */}
           <div className="flex-1 min-w-0 pr-2">
             <p className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5 truncate">
               {title}
@@ -262,12 +189,9 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
             <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
               {message}
             </p>
-
-            {/* Time indicator */}
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Just now</p>
           </div>
 
-          {/* Close button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -288,7 +212,6 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
         </div>
       </div>
 
-      {/* Progress bar with gradient */}
       <div className="h-1.5 bg-gray-100 dark:bg-gray-700/50">
         <div
           className="h-full rounded-full transition-all"
@@ -306,51 +229,25 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 // TOAST DISPLAY FUNCTIONS
 // ============================================
 
-/**
- * Show toast for notification with smart deduplication
- */
-export function showNotificationToast(
-  notification: Notification,
-  navigateHandler: (notification: Notification) => void | Promise<void>
-) {
+export function showNotificationToast(notification: Notification) {
   const { shouldShow, toastIdToDismiss } = shouldShowNotification(notification);
+  if (!shouldShow) return;
 
-  if (!shouldShow) {
-    console.log(`⏭️ Not showing duplicate notification: ${notification.type}`);
-    return;
-  }
-
-  // Dismiss old toast if needed (for priority replacement)
-  if (toastIdToDismiss) {
-    toast.dismiss(toastIdToDismiss);
-    console.log(`🔄 Replacing lower priority notification with: ${notification.type}`);
-  }
+  if (toastIdToDismiss) toast.dismiss(toastIdToDismiss);
 
   toast.custom(
     (t) => (
       <div className="flex justify-center px-4 pointer-events-none">
-        <NotificationToast
-          t={t}
-          notification={notification}
-          onSimpleNavigate={() => navigateHandler(notification)}
-        />
+        <NotificationToast t={t} notification={notification} />
       </div>
     ),
-    {
-      duration: 5000,
-      position: 'top-center',
-      id: `notification-${notification.id}`,
-    }
+    { duration: 5000, position: 'top-center', id: `notification-${notification.id}` }
   );
 }
 
-/**
- * Show toast for WebSocket notification with smart deduplication
- */
 export function showWebSocketNotificationToast(
   type: NotificationType,
-  data: Record<string, unknown>,
-  navigateHandler: (notification: Notification) => void | Promise<void>
+  data: Record<string, unknown>
 ) {
   const notification: Notification = {
     id: (data.id as string) ?? `ws-${Date.now()}`,
@@ -363,5 +260,5 @@ export function showWebSocketNotificationToast(
     createdAt: new Date().toISOString(),
   };
 
-  showNotificationToast(notification, navigateHandler);
+  showNotificationToast(notification);
 }
