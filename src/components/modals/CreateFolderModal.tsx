@@ -1,4 +1,4 @@
-// src/components/modals/CreateSpaceModal.tsx
+// src/components/modals/CreateFolderModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { useProjectContext } from '../../context/ProjectContext';
 import {
@@ -7,86 +7,60 @@ import {
   Info,
   Plus,
   Loader2,
-  Laptop,
-  Megaphone,
-  Target,
-  Rocket,
-  BarChart3,
-  Palette,
-  FileText,
-  Settings,
-  Microscope,
-  BookOpen,
-  Briefcase,
-  Gamepad2,
-  Wrench,
-  TrendingUp,
-  Globe,
-  Lightbulb,
-  Hammer,
-  Smartphone,
-  Music,
-  Film,
-  Package,
-  Lock,
-  Star,
-  Zap,
+  Folder,
+  FolderOpen,
+  FolderClosed,
+  FolderArchive,
+  FolderCog,
+  FolderEdit,
+  FolderHeart,
+  FolderKanban,
+  FolderLock,
+  FolderSearch,
+  FolderTree,
   type LucideIcon,
 } from 'lucide-react';
 
-interface CreateSpaceModalProps {
+interface CreateFolderModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const SPACE_ICONS: LucideIcon[] = [
-  Laptop,
-  Megaphone,
-  Target,
-  Rocket,
-  BarChart3,
-  Palette,
-  FileText,
-  Settings,
-  Microscope,
-  BookOpen,
-  Briefcase,
-  Gamepad2,
-  Wrench,
-  TrendingUp,
-  Globe,
-  Lightbulb,
-  Hammer,
-  Smartphone,
-  Music,
-  Film,
-  Package,
-  Lock,
-  Star,
-  Zap,
+const FOLDER_ICONS: LucideIcon[] = [
+  Folder,
+  FolderOpen,
+  FolderClosed,
+  FolderKanban,
+  FolderTree,
+  FolderArchive,
+  FolderCog,
+  FolderEdit,
+  FolderHeart,
+  FolderLock,
+  FolderSearch,
 ];
 
-const SPACE_COLORS = [
-  '#3B82F6',
-  '#10B981',
-  '#F59E0B',
-  '#EF4444',
-  '#8B5CF6',
-  '#EC4899',
-  '#06B6D4',
-  '#84CC16',
-  '#6366F1',
-  '#14B8A6',
-  '#F97316',
-  '#E11D48',
+const FOLDER_COLORS = [
+  '#F59E0B', // Amber
+  '#EF4444', // Red
+  '#10B981', // Green
+  '#3B82F6', // Blue
+  '#8B5CF6', // Violet
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#84CC16', // Lime
+  '#F97316', // Orange
+  '#14B8A6', // Teal
+  '#6366F1', // Indigo
+  '#E11D48', // Rose
 ];
 
-const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) => {
-  const { createSpace } = useProjectContext();
+const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ isOpen, onClose }) => {
+  const { createFolder, currentSpace } = useProjectContext();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [icon, setIcon] = useState<LucideIcon>(SPACE_ICONS[0]);
-  const [color, setColor] = useState(SPACE_COLORS[0]);
+  const [icon, setIcon] = useState<LucideIcon>(FOLDER_ICONS[0]);
+  const [color, setColor] = useState(FOLDER_COLORS[0]);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +90,12 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Space name is required');
+      setError('Folder name is required');
+      return;
+    }
+
+    if (!currentSpace) {
+      setError('No space selected');
       return;
     }
 
@@ -124,22 +103,22 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
     setError(null);
 
     try {
-      await createSpace({
+      await createFolder({
         name: name.trim(),
-        icon: SPACE_ICONS.indexOf(icon).toString(),
+        icon: FOLDER_ICONS.indexOf(icon).toString(),
         color,
       });
 
       // Reset form
       setName('');
       setDescription('');
-      setIcon(SPACE_ICONS[0]);
-      setColor(SPACE_COLORS[0]);
+      setIcon(FOLDER_ICONS[0]);
+      setColor(FOLDER_COLORS[0]);
       setShowIconPicker(false);
       onClose();
     } catch (err) {
-      console.error('Failed to create space:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create space. Please try again.');
+      console.error('Failed to create folder:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create folder. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -148,8 +127,8 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
   const resetForm = () => {
     setName('');
     setDescription('');
-    setIcon(SPACE_ICONS[0]);
-    setColor(SPACE_COLORS[0]);
+    setIcon(FOLDER_ICONS[0]);
+    setColor(FOLDER_COLORS[0]);
     setShowIconPicker(false);
     setError(null);
   };
@@ -187,9 +166,11 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Create Space
+                  Create Folder
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Organize your projects</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  In {currentSpace?.name || 'space'}
+                </p>
               </div>
             </div>
             <button
@@ -233,7 +214,7 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
                     Click icon to change • Select color below
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {SPACE_COLORS.map((c) => (
+                    {FOLDER_COLORS.map((c) => (
                       <button
                         key={c}
                         type="button"
@@ -258,8 +239,8 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">
                   Choose an icon
                 </p>
-                <div className="grid grid-cols-8 gap-2">
-                  {SPACE_ICONS.map((Icon, idx) => (
+                <div className="grid grid-cols-6 gap-2">
+                  {FOLDER_ICONS.map((Icon, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -268,33 +249,33 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
                         setShowIconPicker(false);
                       }}
                       disabled={isSubmitting}
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all
                         ${
                           icon === Icon
-                            ? 'bg-brand-100 dark:bg-brand-900/50 ring-2 ring-brand-500'
+                            ? 'bg-amber-100 dark:bg-amber-900/50 ring-2 ring-amber-500'
                             : 'hover:bg-gray-200 dark:hover:bg-gray-700'
                         }
                       `}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-5 h-5" />
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Space Name */}
+            {/* Folder Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Space Name <span className="text-red-500">*</span>
+                Folder Name <span className="text-red-500">*</span>
               </label>
               <input
                 ref={nameInputRef}
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Engineering, Marketing, Design, Product"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                placeholder="e.g., Q1 Projects, Sprint 1, Backend Tasks"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                 required
                 disabled={isSubmitting}
                 maxLength={50}
@@ -309,9 +290,9 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="What is this space for? Who will use it?"
+                placeholder="What projects will go in this folder?"
                 rows={3}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                 disabled={isSubmitting}
                 maxLength={200}
               />
@@ -319,13 +300,13 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
             </div>
 
             {/* Info Box */}
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
               <div className="flex gap-3">
-                <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-700 dark:text-blue-300">
-                  <p className="font-medium">What is a Space?</p>
-                  <p className="mt-1 text-blue-600 dark:text-blue-400">
-                    Spaces help you organize related projects together, like teams or departments.
+                <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-700 dark:text-amber-300">
+                  <p className="font-medium">What is a Folder?</p>
+                  <p className="mt-1 text-amber-600 dark:text-amber-400">
+                    Folders help you organize related projects within a space.
                   </p>
                 </div>
               </div>
@@ -345,7 +326,7 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
             <button
               onClick={handleSubmit}
               disabled={!name.trim() || isSubmitting}
-              className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 min-w-[130px] justify-center"
+              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 min-w-[130px] justify-center"
             >
               {isSubmitting ? (
                 <>
@@ -355,7 +336,7 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
               ) : (
                 <>
                   <Plus className="w-4 h-4" />
-                  <span>Create Space</span>
+                  <span>Create Folder</span>
                 </>
               )}
             </button>
@@ -366,4 +347,4 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
   );
 };
 
-export default CreateSpaceModal;
+export default CreateFolderModal;
