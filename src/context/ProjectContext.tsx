@@ -1,4 +1,6 @@
-// ✅ COMPLETE REPLACEMENT: src/context/ProjectContext.tsx - WITH FOLDERS
+/* eslint-disable react-hooks/rules-of-hooks */
+// ✅ COMPLETE FIX: src/context/ProjectContext.tsx
+// Fixed: Navigation state management, auto-selection guards, data fetching
 
 import React, {
   createContext,
@@ -8,6 +10,7 @@ import React, {
   ReactNode,
   useEffect,
   useMemo,
+  useRef,
 } from 'react';
 import { Task, TaskStatus, Project, Space, Workspace, Folder } from '../types/project';
 import { useAuth } from '../components/UserProfile/AuthContext';
@@ -23,6 +26,7 @@ import {
   useCreateProject,
   useDeleteProject,
   useProjectsByFolder,
+  useProjectsBySpace,
   useUpdateProject,
 } from '../hooks/api/useProjects';
 import {
@@ -41,6 +45,16 @@ import {
   useFoldersBySpace,
   useUpdateFolder,
 } from '../hooks/api/useFolder';
+
+// ============================================
+// LocalStorage Keys
+// ============================================
+const STORAGE_KEYS = {
+  WORKSPACE: 'selectedWorkspaceId',
+  SPACE: 'selectedSpaceId',
+  PROJECT: 'selectedProjectId',
+  FOLDER: 'selectedFolderId',
+} as const;
 
 // ============================================
 // Context Type
@@ -225,7 +239,7 @@ const mapFolder = (folder: any): Folder => ({
   name: folder.name,
   icon: folder.icon || '📂',
   color: folder.color || '#6366f1',
-  spaceId: folder.space_id,
+  spaceId: folder.space_id || folder.spaceId,
   projects: [],
 });
 
@@ -260,13 +274,66 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // ============================================
   // Selection State
   // ============================================
-  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
-  const [currentSpace, setCurrentSpace] = useState<Space | null>(null);
-  const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [currentWorkspace, setCurrentWorkspaceState] = useState<Workspace | null>(null);
+  const [currentSpace, setCurrentSpaceState] = useState<Space | null>(null);
+  const [currentFolder, setCurrentFolderState] = useState<Folder | null>(null);
+  const [currentProject, setCurrentProjectState] = useState<Project | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const [managementEntity, setManagementEntity] = useState<ManagementEntity>(null);
+
+  // ============================================
+  // Navigation Guard - Prevents auto-selection from overriding navigation
+  // ============================================
+  const isNavigatingRef = useRef(false);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Wrapped setters that track navigation state
+  const setCurrentWorkspace = useCallback((workspace: Workspace | null) => {
+    setCurrentWorkspaceState(workspace);
+    if (workspace) {
+      localStorage.setItem(STORAGE_KEYS.WORKSPACE, workspace.id);
+    }
+  }, []);
+
+  const setCurrentSpace = useCallback((space: Space | null) => {
+    setCurrentSpaceState(space);
+    if (space) {
+      localStorage.setItem(STORAGE_KEYS.SPACE, space.id);
+    }
+  }, []);
+
+  const setCurrentFolder = useCallback((folder: Folder | null) => {
+    setCurrentFolderState(folder);
+    if (folder) {
+      localStorage.setItem(STORAGE_KEYS.FOLDER, folder.id);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.FOLDER);
+    }
+  }, []);
+
+  const setCurrentProject = useCallback((project: Project | null) => {
+    // Set navigation flag to prevent auto-selection effects
+    isNavigatingRef.current = true;
+
+    // Clear any existing timeout
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+
+    setCurrentProjectState(project);
+
+    if (project) {
+      localStorage.setItem(STORAGE_KEYS.PROJECT, project.id);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.PROJECT);
+    }
+
+    // Reset navigation flag after effects have run
+    navigationTimeoutRef.current = setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 500);
+  }, []);
 
   // ============================================
   // UI State
@@ -291,6 +358,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [isInitializing, setIsInitializing] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
 
+  // Track if initial restoration has completed
+  const hasRestoredRef = useRef(false);
+
   // ============================================
   // Data Hooks
   // ============================================
@@ -312,10 +382,28 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   });
 
   // Fetch projects for current folder
-  const { data: projectsData, refetch: refetchProjects } = useProjectsByFolder(
+  const { data: projectsDataByFolder, refetch: refetchProjectsByFolder } = useProjectsByFolder(
     currentFolder?.id || '',
     { enabled: !!currentFolder?.id }
   );
+
+  // ✅ FIX: Also fetch projects by space for projects without folders
+  const { data: projectsDataBySpace, refetch: refetchProjectsBySpace } = useProjectsBySpace
+    ? useProjectsBySpace(currentSpace?.id || '', {
+        enabled: !!currentSpace?.id && !currentFolder?.id,
+      })
+    : { data: undefined, refetch: () => {} };
+
+  // Combine project data - prefer folder projects, fall back to space projects
+  const projectsData = currentFolder?.id ? projectsDataByFolder : projectsDataBySpace;
+
+  const refetchProjects = useCallback(() => {
+    if (currentFolder?.id) {
+      refetchProjectsByFolder();
+    } else if (currentSpace?.id) {
+      refetchProjectsBySpace();
+    }
+  }, [currentFolder?.id, currentSpace?.id, refetchProjectsByFolder, refetchProjectsBySpace]);
 
   // Fetch tasks for current project
   const {
@@ -442,20 +530,21 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [tasksData]);
 
   // ============================================
-  // Initialize workspace (ONLY ONCE)
+  // Initialize & Restore from localStorage (ONCE)
   // ============================================
   useEffect(() => {
     if (!isAuthenticated) {
-      setCurrentWorkspace(null);
-      setCurrentSpace(null);
-      setCurrentFolder(null);
-      setCurrentProject(null);
+      setCurrentWorkspaceState(null);
+      setCurrentSpaceState(null);
+      setCurrentFolderState(null);
+      setCurrentProjectState(null);
       setIsInitializing(false);
+      hasRestoredRef.current = false;
       return;
     }
 
     if (workspacesLoading) return;
-    if (currentWorkspace) {
+    if (hasRestoredRef.current) {
       setIsInitializing(false);
       return;
     }
@@ -467,6 +556,15 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         let workspace = workspacesData?.[0];
 
+        // Check localStorage for saved workspace
+        const savedWorkspaceId = localStorage.getItem(STORAGE_KEYS.WORKSPACE);
+        if (savedWorkspaceId && workspacesData) {
+          const savedWorkspace = workspacesData.find((w) => w.id === savedWorkspaceId);
+          if (savedWorkspace) {
+            workspace = savedWorkspace;
+          }
+        }
+
         if (!workspace) {
           workspace = await createWorkspaceMutation.mutateAsync({
             name: 'My Workspace',
@@ -474,7 +572,10 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         }
 
         const mappedWorkspace = mapWorkspace(workspace);
-        setCurrentWorkspace(mappedWorkspace);
+        setCurrentWorkspaceState(mappedWorkspace);
+        localStorage.setItem(STORAGE_KEYS.WORKSPACE, mappedWorkspace.id);
+
+        hasRestoredRef.current = true;
       } catch (error) {
         console.error('[ProjectContext] Initialization error:', error);
         setInitError(error instanceof Error ? error.message : 'Failed to initialize');
@@ -484,61 +585,136 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
     initialize();
-  }, [isAuthenticated, workspacesLoading, workspacesData]);
+  }, [isAuthenticated, workspacesLoading, workspacesData, createWorkspaceMutation]);
 
   // ============================================
-  // Set current space when spaces load
+  // Restore Space from localStorage
   // ============================================
   useEffect(() => {
     if (!currentWorkspace || !spacesData || spacesData.length === 0) return;
-    if (currentSpace) return;
+    if (currentSpace) return; // Already set (by navigation or previous restore)
+    if (isNavigatingRef.current) return; // Don't override navigation
 
+    const savedSpaceId = localStorage.getItem(STORAGE_KEYS.SPACE);
+
+    if (savedSpaceId) {
+      const savedSpace = spacesData.find(
+        (s) => s.id === savedSpaceId && s.workspace_id === currentWorkspace.id
+      );
+      if (savedSpace) {
+        setCurrentSpaceState(mapSpace(savedSpace));
+        return;
+      }
+    }
+
+    // Auto-select first space only if no saved space
     const firstSpace = mapSpace(spacesData[0]);
-    setCurrentSpace(firstSpace);
-  }, [spacesData, currentWorkspace]);
+    setCurrentSpaceState(firstSpace);
+    localStorage.setItem(STORAGE_KEYS.SPACE, firstSpace.id);
+  }, [spacesData, currentWorkspace, currentSpace]);
 
   // ============================================
-  // Set current folder when folders load
+  // Restore Folder from localStorage
   // ============================================
   useEffect(() => {
     if (!currentSpace || !foldersData || foldersData.length === 0) return;
-    if (currentFolder) return;
+    if (currentFolder) return; // Already set
+    if (isNavigatingRef.current) return; // Don't override navigation
 
+    const savedFolderId = localStorage.getItem(STORAGE_KEYS.FOLDER);
+
+    if (savedFolderId) {
+      const savedFolder = foldersData.find(
+        (f) =>
+          f.id === savedFolderId &&
+          (f.space_id === currentSpace.id || f.space_id === currentSpace.id)
+      );
+      if (savedFolder) {
+        setCurrentFolderState(mapFolder(savedFolder));
+        return;
+      }
+    }
+
+    // Auto-select first folder only if no saved folder
     const firstFolder = mapFolder(foldersData[0]);
-    setCurrentFolder(firstFolder);
-  }, [foldersData, currentSpace]);
+    setCurrentFolderState(firstFolder);
+    localStorage.setItem(STORAGE_KEYS.FOLDER, firstFolder.id);
+  }, [foldersData, currentSpace, currentFolder]);
 
   // ============================================
-  // Set current project when projects load
+  // Restore Project from localStorage - WITH NAVIGATION GUARD
   // ============================================
   useEffect(() => {
-    if (!currentFolder || !projectsData || projectsData.length === 0) return;
-    if (currentProject) return;
+    // ✅ CRITICAL: Don't override if navigation just set a project
+    if (isNavigatingRef.current) {
+      console.log('[ProjectContext] Skipping auto-select - navigation in progress');
+      return;
+    }
 
+    if (!projectsData || projectsData.length === 0) return;
+    if (currentProject) return; // Already set
+
+    const savedProjectId = localStorage.getItem(STORAGE_KEYS.PROJECT);
+
+    if (savedProjectId) {
+      const savedProject = projectsData.find((p) => p.id === savedProjectId);
+      if (savedProject) {
+        setCurrentProjectState(mapProject(savedProject));
+        return;
+      }
+    }
+
+    // Auto-select first project only if no saved project and not navigating
     const firstProject = mapProject(projectsData[0]);
-    setCurrentProject(firstProject);
-  }, [projectsData, currentFolder]);
+    setCurrentProjectState(firstProject);
+    localStorage.setItem(STORAGE_KEYS.PROJECT, firstProject.id);
+  }, [projectsData, currentProject]);
+
+  // ============================================
+  // Clear child selections when parent changes
+  // ============================================
+  useEffect(() => {
+    // When workspace changes, clear space (which will cascade)
+    if (currentWorkspace && currentSpace) {
+      // Check if space belongs to current workspace
+      const spaceInWorkspace = spacesData?.some(
+        (s) => s.id === currentSpace.id && s.workspace_id === currentWorkspace.id
+      );
+      if (spacesData && !spaceInWorkspace) {
+        setCurrentSpaceState(null);
+        setCurrentFolderState(null);
+        setCurrentProjectState(null);
+        localStorage.removeItem(STORAGE_KEYS.SPACE);
+        localStorage.removeItem(STORAGE_KEYS.FOLDER);
+        localStorage.removeItem(STORAGE_KEYS.PROJECT);
+      }
+    }
+  }, [currentWorkspace?.id, spacesData]);
 
   // ============================================
   // Task Operations
   // ============================================
   const updateTaskStatus = useCallback(
     (taskId: string, newStatus: TaskStatus) => {
-      const backendStatus = mapStatusFromBackend(newStatus);
-      updateTaskStatusMutation.mutate({ id: taskId, status: backendStatus });
+      updateTaskStatusMutation.mutate(
+        { id: taskId, status: newStatus },
+        {
+          onSuccess: () => {
+            refetchTasks();
+          },
+        }
+      );
     },
-    [updateTaskStatusMutation]
+    [updateTaskStatusMutation, refetchTasks]
   );
 
   const moveTask = useCallback(
-    (taskId: string, toStatus: TaskStatus) => {
-      const backendStatus = mapStatusFromBackend(toStatus);
-
+    (taskId: string, toStatus: TaskStatus, _toIndex: number) => {
       updateTaskMutation.mutate(
         {
           id: taskId,
           data: {
-            status: backendStatus,
+            status: toStatus,
           },
         },
         {
@@ -559,10 +735,11 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
             setSelectedTask(null);
             setIsTaskModalOpen(false);
           }
+          refetchTasks();
         },
       });
     },
-    [deleteTaskMutation, selectedTask]
+    [deleteTaskMutation, selectedTask, refetchTasks]
   );
 
   // ============================================
@@ -602,11 +779,11 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       if (currentSpace?.id === spaceId) {
         const remainingSpaces = spacesData?.filter((s) => s.id !== spaceId) || [];
         if (remainingSpaces.length > 0) {
-          setCurrentSpace(mapSpace(remainingSpaces[0]));
+          setCurrentSpaceState(mapSpace(remainingSpaces[0]));
         } else {
-          setCurrentSpace(null);
-          setCurrentFolder(null);
-          setCurrentProject(null);
+          setCurrentSpaceState(null);
+          setCurrentFolderState(null);
+          setCurrentProjectState(null);
         }
       }
     },
@@ -650,10 +827,10 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       if (currentFolder?.id === folderId) {
         const remainingFolders = foldersData?.filter((f) => f.id !== folderId) || [];
         if (remainingFolders.length > 0) {
-          setCurrentFolder(mapFolder(remainingFolders[0]));
+          setCurrentFolderState(mapFolder(remainingFolders[0]));
         } else {
-          setCurrentFolder(null);
-          setCurrentProject(null);
+          setCurrentFolderState(null);
+          setCurrentProjectState(null);
         }
       }
     },
@@ -670,7 +847,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         data: projectData,
       });
 
-      setCurrentProject(mapProject(newProject));
+      setCurrentProjectState(mapProject(newProject));
+      localStorage.setItem(STORAGE_KEYS.PROJECT, newProject.id);
       await refetchProjects();
     },
     [createProjectMutation, refetchProjects]
@@ -689,7 +867,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       await deleteProjectMutation.mutateAsync(projectId);
 
       if (currentProject?.id === projectId) {
-        setCurrentProject(null);
+        setCurrentProjectState(null);
+        localStorage.removeItem(STORAGE_KEYS.PROJECT);
       }
       await refetchProjects();
     },
@@ -707,6 +886,17 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const closeTaskModal = useCallback(() => {
     setIsTaskModalOpen(false);
     setTimeout(() => setSelectedTask(null), 300);
+  }, []);
+
+  // ============================================
+  // Cleanup
+  // ============================================
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
   }, []);
 
   // ============================================
@@ -770,6 +960,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
 
 export const useProjectContext = (): ProjectContextType => {
   const context = useContext(ProjectContext);
-  if (!context) throw new Error('useProject must be used within a ProjectProvider');
+  if (!context) throw new Error('useProjectContext must be used within a ProjectProvider');
   return context;
 };

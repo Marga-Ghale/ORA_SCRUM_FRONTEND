@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
+import toast from 'react-hot-toast';
 
 // ============================================
 // Types
@@ -525,10 +526,50 @@ export const useDeleteTask = () => {
 
   return useMutation({
     mutationFn: taskApi.delete,
-    onSuccess: (_, id) => {
+
+    // ✅ CRITICAL: Remove the task from cache immediately (optimistic update)
+    onMutate: async (taskId: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
+
+      // Snapshot the previous value
+      const previousTasks = queryClient.getQueriesData({ queryKey: queryKeys.tasks.all });
+
+      // Optimistically remove the task from all queries
+      queryClient.setQueriesData<TaskResponse[]>({ queryKey: queryKeys.tasks.all }, (old) => {
+        if (!old) return old;
+        return old.filter((task) => task.id !== taskId);
+      });
+
+      return { previousTasks };
+    },
+
+    onSuccess: (_, taskId) => {
+      console.log('✅ Task deleted successfully:', taskId);
+
+      // Invalidate ALL task-related queries to force refetch
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.myTasks() });
-      queryClient.removeQueries({ queryKey: queryKeys.tasks.detail(id) });
+
+      // Remove specific task detail query
+      queryClient.removeQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+
+      // ✅ Show success toast ONLY on actual success
+      toast.success('Task deleted successfully');
+    },
+
+    onError: (error, taskId, context) => {
+      console.error('❌ Failed to delete task:', error);
+
+      // ✅ Rollback optimistic update on error
+      if (context?.previousTasks) {
+        context.previousTasks.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+
+      // ✅ Show error toast
+      toast.error('Failed to delete task. You may not have permission.');
     },
   });
 };
