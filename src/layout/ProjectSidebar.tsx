@@ -235,6 +235,8 @@ const ProjectSidebar: React.FC = () => {
   const { data: notificationData } = useNotificationCount({ enabled: !!user });
   const { data: chatUnreadData } = useUnreadCounts({ enabled: !!user });
 
+  const [spaceAddMenuOpen, setSpaceAddMenuOpen] = useState<string | null>(null);
+
   // ============================================================================
   // LOCAL STATE
   // ============================================================================
@@ -383,6 +385,16 @@ const ProjectSidebar: React.FC = () => {
   useEffect(() => {
     if (currentFolder) setExpandedFolders((prev) => new Set([...prev, currentFolder.id]));
   }, [currentFolder]);
+
+  // Close space add menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (spaceAddMenuOpen) setSpaceAddMenuOpen(null);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [spaceAddMenuOpen]);
 
   // ============================================================================
   // HANDLERS
@@ -817,18 +829,53 @@ const ProjectSidebar: React.FC = () => {
                                   <MoreHorizontal className="w-4 h-4" />
                                 </button>
 
-                                {/* Add Button */}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCurrentSpace(space as any);
-                                    setIsCreateFolderModalOpen?.(true);
-                                  }}
-                                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-white transition-all"
-                                  title="Add folder"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </button>
+                                {/* Add Button with Dropdown */}
+                                <div className="relative z-80000">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSpaceAddMenuOpen(
+                                        spaceAddMenuOpen === space.id ? null : space.id
+                                      );
+                                    }}
+                                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-white transition-all"
+                                    title="Add to space"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+
+                                  {/* Dropdown Menu */}
+                                  {spaceAddMenuOpen === space.id && (
+                                    <div
+                                      className="absolute left-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-[9999]"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          setCurrentSpace(space as any);
+                                          setIsCreateFolderModalOpen?.(true);
+                                          setSpaceAddMenuOpen(null);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+                                      >
+                                        <Folder className="w-4 h-4" />
+                                        <span>New Folder</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setCurrentSpace(space as any);
+                                          setCurrentFolder(null);
+                                          setIsCreateProjectModalOpen?.(true);
+                                          setSpaceAddMenuOpen(null);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
+                                      >
+                                        <Hash className="w-4 h-4" />
+                                        <span>New Project</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </>
                             )}
                           </div>
