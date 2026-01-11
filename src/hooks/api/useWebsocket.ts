@@ -102,7 +102,6 @@ function shouldProcessMessage(message: WebSocketMessage): boolean {
     const messageId = `notification-${notificationId}`;
 
     if (processedMessages.has(messageId)) {
-      console.log('⏭️ Skipping duplicate WebSocket message:', messageId);
       return false;
     }
 
@@ -122,7 +121,6 @@ function shouldProcessMessage(message: WebSocketMessage): boolean {
   const messageId = `${message.type}-${taskId || projectId || channelId || Date.now()}`;
 
   if (processedMessages.has(messageId)) {
-    console.log('⏭️ Skipping duplicate WebSocket message:', messageId);
     return false;
   }
 

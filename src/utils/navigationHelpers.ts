@@ -1,6 +1,6 @@
 // ============================================
 // UPDATED: src/utils/navigationHelpers.ts
-// Handles projects without folderId
+// Fixed: Updates localStorage BEFORE setting context state
 // ============================================
 
 import { NavigateFunction } from 'react-router-dom';
@@ -11,9 +11,19 @@ import { SpaceResponse } from '../hooks/api/useSpaces';
 import { WorkspaceResponse } from '../hooks/api/useWorkspaces';
 import { Workspace, Space, Folder, Project } from '../types/project';
 
-/**
- * Maps backend responses to frontend types
- */
+// ============================================
+// LocalStorage Keys - Must match ProjectContext
+// ============================================
+const STORAGE_KEYS = {
+  WORKSPACE: 'selectedWorkspaceId',
+  SPACE: 'selectedSpaceId',
+  PROJECT: 'selectedProjectId',
+  FOLDER: 'selectedFolderId',
+} as const;
+
+// ============================================
+// Mapper Functions
+// ============================================
 const mapWorkspace = (data: WorkspaceResponse): Workspace => ({
   id: data.id,
   name: data.name,
@@ -52,10 +62,9 @@ const mapProject = (data: ProjectResponse): Project => ({
   members: [],
 });
 
-/**
- * Fetches the complete hierarchy for a project from the API
- * ✅ NOW HANDLES PROJECTS WITHOUT FOLDERS
- */
+// ============================================
+// Fetch Project Hierarchy
+// ============================================
 async function fetchProjectHierarchy(projectId: string): Promise<{
   workspace: Workspace;
   space: Space;
@@ -68,24 +77,19 @@ async function fetchProjectHierarchy(projectId: string): Promise<{
     // 1. Fetch the project
     const project = await apiClient.get<ProjectResponse>(`/projects/${projectId}`);
     console.log('✅ Project:', project);
-    console.log('🔍 Project has folderId?', project.folderId);
-    console.log('🔍 Project has spaceId?', project.spaceId);
 
-    // ✅ CHECK: Does project have spaceId?
     if (!project.spaceId) {
       console.error('❌ Project missing spaceId');
       return null;
     }
 
-    // ✅ NEW: Handle projects without folders
+    // 2. Fetch folder if exists
     let folder: FolderResponse | null = null;
-
     if (project.folderId) {
-      // Project has a folder - fetch it
       folder = await apiClient.get<FolderResponse>(`/folders/${project.folderId}`);
       console.log('✅ Folder:', folder);
     } else {
-      console.log('⚠️ Project has no folder (legacy project)');
+      console.log('⚠️ Project has no folder (direct space project)');
     }
 
     // 3. Fetch the space
@@ -108,10 +112,9 @@ async function fetchProjectHierarchy(projectId: string): Promise<{
   }
 }
 
-/**
- * Main navigation function: Sets up context and navigates to project
- * ✅ NOW HANDLES PROJECTS WITHOUT FOLDERS
- */
+// ============================================
+// Main Navigation Function
+// ============================================
 export async function navigateToProject(
   projectId: string,
   navigate: NavigateFunction,
@@ -135,19 +138,25 @@ export async function navigateToProject(
 
     console.log('✅ Hierarchy loaded successfully');
 
-    // Set the context state in the correct order
-    setContextState.setCurrentWorkspace(hierarchy.workspace);
-    setContextState.setCurrentSpace(hierarchy.space);
+    // ✅ CRITICAL FIX: Update localStorage FIRST
+    // This prevents restoration effects from overriding the navigation
+    localStorage.setItem(STORAGE_KEYS.WORKSPACE, hierarchy.workspace.id);
+    localStorage.setItem(STORAGE_KEYS.SPACE, hierarchy.space.id);
+    localStorage.setItem(STORAGE_KEYS.PROJECT, hierarchy.project.id);
 
-    // ✅ NEW: Handle null folder (legacy projects)
     if (hierarchy.folder) {
-      setContextState.setCurrentFolder(hierarchy.folder);
+      localStorage.setItem(STORAGE_KEYS.FOLDER, hierarchy.folder.id);
     } else {
-      // For projects without folders, set folder to null
-      // This allows the app to work with legacy data
-      setContextState.setCurrentFolder(null);
+      localStorage.removeItem(STORAGE_KEYS.FOLDER);
     }
 
+    console.log('✅ localStorage updated');
+
+    // ✅ Set context state in correct order (parent -> child)
+    // The setCurrentProject will set isNavigatingRef to prevent auto-selection
+    setContextState.setCurrentWorkspace(hierarchy.workspace);
+    setContextState.setCurrentSpace(hierarchy.space);
+    setContextState.setCurrentFolder(hierarchy.folder);
     setContextState.setCurrentProject(hierarchy.project);
 
     console.log('✅ Context state set');
@@ -163,9 +172,9 @@ export async function navigateToProject(
   }
 }
 
-/**
- * Navigate to a specific task within a project
- */
+// ============================================
+// Navigate to Task
+// ============================================
 export async function navigateToTask(
   projectId: string,
   taskId: string,
@@ -180,14 +189,14 @@ export async function navigateToTask(
   try {
     console.log('🎯 Starting navigation to task:', taskId, 'in project:', projectId);
 
-    // First navigate to the project (sets up context)
+    // First set up the project context
     const success = await navigateToProject(projectId, navigate, setContextState);
 
     if (!success) {
       return false;
     }
 
-    // Add task ID as URL parameter
+    // Navigate with task ID parameter
     navigate(`/project/${projectId}/board?taskId=${taskId}`);
     console.log('✅ Task navigation complete');
 
@@ -198,9 +207,9 @@ export async function navigateToTask(
   }
 }
 
-/**
- * Extract projectId from notification data
- */
+// ============================================
+// Helper Functions
+// ============================================
 export function getProjectIdFromNotification(notification: any): string | null {
   return (
     notification.data?.projectId ||
@@ -210,9 +219,6 @@ export function getProjectIdFromNotification(notification: any): string | null {
   );
 }
 
-/**
- * Extract taskId from notification data
- */
 export function getTaskIdFromNotification(notification: any): string | null {
   return notification.data?.taskId || notification.taskId || notification.metadata?.taskId || null;
 }

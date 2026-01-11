@@ -65,11 +65,16 @@ const projectApi = {
 // Query Hooks
 // ============================================
 
+// Fetch projects by space (for projects without folders)
 export const useProjectsBySpace = (spaceId: string, options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: queryKeys.projects.bySpace(spaceId),
-    queryFn: () => projectApi.listBySpace(spaceId),
+    queryKey: ['projects', 'by-space', spaceId],
+    queryFn: async () => {
+      const response = await apiClient.get<ProjectResponse[]>(`/spaces/${spaceId}/projects`);
+      return response;
+    },
     enabled: options?.enabled ?? !!spaceId,
+    staleTime: 30000,
   });
 };
 

@@ -1,4 +1,4 @@
-// src/components/ProjectSidebar.tsx - COMPLETE STATE MANAGEMENT FIX
+// src/layout/ProjectSidebar.tsx - COMPLETE FIXED VERSION
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
@@ -12,13 +12,12 @@ import {
   LogOut,
   Zap,
   MessageSquare,
-  BellElectric,
   UserPlus,
-  PersonStandingIcon,
   Bell,
-  PanelsTopLeftIcon,
-  LucideHammer,
   Settings2,
+  Trash2,
+  X,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
@@ -41,6 +40,7 @@ import {
 } from '../hooks/api/useAccessibleEntities';
 import { SpaceItem } from '../components/projectSidebarCompponent/SpaceComponent';
 import { useProjectContext } from '../context/ProjectContext';
+import toast from 'react-hot-toast';
 
 // ============================================================================
 // LOCALSTORAGE KEYS
@@ -52,20 +52,260 @@ const STORAGE_KEYS = {
   FOLDER: 'selectedFolderId',
 } as const;
 
+// ============================================================================
+// SPACE MANAGEMENT MODAL COMPONENT
+// ============================================================================
+interface SpaceManagementModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  mode: 'create' | 'edit';
+  space?: { id: string; name: string; color?: string; icon?: string } | null;
+  onSubmit: (data: { name: string; color?: string; icon?: string }) => Promise<void>;
+  onDelete?: () => Promise<void>;
+}
+
+const SpaceManagementModal: React.FC<SpaceManagementModalProps> = ({
+  isOpen,
+  onClose,
+  mode,
+  space,
+  onSubmit,
+  onDelete,
+}) => {
+  const [name, setName] = useState(space?.name || '');
+  const [color, setColor] = useState(space?.color || '#6366f1');
+  const [icon, setIcon] = useState(space?.icon || '📁');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(space?.name || '');
+      setColor(space?.color || '#6366f1');
+      setIcon(space?.icon || '📁');
+      setShowDeleteConfirm(false);
+    }
+  }, [isOpen, space]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error('Space name is required');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ name: name.trim(), color, icon });
+      onClose();
+      toast.success(
+        mode === 'create' ? 'Space created successfully' : 'Space updated successfully'
+      );
+    } catch (error) {
+      toast.error(mode === 'create' ? 'Failed to create space' : 'Failed to update space');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setIsSubmitting(true);
+    try {
+      await onDelete();
+      onClose();
+      toast.success('Space deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete space');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const colorOptions = [
+    '#6366f1',
+    '#8b5cf6',
+    '#ec4899',
+    '#ef4444',
+    '#f97316',
+    '#eab308',
+    '#22c55e',
+    '#14b8a6',
+    '#06b6d4',
+    '#3b82f6',
+  ];
+
+  const iconOptions = ['📁', '🚀', '💼', '🎯', '📊', '🔧', '💡', '🎨', '📱', '🌟'];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Modal */}
+      <div className="relative w-full max-w-md mx-4 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {mode === 'create' ? 'Create New Space' : 'Edit Space'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        {showDeleteConfirm ? (
+          <div className="p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <Trash2 className="w-8 h-8 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Delete Space?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                This will permanently delete "{space?.name}" and all its contents. This action
+                cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Deleting...' : 'Delete Space'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            {/* Name Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Space Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter space name..."
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-shadow"
+                autoFocus
+              />
+            </div>
+
+            {/* Icon Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Icon
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {iconOptions.map((iconOption) => (
+                  <button
+                    key={iconOption}
+                    type="button"
+                    onClick={() => setIcon(iconOption)}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${
+                      icon === iconOption
+                        ? 'bg-violet-100 dark:bg-violet-900/30 ring-2 ring-violet-500'
+                        : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {iconOption}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Color Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Color
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {colorOptions.map((colorOption) => (
+                  <button
+                    key={colorOption}
+                    type="button"
+                    onClick={() => setColor(colorOption)}
+                    className={`w-8 h-8 rounded-lg transition-all ${
+                      color === colorOption
+                        ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 ring-gray-900 dark:ring-white scale-110'
+                        : 'hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: colorOption }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              {mode === 'edit' && onDelete && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isSubmitting}
+                  className="px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !name.trim()}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-medium transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Saving...' : mode === 'create' ? 'Create Space' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// MAIN SIDEBAR COMPONENT
+// ============================================================================
 const ProjectSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const {
     currentWorkspace,
     currentSpace,
     currentFolder,
+    currentProject, // ✅ FIX: Added currentProject
     setCurrentWorkspace,
     setCurrentSpace,
     setCurrentProject,
     setCurrentFolder,
-    setIsCreateSpaceModalOpen,
-    setIsCreateProjectModalOpen,
     isInitializing,
     setManagementEntity,
+    createSpace,
+    updateSpace,
+    deleteSpace,
   } = useProjectContext();
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -96,13 +336,23 @@ const ProjectSidebar: React.FC = () => {
   const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set());
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [hoveredSpace, setHoveredSpace] = useState<string | null>(null);
-  const [IsCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
+  const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
   const [memberModal, setMemberModal] = useState<{
     isOpen: boolean;
     entityType: 'workspace' | 'space' | 'folder' | 'project';
     entityId: string;
     entityName: string;
   } | null>(null);
+
+  // Space management modal state
+  const [spaceModal, setSpaceModal] = useState<{
+    isOpen: boolean;
+    mode: 'create' | 'edit';
+    space: { id: string; name: string; color?: string; icon?: string } | null;
+  }>({ isOpen: false, mode: 'create', space: null });
+
+  // Track if we're restoring from storage vs navigation
+  const [hasInitializedFromStorage, setHasInitializedFromStorage] = useState(false);
 
   const showFull = isExpanded || isHovered || isMobileOpen;
 
@@ -127,14 +377,6 @@ const ProjectSidebar: React.FC = () => {
       {} as Record<string, typeof allProjects>
     );
   }, [allProjects]);
-
-  const foldersForCurrentWorkspace = useMemo(() => {
-    if (!currentWorkspace || !allFolders || !allSpaces) return [];
-    const spaceIds = allSpaces
-      .filter((space) => space.workspaceId === currentWorkspace.id)
-      .map((space) => space.id);
-    return allFolders.filter((folder) => spaceIds.includes(folder.spaceId));
-  }, [allFolders, allSpaces, currentWorkspace]);
 
   const foldersBySpaceId = useMemo(() => {
     if (!allFolders) return {};
@@ -167,11 +409,12 @@ const ProjectSidebar: React.FC = () => {
   }, [allProjects]);
 
   // ============================================================================
-  // STATE PERSISTENCE - RESTORE ON MOUNT
+  // STATE PERSISTENCE - RESTORE ON MOUNT (WITH GUARDS)
   // ============================================================================
 
   // 1. WORKSPACE RESTORATION
   useEffect(() => {
+    if (hasInitializedFromStorage) return;
     if (!workspaces || workspaces.length === 0) return;
 
     const savedWorkspaceId = localStorage.getItem(STORAGE_KEYS.WORKSPACE);
@@ -180,24 +423,27 @@ const ProjectSidebar: React.FC = () => {
       const savedWorkspace = workspaces.find((w) => w.id === savedWorkspaceId);
       if (savedWorkspace && !currentWorkspace) {
         setCurrentWorkspace(savedWorkspace as any);
+        setHasInitializedFromStorage(true);
         return;
       }
     }
 
-    // Only auto-select if no workspace is selected AND none was saved
     if (!currentWorkspace && !savedWorkspaceId) {
       setCurrentWorkspace(workspaces[0] as any);
       localStorage.setItem(STORAGE_KEYS.WORKSPACE, workspaces[0].id);
     }
-  }, [workspaces, currentWorkspace, setCurrentWorkspace]);
+
+    setHasInitializedFromStorage(true);
+  }, [workspaces, currentWorkspace, setCurrentWorkspace, hasInitializedFromStorage]);
 
   // 2. SPACE RESTORATION
   useEffect(() => {
     if (!allSpaces || allSpaces.length === 0 || !currentWorkspace) return;
+    if (currentSpace) return;
 
     const savedSpaceId = localStorage.getItem(STORAGE_KEYS.SPACE);
 
-    if (savedSpaceId && !currentSpace) {
+    if (savedSpaceId) {
       const savedSpace = allSpaces.find(
         (s) => s.id === savedSpaceId && s.workspaceId === currentWorkspace.id
       );
@@ -210,10 +456,11 @@ const ProjectSidebar: React.FC = () => {
   // 3. FOLDER RESTORATION
   useEffect(() => {
     if (!allFolders || allFolders.length === 0 || !currentSpace) return;
+    if (currentFolder) return;
 
     const savedFolderId = localStorage.getItem(STORAGE_KEYS.FOLDER);
 
-    if (savedFolderId && !currentFolder && setCurrentFolder) {
+    if (savedFolderId && setCurrentFolder) {
       const savedFolder = allFolders.find(
         (f) => f.id === savedFolderId && f.spaceId === currentSpace.id
       );
@@ -223,19 +470,7 @@ const ProjectSidebar: React.FC = () => {
     }
   }, [allFolders, currentFolder, currentSpace, setCurrentFolder]);
 
-  // 4. PROJECT RESTORATION
-  useEffect(() => {
-    if (!allProjects || allProjects.length === 0) return;
-
-    const savedProjectId = localStorage.getItem(STORAGE_KEYS.PROJECT);
-
-    if (savedProjectId) {
-      const savedProject = allProjects.find((p) => p.id === savedProjectId);
-      if (savedProject) {
-        setCurrentProject(savedProject as any);
-      }
-    }
-  }, [allProjects, setCurrentProject]);
+  // ✅ REMOVED: Project restoration - let ProjectContext handle it to prevent navigation override
 
   // ============================================================================
   // AUTO-EXPAND CURRENT SPACE
@@ -247,25 +482,32 @@ const ProjectSidebar: React.FC = () => {
   }, [currentSpace]);
 
   // ============================================================================
-  // HANDLER FUNCTIONS WITH PERSISTENCE
+  // HANDLER FUNCTIONS
   // ============================================================================
 
   const handleWorkspaceChange = (workspace: any) => {
     setCurrentWorkspace(workspace);
     localStorage.setItem(STORAGE_KEYS.WORKSPACE, workspace.id);
 
-    // Clear child selections
     localStorage.removeItem(STORAGE_KEYS.SPACE);
     localStorage.removeItem(STORAGE_KEYS.FOLDER);
     localStorage.removeItem(STORAGE_KEYS.PROJECT);
+
+    setCurrentSpace(null);
+    setCurrentFolder(null);
+    setCurrentProject(null);
   };
 
   const handleSpaceChange = (space: any) => {
     setCurrentSpace(space);
     localStorage.setItem(STORAGE_KEYS.SPACE, space.id);
-
-    // Clear child selections
     localStorage.removeItem(STORAGE_KEYS.FOLDER);
+    setCurrentFolder(null);
+
+    // ✅ Close mobile sidebar after selection
+    if (isMobileOpen) {
+      toggleMobileSidebar();
+    }
   };
 
   const handleFolderChange = (folder: any) => {
@@ -273,12 +515,52 @@ const ProjectSidebar: React.FC = () => {
       setCurrentFolder(folder);
       localStorage.setItem(STORAGE_KEYS.FOLDER, folder.id);
     }
+
+    // ✅ Close mobile sidebar after selection
+    if (isMobileOpen) {
+      toggleMobileSidebar();
+    }
   };
 
   const handleProjectChange = (project: any) => {
     setCurrentProject(project);
     localStorage.setItem(STORAGE_KEYS.PROJECT, project.id);
+
+    // ✅ Close mobile sidebar after selection
+    if (isMobileOpen) {
+      toggleMobileSidebar();
+    }
   };
+
+  // ============================================================================
+  // SPACE MANAGEMENT HANDLERS
+  // ============================================================================
+
+  const handleCreateSpace = () => {
+    setSpaceModal({ isOpen: true, mode: 'create', space: null });
+  };
+
+  const handleEditSpace = (space: { id: string; name: string; color?: string; icon?: string }) => {
+    setSpaceModal({ isOpen: true, mode: 'edit', space });
+  };
+
+  const handleSpaceSubmit = async (data: { name: string; color?: string; icon?: string }) => {
+    if (spaceModal.mode === 'create') {
+      await createSpace(data);
+    } else if (spaceModal.space) {
+      await updateSpace(spaceModal.space.id, data);
+    }
+  };
+
+  const handleSpaceDelete = async () => {
+    if (spaceModal.space) {
+      await deleteSpace(spaceModal.space.id);
+    }
+  };
+
+  // ============================================================================
+  // NAVIGATION HELPERS
+  // ============================================================================
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -287,6 +569,14 @@ const ProjectSidebar: React.FC = () => {
 
   const isProjectActive = (projectId: string) =>
     location.pathname.includes(`/project/${projectId}`);
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    // ✅ Close mobile sidebar after navigation
+    if (isMobileOpen) {
+      toggleMobileSidebar();
+    }
+  };
 
   const totalChatUnread = chatUnreadData
     ? Object.values(chatUnreadData).reduce((sum, count) => sum + count, 0)
@@ -317,7 +607,6 @@ const ProjectSidebar: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // Clear all selections on logout
     localStorage.removeItem(STORAGE_KEYS.WORKSPACE);
     localStorage.removeItem(STORAGE_KEYS.SPACE);
     localStorage.removeItem(STORAGE_KEYS.FOLDER);
@@ -336,6 +625,7 @@ const ProjectSidebar: React.FC = () => {
     e?.stopPropagation();
     setMemberModal({ isOpen: true, entityType, entityId, entityName });
   };
+
   // ============================================================================
   // LOADING STATE
   // ============================================================================
@@ -420,7 +710,9 @@ const ProjectSidebar: React.FC = () => {
                 <span>Invite</span>
               </button>
               <button
-                onClick={() => navigate(`/member-management/workspace/${currentWorkspace.id}`)}
+                onClick={() => {
+                  handleNavigation(`/member-management/workspace/${currentWorkspace.id}`);
+                }}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium
                   text-gray-600 dark:text-[#9ca3af] 
                   bg-gray-100 dark:bg-[#25282c] 
@@ -498,18 +790,18 @@ const ProjectSidebar: React.FC = () => {
                   entityId: currentWorkspace.id,
                   entityName: currentWorkspace.name,
                 });
-                navigate(`/member-management/workspace/${currentWorkspace.id}`);
+                handleNavigation(`/member-management/workspace/${currentWorkspace.id}`);
               },
             },
           ].map((item) => {
             const Icon = item.icon;
 
-            if ('onClick' in item) {
+            if ('onClick' in item && item.onClick) {
               return (
                 <button
                   key={item.label}
                   onClick={item.onClick}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1 group
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1 group
                     text-gray-700 dark:text-[#9ca3af] 
                     hover:bg-gray-100 dark:hover:bg-[#25282c] 
                     hover:text-gray-900 dark:hover:text-white
@@ -523,11 +815,14 @@ const ProjectSidebar: React.FC = () => {
               );
             }
 
-            const active = isActive(item.path);
+            const active = isActive(item.path!);
             return (
               <Link
                 key={item.path}
-                to={item.path}
+                to={item.path!}
+                onClick={() => {
+                  if (isMobileOpen) toggleMobileSidebar();
+                }}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1 group relative overflow-hidden
                   ${
                     active
@@ -586,19 +881,20 @@ const ProjectSidebar: React.FC = () => {
                       Spaces
                     </span>
                     <button
-                      onClick={() => setIsCreateSpaceModalOpen(true)}
+                      onClick={handleCreateSpace}
                       className="p-1.5 rounded-lg 
                         hover:bg-gray-100 dark:hover:bg-[#2a2e33] 
                         text-gray-600 dark:text-[#6b7280] 
                         hover:text-gray-900 dark:hover:text-white 
                         transition-all duration-200 hover:scale-110 active:scale-95"
+                      title="Create Space"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <button
-                    onClick={() => setIsCreateSpaceModalOpen(true)}
+                    onClick={handleCreateSpace}
                     className="w-full p-2.5 rounded-xl 
                       hover:bg-gray-100 dark:hover:bg-[#2a2e33] 
                       text-gray-600 dark:text-[#6b7280] 
@@ -630,28 +926,54 @@ const ProjectSidebar: React.FC = () => {
                       const spaceProjects = projectsBySpaceId[space.id] || [];
 
                       return (
-                        <SpaceItem
-                          key={space.id}
-                          space={space}
-                          projects={spaceProjects}
-                          folders={foldersBySpaceId[space.id] || []}
-                          projectsByFolderId={projectsByFolderId}
-                          isSpaceExpanded={isSpaceExpanded}
-                          isHovered={isHovered}
-                          showFull={showFull}
-                          currentSpace={currentSpace}
-                          projectsLoading={projectsLoading}
-                          foldersLoading={foldersLoading}
-                          onToggle={toggleSpace}
-                          onMouseEnter={() => setHoveredSpace(space.id)}
-                          onMouseLeave={() => setHoveredSpace(null)}
-                          setCurrentSpace={handleSpaceChange}
-                          setCurrentProject={handleProjectChange}
-                          setCurrentFolder={handleFolderChange}
-                          setIsCreateProjectModalOpen={setIsCreateProjectModalOpen}
-                          isProjectActive={isProjectActive}
-                          onManageMembers={openMemberModal}
-                        />
+                        <div key={space.id} className="group relative">
+                          <SpaceItem
+                            space={space}
+                            projects={spaceProjects}
+                            folders={foldersBySpaceId[space.id] || []}
+                            projectsByFolderId={projectsByFolderId}
+                            isSpaceExpanded={isSpaceExpanded}
+                            isHovered={isHovered}
+                            showFull={showFull}
+                            currentSpace={currentSpace}
+                            projectsLoading={projectsLoading}
+                            foldersLoading={foldersLoading}
+                            onToggle={toggleSpace}
+                            onMouseEnter={() => setHoveredSpace(space.id)}
+                            onMouseLeave={() => setHoveredSpace(null)}
+                            setCurrentSpace={handleSpaceChange}
+                            setCurrentProject={handleProjectChange}
+                            setCurrentFolder={handleFolderChange}
+                            setIsCreateProjectModalOpen={() => {}}
+                            isProjectActive={isProjectActive}
+                            onManageMembers={openMemberModal}
+                          />
+
+                          {/* Space Edit Button - Shows on hover */}
+                          {showFull && isHovered && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditSpace({
+                                  id: space.id,
+                                  name: space.name,
+                                  color: space.color,
+                                  icon: space.icon,
+                                });
+                              }}
+                              className="absolute right-8 top-2.5 p-1 rounded-md 
+                                bg-white dark:bg-[#25282c] 
+                                border border-gray-200 dark:border-[#2a2e33]
+                                text-gray-500 hover:text-gray-700 dark:hover:text-white
+                                opacity-0 group-hover:opacity-100
+                                transition-all duration-200 hover:scale-110
+                                shadow-sm"
+                              title="Edit Space"
+                            >
+                              <MoreHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -671,7 +993,7 @@ const ProjectSidebar: React.FC = () => {
                           No spaces yet
                         </p>
                         <button
-                          onClick={() => setIsCreateSpaceModalOpen(true)}
+                          onClick={handleCreateSpace}
                           className="text-sm text-violet-600 dark:text-[#7c3aed] 
                             hover:text-violet-700 dark:hover:text-[#a78bfa] 
                             font-semibold transition-colors duration-200
@@ -726,6 +1048,9 @@ const ProjectSidebar: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => {
+                  if (isMobileOpen) toggleMobileSidebar();
+                }}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1 group
                   ${
                     active
@@ -813,6 +1138,16 @@ const ProjectSidebar: React.FC = () => {
           )}
         </div>
       </aside>
+
+      {/* Space Management Modal */}
+      <SpaceManagementModal
+        isOpen={spaceModal.isOpen}
+        onClose={() => setSpaceModal({ isOpen: false, mode: 'create', space: null })}
+        mode={spaceModal.mode}
+        space={spaceModal.space}
+        onSubmit={handleSpaceSubmit}
+        onDelete={spaceModal.mode === 'edit' ? handleSpaceDelete : undefined}
+      />
 
       {/* Member Management Modal */}
       {memberModal && (

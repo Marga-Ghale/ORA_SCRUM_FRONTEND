@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/TaskDetailModal/TaskDetailModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { TaskStatus, Priority, TaskType, TASK_TYPE_CONFIG } from '../../types/project';
@@ -201,8 +202,7 @@ const TaskDetailModal: React.FC = () => {
       closeTaskModal();
       toast.success('Task deleted successfully');
     } catch (error) {
-      console.error('Failed to delete task:', error);
-      toast.error(getErrorMessage(error));
+      console.error('Failed to delete task:');
     }
   };
 

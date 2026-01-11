@@ -58,7 +58,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
     try {
       await deleteTask(task.id);
       setShowDeleteModal(false);
-      toast.success('Task deleted successfully');
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
