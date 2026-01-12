@@ -4,6 +4,7 @@ import CreateSpaceModal from './CreateSpaceModal';
 import CreateFolderModal from './CreateFolderModal';
 import { useProjectContext } from '../../context/ProjectContext';
 import { CreateProjectModal } from '.';
+import CreateTaskModal from '../tasks/CreateTaskModal';
 
 const GlobalModals: React.FC = () => {
   const {
@@ -72,6 +73,8 @@ const GlobalModals: React.FC = () => {
         parentName={creationContext?.folderName || creationContext?.spaceName || undefined}
         parentType={creationContext?.folderId ? 'folder' : 'space'}
       />
+
+      <CreateTaskModal />
     </>
   );
 };
