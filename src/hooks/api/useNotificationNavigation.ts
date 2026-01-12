@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { useNavigate, NavigateFunction } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useProjectContext } from '../../context/ProjectContext';
+import { QueryClient, useQueryClient } from '@tanstack/react-query';
 
 const STORAGE_KEYS = {
   WORKSPACE: 'selectedWorkspaceId',
@@ -23,7 +24,8 @@ export const navigateToTaskWithHierarchy = async (
     setCurrentSpace: (space: any) => void;
     setCurrentFolder: (folder: any) => void;
     setCurrentProject: (project: any) => void;
-  }
+  },
+  queryClient: QueryClient
 ) => {
   try {
     // ------------------------------------------------------------------------
@@ -134,6 +136,8 @@ export const navigateToTaskWithHierarchy = async (
     });
     localStorage.setItem(STORAGE_KEYS.PROJECT, project.id);
 
+    queryClient.invalidateQueries({ queryKey: ['tasks', project.id] });
+
     // ------------------------------------------------------------------------
     // 7. NAVIGATE
     // ------------------------------------------------------------------------
@@ -148,19 +152,33 @@ export const navigateToTaskWithHierarchy = async (
 // ============================================================================
 export const useNotificationNavigation = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient(); // <-- ADD THIS
   const { setCurrentWorkspace, setCurrentSpace, setCurrentFolder, setCurrentProject } =
     useProjectContext();
 
   const navigateToTask = useCallback(
     async (taskId: string, projectId?: string) => {
-      await navigateToTaskWithHierarchy(taskId, projectId, navigate, {
-        setCurrentWorkspace,
-        setCurrentSpace,
-        setCurrentFolder,
-        setCurrentProject,
-      });
+      await navigateToTaskWithHierarchy(
+        taskId,
+        projectId,
+        navigate,
+        {
+          setCurrentWorkspace,
+          setCurrentSpace,
+          setCurrentFolder,
+          setCurrentProject,
+        },
+        queryClient
+      );
     },
-    [navigate, setCurrentWorkspace, setCurrentSpace, setCurrentFolder, setCurrentProject]
+    [
+      navigate,
+      queryClient,
+      setCurrentWorkspace,
+      setCurrentSpace,
+      setCurrentFolder,
+      setCurrentProject,
+    ]
   );
 
   return { navigateToTask };

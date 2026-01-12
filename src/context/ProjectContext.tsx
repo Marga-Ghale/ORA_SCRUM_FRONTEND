@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-// ✅ COMPLETE FIX: src/context/ProjectContext.tsx
-// Fixed: Navigation state management, auto-selection guards, data fetching
+// src/context/ProjectContext.tsx - FIXED VERSION
 
 import React, {
   createContext,
@@ -45,6 +44,7 @@ import {
   useFoldersBySpace,
   useUpdateFolder,
 } from '../hooks/api/useFolder';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ============================================
 // LocalStorage Keys
@@ -59,6 +59,13 @@ const STORAGE_KEYS = {
 // ============================================
 // Context Type
 // ============================================
+
+interface CreationContext {
+  spaceId: string | null;
+  spaceName: string | null;
+  folderId: string | null;
+  folderName: string | null;
+}
 
 interface ProjectContextType {
   // Current selections
@@ -96,7 +103,12 @@ interface ProjectContextType {
   deleteTask: (taskId: string) => void;
 
   // Space operations
-  createSpace: (spaceData: { name: string; color?: string; icon?: string }) => Promise<void>;
+  createSpace: (spaceData: {
+    name: string;
+    color?: string;
+    icon?: string;
+    workspaceId?: string;
+  }) => Promise<void>;
   updateSpace: (
     spaceId: string,
     updates: { name?: string; description?: string; icon?: string; color?: string }
@@ -104,18 +116,26 @@ interface ProjectContextType {
   deleteSpace: (spaceId: string) => Promise<void>;
 
   // Folder operations
-  createFolder: (folderData: { name: string; color?: string; icon?: string }) => Promise<void>;
+  createFolder: (folderData: {
+    name: string;
+    color?: string;
+    icon?: string;
+    spaceId?: string;
+  }) => Promise<void>;
   updateFolder: (
     folderId: string,
     updates: { name?: string; description?: string; icon?: string; color?: string }
   ) => Promise<void>;
   deleteFolder: (folderId: string) => Promise<void>;
 
-  // Project operations
-  createProject: (
-    spaceId: string,
-    projectData: { name: string; key: string; description?: string }
-  ) => Promise<void>;
+  // Project operations - FIXED: now accepts folderId
+  createProject: (projectData: {
+    name: string;
+    key: string;
+    description?: string;
+    spaceId?: string;
+    folderId?: string;
+  }) => Promise<void>;
   updateProject: (
     projectId: string,
     updates: { name?: string; description?: string }
@@ -155,6 +175,9 @@ interface ProjectContextType {
   setIsCreateTaskModalOpen: (open: boolean) => void;
   createTaskInitialStatus: TaskStatus;
   setCreateTaskInitialStatus: (status: TaskStatus) => void;
+
+  creationContext: CreationContext;
+  setCreationContext: (context: CreationContext) => void;
 }
 
 type ManagementEntity = {
@@ -270,6 +293,7 @@ const mapWorkspace = (workspace: any, spaces: Space[] = []): Workspace => ({
 
 export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   // ============================================
   // Selection State
@@ -281,6 +305,13 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const [managementEntity, setManagementEntity] = useState<ManagementEntity>(null);
+
+  const [creationContext, setCreationContext] = useState<CreationContext>({
+    spaceId: null,
+    spaceName: null,
+    folderId: null,
+    folderName: null,
+  });
 
   // ============================================
   // Navigation Guard - Prevents auto-selection from overriding navigation
@@ -313,10 +344,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, []);
 
   const setCurrentProject = useCallback((project: Project | null) => {
-    // Set navigation flag to prevent auto-selection effects
     isNavigatingRef.current = true;
 
-    // Clear any existing timeout
     if (navigationTimeoutRef.current) {
       clearTimeout(navigationTimeoutRef.current);
     }
@@ -329,7 +358,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       localStorage.removeItem(STORAGE_KEYS.PROJECT);
     }
 
-    // Reset navigation flag after effects have run
     navigationTimeoutRef.current = setTimeout(() => {
       isNavigatingRef.current = false;
     }, 500);
@@ -358,43 +386,36 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [isInitializing, setIsInitializing] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
 
-  // Track if initial restoration has completed
   const hasRestoredRef = useRef(false);
 
   // ============================================
   // Data Hooks
   // ============================================
 
-  // Fetch workspaces
   const { data: workspacesData, isLoading: workspacesLoading } = useWorkspaces({
     enabled: isAuthenticated,
   });
 
-  // Fetch spaces for current workspace
   const { data: spacesData, refetch: refetchSpaces } = useSpacesByWorkspace(
     currentWorkspace?.id || '',
     { enabled: !!currentWorkspace?.id }
   );
 
-  // Fetch folders for current space
   const { data: foldersData, refetch: refetchFolders } = useFoldersBySpace(currentSpace?.id || '', {
     enabled: !!currentSpace?.id,
   });
 
-  // Fetch projects for current folder
   const { data: projectsDataByFolder, refetch: refetchProjectsByFolder } = useProjectsByFolder(
     currentFolder?.id || '',
     { enabled: !!currentFolder?.id }
   );
 
-  // ✅ FIX: Also fetch projects by space for projects without folders
   const { data: projectsDataBySpace, refetch: refetchProjectsBySpace } = useProjectsBySpace
     ? useProjectsBySpace(currentSpace?.id || '', {
         enabled: !!currentSpace?.id && !currentFolder?.id,
       })
     : { data: undefined, refetch: () => {} };
 
-  // Combine project data - prefer folder projects, fall back to space projects
   const projectsData = currentFolder?.id ? projectsDataByFolder : projectsDataBySpace;
 
   const refetchProjects = useCallback(() => {
@@ -405,7 +426,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [currentFolder?.id, currentSpace?.id, refetchProjectsByFolder, refetchProjectsBySpace]);
 
-  // Fetch tasks for current project
   const {
     data: tasksData,
     isLoading: tasksLoading,
@@ -431,75 +451,69 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   const deleteTaskMutation = useDeleteTask();
 
   // ============================================
+  // Helper to invalidate all accessible queries
+  // ============================================
+  const invalidateAccessibleQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['accessibleWorkspaces'] });
+    queryClient.invalidateQueries({ queryKey: ['accessibleSpaces'] });
+    queryClient.invalidateQueries({ queryKey: ['accessibleFolders'] });
+    queryClient.invalidateQueries({ queryKey: ['accessibleProjects'] });
+  }, [queryClient]);
+
+  // ============================================
   // WebSocket Integration
   // ============================================
   const wsHookResult = useWebSocket({
     onMessage: (message) => {
       const data = message.payload || message.data || {};
 
-      // Log all messages except ping/pong
       if (message.type !== 'ping' && message.type !== 'pong') {
         console.log('📨 WebSocket:', message.type, data);
       }
 
-      // Check top-level projectId for task updates
       if (message.type === 'task_updated' && currentProject?.id) {
         if (data.projectId === currentProject.id) {
-          console.log('🔄 Task updated in current project - refetching');
           refetchTasks();
         }
       }
 
-      // Handle task creation
       if (message.type === 'task_created' && currentProject?.id) {
         if (data.projectId === currentProject.id) {
-          console.log('🔄 Task created in current project - refetching');
           refetchTasks();
         }
       }
 
-      // Handle task deletion
       if (message.type === 'task_deleted' && currentProject?.id) {
         if (data.projectId === currentProject.id) {
-          console.log('🔄 Task deleted in current project - refetching');
           refetchTasks();
         }
       }
 
-      // Handle task status changes
       if (message.type === 'task_status_changed' && currentProject?.id) {
         if (data.projectId === currentProject.id) {
-          console.log('🔄 Task status changed in current project - refetching');
           refetchTasks();
         }
       }
 
-      // Handle task assignments
       if (message.type === 'task_assigned' && currentProject?.id) {
         if (data.projectId === currentProject.id) {
-          console.log('🔄 Task assigned in current project - refetching');
           refetchTasks();
         }
       }
 
-      // Handle comments
       if (message.type === 'comment_added' && currentProject?.id) {
-        console.log('🔄 Comment added - refetching tasks');
         refetchTasks();
       }
     },
   });
 
-  // Join project room when project changes
   useEffect(() => {
     if (currentProject?.id && wsHookResult.joinRoom) {
       const room = `project:${currentProject.id}`;
-      console.log(`[ProjectContext] Joining room: ${room}`);
       wsHookResult.joinRoom(room);
 
       return () => {
         if (wsHookResult.leaveRoom) {
-          console.log(`[ProjectContext] Leaving room: ${room}`);
           wsHookResult.leaveRoom(room);
         }
       };
@@ -556,7 +570,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         let workspace = workspacesData?.[0];
 
-        // Check localStorage for saved workspace
         const savedWorkspaceId = localStorage.getItem(STORAGE_KEYS.WORKSPACE);
         if (savedWorkspaceId && workspacesData) {
           const savedWorkspace = workspacesData.find((w) => w.id === savedWorkspaceId);
@@ -587,13 +600,10 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     initialize();
   }, [isAuthenticated, workspacesLoading, workspacesData, createWorkspaceMutation]);
 
-  // ============================================
-  // Restore Space from localStorage
-  // ============================================
   useEffect(() => {
     if (!currentWorkspace || !spacesData || spacesData.length === 0) return;
-    if (currentSpace) return; // Already set (by navigation or previous restore)
-    if (isNavigatingRef.current) return; // Don't override navigation
+    if (currentSpace) return;
+    if (isNavigatingRef.current) return;
 
     const savedSpaceId = localStorage.getItem(STORAGE_KEYS.SPACE);
 
@@ -607,19 +617,15 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
     }
 
-    // Auto-select first space only if no saved space
     const firstSpace = mapSpace(spacesData[0]);
     setCurrentSpaceState(firstSpace);
     localStorage.setItem(STORAGE_KEYS.SPACE, firstSpace.id);
   }, [spacesData, currentWorkspace, currentSpace]);
 
-  // ============================================
-  // Restore Folder from localStorage
-  // ============================================
   useEffect(() => {
     if (!currentSpace || !foldersData || foldersData.length === 0) return;
-    if (currentFolder) return; // Already set
-    if (isNavigatingRef.current) return; // Don't override navigation
+    if (currentFolder) return;
+    if (isNavigatingRef.current) return;
 
     const savedFolderId = localStorage.getItem(STORAGE_KEYS.FOLDER);
 
@@ -635,24 +641,18 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
     }
 
-    // Auto-select first folder only if no saved folder
     const firstFolder = mapFolder(foldersData[0]);
     setCurrentFolderState(firstFolder);
     localStorage.setItem(STORAGE_KEYS.FOLDER, firstFolder.id);
   }, [foldersData, currentSpace, currentFolder]);
 
-  // ============================================
-  // Restore Project from localStorage - WITH NAVIGATION GUARD
-  // ============================================
   useEffect(() => {
-    // ✅ CRITICAL: Don't override if navigation just set a project
     if (isNavigatingRef.current) {
-      console.log('[ProjectContext] Skipping auto-select - navigation in progress');
       return;
     }
 
     if (!projectsData || projectsData.length === 0) return;
-    if (currentProject) return; // Already set
+    if (currentProject) return;
 
     const savedProjectId = localStorage.getItem(STORAGE_KEYS.PROJECT);
 
@@ -664,19 +664,13 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
     }
 
-    // Auto-select first project only if no saved project and not navigating
     const firstProject = mapProject(projectsData[0]);
     setCurrentProjectState(firstProject);
     localStorage.setItem(STORAGE_KEYS.PROJECT, firstProject.id);
   }, [projectsData, currentProject]);
 
-  // ============================================
-  // Clear child selections when parent changes
-  // ============================================
   useEffect(() => {
-    // When workspace changes, clear space (which will cascade)
     if (currentWorkspace && currentSpace) {
-      // Check if space belongs to current workspace
       const spaceInWorkspace = spacesData?.some(
         (s) => s.id === currentSpace.id && s.workspace_id === currentWorkspace.id
       );
@@ -746,19 +740,25 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Space Operations
   // ============================================
   const createSpace = useCallback(
-    async (spaceData: { name: string; color?: string; icon?: string }) => {
-      if (!currentWorkspace) {
+    async (spaceData: { name: string; color?: string; icon?: string; workspaceId?: string }) => {
+      const workspaceId = spaceData.workspaceId || currentWorkspace?.id;
+      if (!workspaceId) {
         throw new Error('No workspace selected');
       }
 
       await createSpaceMutation.mutateAsync({
-        workspaceId: currentWorkspace.id,
-        data: spaceData,
+        workspaceId,
+        data: {
+          name: spaceData.name,
+          color: spaceData.color,
+          icon: spaceData.icon,
+        },
       });
 
       await refetchSpaces();
+      invalidateAccessibleQueries();
     },
-    [currentWorkspace, createSpaceMutation, refetchSpaces]
+    [currentWorkspace, createSpaceMutation, refetchSpaces, invalidateAccessibleQueries]
   );
 
   const updateSpace = useCallback(
@@ -768,8 +768,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     ) => {
       await updateSpaceMutation.mutateAsync({ id: spaceId, data: updates });
       await refetchSpaces();
+      invalidateAccessibleQueries();
     },
-    [updateSpaceMutation, refetchSpaces]
+    [updateSpaceMutation, refetchSpaces, invalidateAccessibleQueries]
   );
 
   const deleteSpace = useCallback(
@@ -786,27 +787,34 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
           setCurrentProjectState(null);
         }
       }
+      invalidateAccessibleQueries();
     },
-    [deleteSpaceMutation, currentSpace, spacesData]
+    [deleteSpaceMutation, currentSpace, spacesData, invalidateAccessibleQueries]
   );
 
   // ============================================
   // Folder Operations
   // ============================================
   const createFolder = useCallback(
-    async (folderData: { name: string; color?: string; icon?: string }) => {
-      if (!currentSpace) {
+    async (folderData: { name: string; color?: string; icon?: string; spaceId?: string }) => {
+      const spaceId = folderData.spaceId || currentSpace?.id;
+      if (!spaceId) {
         throw new Error('No space selected');
       }
 
       await createFolderMutation.mutateAsync({
-        spaceId: currentSpace.id,
-        data: folderData,
+        spaceId,
+        data: {
+          name: folderData.name,
+          color: folderData.color,
+          icon: folderData.icon,
+        },
       });
 
       await refetchFolders();
+      invalidateAccessibleQueries();
     },
-    [currentSpace, createFolderMutation, refetchFolders]
+    [currentSpace, createFolderMutation, refetchFolders, invalidateAccessibleQueries]
   );
 
   const updateFolder = useCallback(
@@ -816,8 +824,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     ) => {
       await updateFolderMutation.mutateAsync({ id: folderId, data: updates });
       await refetchFolders();
+      invalidateAccessibleQueries();
     },
-    [updateFolderMutation, refetchFolders]
+    [updateFolderMutation, refetchFolders, invalidateAccessibleQueries]
   );
 
   const deleteFolder = useCallback(
@@ -833,33 +842,84 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
           setCurrentProjectState(null);
         }
       }
+      invalidateAccessibleQueries();
     },
-    [deleteFolderMutation, currentFolder, foldersData]
+    [deleteFolderMutation, currentFolder, foldersData, invalidateAccessibleQueries]
   );
 
   // ============================================
-  // Project Operations
+  // Project Operations - FIXED: accepts folderId in data
   // ============================================
+  // Corrected createProject function for ProjectContext.tsx
+
   const createProject = useCallback(
-    async (spaceId: string, projectData: { name: string; key: string; description?: string }) => {
+    async (projectData: {
+      name: string;
+      key: string;
+      description?: string;
+      spaceId?: string;
+      folderId?: string;
+    }) => {
+      // ✅ Priority: explicit params → creationContext → current selections
+      const spaceId = projectData.spaceId || creationContext.spaceId || currentSpace?.id;
+      const folderId = projectData.folderId || creationContext.folderId || undefined;
+
+      console.log('🔍 createProject - Resolution:', {
+        'projectData.spaceId': projectData.spaceId,
+        'projectData.folderId': projectData.folderId,
+        'creationContext.spaceId': creationContext.spaceId,
+        'creationContext.folderId': creationContext.folderId,
+        'currentSpace?.id': currentSpace?.id,
+        'currentFolder?.id': currentFolder?.id,
+        'RESOLVED spaceId': spaceId,
+        'RESOLVED folderId': folderId,
+      });
+
+      if (!spaceId) {
+        throw new Error('No space selected');
+      }
+
       const newProject = await createProjectMutation.mutateAsync({
         spaceId,
-        data: projectData,
+        data: {
+          name: projectData.name,
+          key: projectData.key,
+          description: projectData.description,
+          folderId, // ✅ Pass resolved folderId
+        },
       });
 
       setCurrentProjectState(mapProject(newProject));
       localStorage.setItem(STORAGE_KEYS.PROJECT, newProject.id);
+
+      // ✅ Clear creation context after success
+      setCreationContext({
+        spaceId: null,
+        spaceName: null,
+        folderId: null,
+        folderName: null,
+      });
+
       await refetchProjects();
+      invalidateAccessibleQueries();
     },
-    [createProjectMutation, refetchProjects]
+    [
+      currentSpace,
+      currentFolder,
+      creationContext, // ✅ MUST be in dependencies
+      createProjectMutation,
+      refetchProjects,
+      invalidateAccessibleQueries,
+    ]
   );
 
   const updateProject = useCallback(
     async (projectId: string, updates: { name?: string; description?: string }) => {
       await updateProjectMutation.mutateAsync({ id: projectId, data: updates });
       await refetchProjects();
+      invalidateAccessibleQueries();
     },
-    [updateProjectMutation, refetchProjects]
+    [updateProjectMutation, refetchProjects, invalidateAccessibleQueries]
   );
 
   const deleteProject = useCallback(
@@ -871,8 +931,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         localStorage.removeItem(STORAGE_KEYS.PROJECT);
       }
       await refetchProjects();
+      invalidateAccessibleQueries();
     },
-    [deleteProjectMutation, currentProject, refetchProjects]
+    [deleteProjectMutation, currentProject, refetchProjects, invalidateAccessibleQueries]
   );
 
   // ============================================
@@ -953,6 +1014,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     setCreateTaskInitialStatus,
     managementEntity,
     setManagementEntity,
+    creationContext,
+    setCreationContext,
   };
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

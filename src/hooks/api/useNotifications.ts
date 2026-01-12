@@ -559,7 +559,7 @@ export function useUnreadNotifications() {
 /**
  * Get notification counts
  */
-export function useNotificationCount() {
+export function useNotificationCount(p0: { enabled: boolean }) {
   return useQuery({
     queryKey: queryKeys.notifications.count(),
     queryFn: () => apiClient.get<NotificationCount>('/notifications/count'),

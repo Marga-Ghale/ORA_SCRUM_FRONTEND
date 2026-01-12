@@ -1,5 +1,6 @@
-// src/layout/ProjectSidebar.tsx - COMPLETE FINAL VERSION
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+// src/layout/ProjectSidebar.tsx - FIXED VERSION
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Home,
@@ -82,6 +83,104 @@ const SPACE_ICONS: Record<string, React.FC<{ className?: string; style?: React.C
 };
 
 // ============================================================================
+// PORTAL DROPDOWN COMPONENT
+// ============================================================================
+interface SpaceAddMenuProps {
+  isOpen: boolean;
+  anchorEl: HTMLElement | null;
+  onClose: () => void;
+  onCreateFolder: () => void;
+  onCreateProject: () => void;
+}
+
+const SpaceAddMenu: React.FC<SpaceAddMenuProps> = ({
+  isOpen,
+  anchorEl,
+  onClose,
+  onCreateFolder,
+  onCreateProject,
+}) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !anchorEl) return null;
+
+  const rect = anchorEl.getBoundingClientRect();
+  const menuWidth = 160;
+  const menuHeight = 88;
+
+  let top = rect.bottom + 4;
+  let left = rect.left;
+
+  if (left + menuWidth > window.innerWidth - 8) {
+    left = window.innerWidth - menuWidth - 8;
+  }
+
+  if (top + menuHeight > window.innerHeight - 8) {
+    top = rect.top - menuHeight - 4;
+  }
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      className="fixed bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1 animate-in fade-in zoom-in-95 duration-150"
+      style={{
+        top,
+        left,
+        width: menuWidth,
+        zIndex: 999999,
+      }}
+    >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onCreateFolder();
+        }}
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      >
+        <Folder className="w-4 h-4 text-amber-500" />
+        <span>New Folder</span>
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onCreateProject();
+        }}
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      >
+        <Hash className="w-4 h-4 text-violet-500" />
+        <span>New Project</span>
+      </button>
+    </div>,
+    document.body
+  );
+};
+
+// ============================================================================
 // CONTEXT MENU COMPONENT
 // ============================================================================
 interface ContextMenuProps {
@@ -123,15 +222,14 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     };
   }, [onClose]);
 
-  // Adjust position to stay in viewport
   const adjustedX = Math.min(x, window.innerWidth - 200);
   const adjustedY = Math.min(y, window.innerHeight - 160);
 
-  return (
+  return createPortal(
     <div
       ref={menuRef}
-      className="fixed z-[200] min-w-[180px] py-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700"
-      style={{ top: adjustedY, left: adjustedX }}
+      className="fixed min-w-[180px] py-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in-95 duration-150"
+      style={{ top: adjustedY, left: adjustedX, zIndex: 999999 }}
     >
       <button
         onClick={() => {
@@ -169,7 +267,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         <Trash2 className="w-4 h-4" />
         <span>Delete {entityType}</span>
       </button>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -205,12 +304,16 @@ const ProjectSidebar: React.FC = () => {
     createFolder,
     updateFolder,
     deleteFolder,
-    createProject,
     updateProject,
     deleteProject,
+    isCreateSpaceModalOpen,
     setIsCreateSpaceModalOpen,
+    isCreateFolderModalOpen,
     setIsCreateFolderModalOpen,
+    isCreateProjectModalOpen,
     setIsCreateProjectModalOpen,
+    // ✅ FIX: Use global creationContext instead of local state
+    setCreationContext,
   } = useProjectContext();
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -235,7 +338,12 @@ const ProjectSidebar: React.FC = () => {
   const { data: notificationData } = useNotificationCount({ enabled: !!user });
   const { data: chatUnreadData } = useUnreadCounts({ enabled: !!user });
 
-  const [spaceAddMenuOpen, setSpaceAddMenuOpen] = useState<string | null>(null);
+  const [spaceAddMenu, setSpaceAddMenu] = useState<{
+    spaceId: string;
+    anchorEl: HTMLElement | null;
+  } | null>(null);
+
+  const addButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   // ============================================================================
   // LOCAL STATE
@@ -246,7 +354,6 @@ const ProjectSidebar: React.FC = () => {
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
   const [hasInitializedFromStorage, setHasInitializedFromStorage] = useState(false);
 
-  // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -254,7 +361,6 @@ const ProjectSidebar: React.FC = () => {
     entity: any;
   } | null>(null);
 
-  // Edit modal states
   const [editSpaceModal, setEditSpaceModal] = useState<{ isOpen: boolean; space: any }>({
     isOpen: false,
     space: null,
@@ -268,13 +374,14 @@ const ProjectSidebar: React.FC = () => {
     project: null,
   });
 
-  // Member modal state
   const [memberModal, setMemberModal] = useState<{
     isOpen: boolean;
     entityType: 'workspace' | 'space' | 'folder' | 'project';
     entityId: string;
     entityName: string;
   } | null>(null);
+
+  // ✅ REMOVED: Local createModalContext state - now using global creationContext
 
   const showFull = isExpanded || isHovered || isMobileOpen;
 
@@ -386,16 +493,6 @@ const ProjectSidebar: React.FC = () => {
     if (currentFolder) setExpandedFolders((prev) => new Set([...prev, currentFolder.id]));
   }, [currentFolder]);
 
-  // Close space add menu on outside click
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (spaceAddMenuOpen) setSpaceAddMenuOpen(null);
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [spaceAddMenuOpen]);
-
   // ============================================================================
   // HANDLERS
   // ============================================================================
@@ -483,6 +580,77 @@ const ProjectSidebar: React.FC = () => {
   const unreadNotifications = notificationData?.unread || 0;
 
   // ============================================================================
+  // SPACE ADD MENU HANDLERS - ✅ FIXED: Using global setCreationContext
+  // ============================================================================
+  const handleOpenSpaceAddMenu = (e: React.MouseEvent, spaceId: string) => {
+    e.stopPropagation();
+    const buttonEl = addButtonRefs.current[spaceId];
+    if (spaceAddMenu?.spaceId === spaceId) {
+      setSpaceAddMenu(null);
+    } else {
+      setSpaceAddMenu({ spaceId, anchorEl: buttonEl });
+    }
+  };
+
+  const handleCreateFolderFromMenu = (spaceId: string, spaceName?: string) => {
+    const space = allSpaces?.find((s) => s.id === spaceId);
+    if (space) {
+      setCurrentSpace(space as any);
+    }
+    // ✅ FIX: Use global setCreationContext
+    setCreationContext({
+      spaceId,
+      spaceName: spaceName || space?.name || null,
+      folderId: null,
+      folderName: null,
+    });
+    setSpaceAddMenu(null);
+    setTimeout(() => {
+      setIsCreateFolderModalOpen(true);
+    }, 0);
+  };
+
+  const handleCreateProjectFromMenu = (spaceId: string, spaceName?: string) => {
+    const space = allSpaces?.find((s) => s.id === spaceId);
+    if (space) {
+      setCurrentSpace(space as any);
+    }
+    setCurrentFolder(null);
+    // ✅ FIX: Use global setCreationContext
+    setCreationContext({
+      spaceId,
+      spaceName: spaceName || space?.name || null,
+      folderId: null,
+      folderName: null,
+    });
+    setSpaceAddMenu(null);
+    setTimeout(() => {
+      setIsCreateProjectModalOpen(true);
+    }, 0);
+  };
+
+  const handleCreateProjectFromFolder = (
+    folderId: string,
+    spaceId: string,
+    folderName?: string
+  ) => {
+    const folder = allFolders?.find((f) => f.id === folderId);
+    if (folder) {
+      setCurrentFolder(folder as any);
+    }
+    // ✅ FIX: Use global setCreationContext
+    setCreationContext({
+      spaceId,
+      spaceName: null,
+      folderId,
+      folderName: folderName || folder?.name || null,
+    });
+    setTimeout(() => {
+      setIsCreateProjectModalOpen(true);
+    }, 0);
+  };
+
+  // ============================================================================
   // CONTEXT MENU HANDLERS
   // ============================================================================
   const openContextMenu = (
@@ -513,7 +681,6 @@ const ProjectSidebar: React.FC = () => {
 
   const handleContextMenuDelete = () => {
     if (!contextMenu) return;
-    // Open edit modal which has delete functionality
     if (contextMenu.entityType === 'space') {
       setEditSpaceModal({ isOpen: true, space: contextMenu.entity });
     } else if (contextMenu.entityType === 'folder') {
@@ -735,7 +902,7 @@ const ProjectSidebar: React.FC = () => {
                       Spaces
                     </span>
                     <button
-                      onClick={() => setIsCreateSpaceModalOpen?.(true)}
+                      onClick={() => setIsCreateSpaceModalOpen(true)}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-all hover:scale-110 active:scale-95"
                       title="Create Space"
                     >
@@ -744,7 +911,7 @@ const ProjectSidebar: React.FC = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => setIsCreateSpaceModalOpen?.(true)}
+                    onClick={() => setIsCreateSpaceModalOpen(true)}
                     className="w-full p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-all flex justify-center hover:scale-110 active:scale-95"
                     title="Add Space"
                   >
@@ -821,7 +988,6 @@ const ProjectSidebar: React.FC = () => {
                                   {space.name}
                                 </span>
 
-                                {/* More Options Button */}
                                 <button
                                   onClick={(e) => openContextMenu(e, 'space', space)}
                                   className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-white transition-all"
@@ -829,53 +995,16 @@ const ProjectSidebar: React.FC = () => {
                                   <MoreHorizontal className="w-4 h-4" />
                                 </button>
 
-                                {/* Add Button with Dropdown */}
-                                <div className="relative z-80000">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSpaceAddMenuOpen(
-                                        spaceAddMenuOpen === space.id ? null : space.id
-                                      );
-                                    }}
-                                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-white transition-all"
-                                    title="Add to space"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
-
-                                  {/* Dropdown Menu */}
-                                  {spaceAddMenuOpen === space.id && (
-                                    <div
-                                      className="absolute left-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-[9999]"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <button
-                                        onClick={() => {
-                                          setCurrentSpace(space as any);
-                                          setIsCreateFolderModalOpen?.(true);
-                                          setSpaceAddMenuOpen(null);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
-                                      >
-                                        <Folder className="w-4 h-4" />
-                                        <span>New Folder</span>
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setCurrentSpace(space as any);
-                                          setCurrentFolder(null);
-                                          setIsCreateProjectModalOpen?.(true);
-                                          setSpaceAddMenuOpen(null);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
-                                      >
-                                        <Hash className="w-4 h-4" />
-                                        <span>New Project</span>
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
+                                <button
+                                  ref={(el) => {
+                                    addButtonRefs.current[space.id] = el;
+                                  }}
+                                  onClick={(e) => handleOpenSpaceAddMenu(e, space.id)}
+                                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-white transition-all"
+                                  title="Add to space"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
                               </>
                             )}
                           </div>
@@ -940,8 +1069,11 @@ const ProjectSidebar: React.FC = () => {
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setCurrentFolder(folder as any);
-                                          setIsCreateProjectModalOpen?.(true);
+                                          handleCreateProjectFromFolder(
+                                            folder.id,
+                                            space.id,
+                                            folder.name
+                                          );
                                         }}
                                         className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all"
                                         title="Add project"
@@ -1028,10 +1160,7 @@ const ProjectSidebar: React.FC = () => {
                                     No content yet
                                   </p>
                                   <button
-                                    onClick={() => {
-                                      setCurrentSpace(space as any);
-                                      setIsCreateFolderModalOpen?.(true);
-                                    }}
+                                    onClick={() => handleCreateFolderFromMenu(space.id, space.name)}
                                     className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
                                   >
                                     Add a folder
@@ -1055,7 +1184,7 @@ const ProjectSidebar: React.FC = () => {
                           No spaces yet
                         </p>
                         <button
-                          onClick={() => setIsCreateSpaceModalOpen?.(true)}
+                          onClick={() => setIsCreateSpaceModalOpen(true)}
                           className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-semibold hover:underline"
                         >
                           Create a space
@@ -1169,6 +1298,25 @@ const ProjectSidebar: React.FC = () => {
         </div>
       </aside>
 
+      {/* Portal-based Space Add Menu */}
+      <SpaceAddMenu
+        isOpen={!!spaceAddMenu}
+        anchorEl={spaceAddMenu?.anchorEl || null}
+        onClose={() => setSpaceAddMenu(null)}
+        onCreateFolder={() => {
+          if (spaceAddMenu) {
+            const space = allSpaces?.find((s) => s.id === spaceAddMenu.spaceId);
+            handleCreateFolderFromMenu(spaceAddMenu.spaceId, space?.name);
+          }
+        }}
+        onCreateProject={() => {
+          if (spaceAddMenu) {
+            const space = allSpaces?.find((s) => s.id === spaceAddMenu.spaceId);
+            handleCreateProjectFromMenu(spaceAddMenu.spaceId, space?.name);
+          }
+        }}
+      />
+
       {/* Context Menu */}
       {contextMenu && (
         <ContextMenu
@@ -1189,37 +1337,28 @@ const ProjectSidebar: React.FC = () => {
         isOpen={editSpaceModal.isOpen}
         onClose={() => setEditSpaceModal({ isOpen: false, space: null })}
         space={editSpaceModal.space}
-        onUpdate={async (id, data) => {
-          await updateSpace(id, data);
-        }}
-        onDelete={async (id) => {
-          await deleteSpace(id);
-        }}
+        onUpdate={updateSpace}
+        onDelete={deleteSpace}
       />
 
       <EditFolderModal
         isOpen={editFolderModal.isOpen}
         onClose={() => setEditFolderModal({ isOpen: false, folder: null })}
         folder={editFolderModal.folder}
-        onUpdate={async (id, data) => {
-          await updateFolder(id, data);
-        }}
-        onDelete={async (id) => {
-          await deleteFolder(id);
-        }}
+        onUpdate={updateFolder}
+        onDelete={deleteFolder}
       />
 
       <EditProjectModal
         isOpen={editProjectModal.isOpen}
         onClose={() => setEditProjectModal({ isOpen: false, project: null })}
         project={editProjectModal.project}
-        onUpdate={async (id, data) => {
-          await updateProject(id, data);
-        }}
-        onDelete={async (id) => {
-          await deleteProject(id);
-        }}
+        onUpdate={updateProject}
+        onDelete={deleteProject}
       />
+
+      {/* ✅ REMOVED: CreateSpaceModal, CreateFolderModal, CreateProjectModal 
+          These are now rendered ONLY in GlobalModals.tsx to avoid duplication */}
 
       {/* Member Management Modal */}
       {memberModal && (
