@@ -34,6 +34,7 @@ import {
   Star,
   FolderKanban,
   ChevronUp,
+  DotIcon,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
@@ -1377,7 +1378,7 @@ const ProjectSidebar: React.FC = () => {
                                     {/* Folder Projects - Animated Collapse */}
                                     <div
                                       className={`overflow-hidden transition-all duration-200 ease-out
-                                  ${isFolderExpanded && folderProjects.length > 0 ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
+    ${isFolderExpanded && folderProjects.length > 0 ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
                                     >
                                       <div className="ml-4 pl-3 border-l-2 border-gray-200/50 dark:border-gray-700/40 mt-1 space-y-0.5">
                                         {folderProjects.map((project, projectIndex) => {
@@ -1387,40 +1388,46 @@ const ProjectSidebar: React.FC = () => {
                                             <div
                                               key={project.id}
                                               style={{ animationDelay: `${projectIndex * 20}ms` }}
-                                              className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer 
-                                          transition-all duration-200 ease-out
-                                          animate-in slide-in-from-left-1 fade-in
-                                          ${
-                                            isProjectItemActive
-                                              ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
-                                              : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                                          }`}
-                                              onClick={() => handleProjectClick(project)}
+                                              className="animate-in slide-in-from-left-1 fade-in"
                                             >
-                                              <Hash
-                                                className={`w-4 h-4 flex-shrink-0 transition-colors duration-200
-                                          ${isProjectItemActive ? 'text-violet-500' : ''}`}
-                                              />
-                                              <span className="flex-1 text-sm truncate">
-                                                {project.name}
-                                              </span>
-                                              <span
-                                                className="text-[10px] font-mono text-gray-400 dark:text-gray-500 
-                                          opacity-0 group-hover:opacity-100 transition-opacity duration-150
-                                          bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded"
-                                              >
-                                                {project.key}
-                                              </span>
                                               <button
-                                                onClick={(e) =>
-                                                  openContextMenu(e, 'project', project)
-                                                }
-                                                className="p-1 rounded opacity-0 group-hover:opacity-100 
-                                            hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
-                                            text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
-                                            transition-all duration-150"
+                                                onClick={() => handleProjectClick(project)}
+                                                className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer 
+              transition-all duration-200 ease-out
+              ${
+                isProjectItemActive
+                  ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                  : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
                                               >
-                                                <MoreHorizontal className="w-3.5 h-3.5" />
+                                                <DotIcon
+                                                  className={`w-4 h-4 flex-shrink-0 transition-colors duration-200
+                ${isProjectItemActive ? 'text-violet-500' : ''}`}
+                                                />
+                                                <span className="flex-1 text-sm truncate">
+                                                  {project.name}
+                                                </span>
+                                                <span
+                                                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-opacity duration-150
+                ${
+                  isProjectItemActive
+                    ? 'bg-violet-200/50 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100'
+                }`}
+                                                >
+                                                  {project.key}
+                                                </span>
+                                                <button
+                                                  onClick={(e) =>
+                                                    openContextMenu(e, 'project', project)
+                                                  }
+                                                  className="p-1 rounded opacity-0 group-hover:opacity-100 
+                hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                transition-all duration-150"
+                                                >
+                                                  <MoreHorizontal className="w-3.5 h-3.5" />
+                                                </button>
                                               </button>
                                             </div>
                                           );
@@ -1432,6 +1439,7 @@ const ProjectSidebar: React.FC = () => {
                               })}
 
                               {/* Direct Space Projects (no folder) */}
+                              {/* Direct Space Projects (no folder) */}
                               {spaceDirectProjects.map((project, projectIndex) => {
                                 const isProjectItemActive = isProjectActive(project.id);
 
@@ -1441,36 +1449,44 @@ const ProjectSidebar: React.FC = () => {
                                     style={{
                                       animationDelay: `${(spaceFolders.length + projectIndex) * 20}ms`,
                                     }}
-                                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer 
-                                transition-all duration-200 ease-out
-                                animate-in slide-in-from-left-1 fade-in
-                                ${
-                                  isProjectItemActive
-                                    ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
-                                    : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                                }`}
-                                    onClick={() => handleProjectClick(project)}
+                                    className="animate-in slide-in-from-left-1 fade-in"
                                   >
-                                    <Hash
-                                      className={`w-4 h-4 flex-shrink-0 transition-colors duration-200
-                                ${isProjectItemActive ? 'text-violet-500' : ''}`}
-                                    />
-                                    <span className="flex-1 text-sm truncate">{project.name}</span>
-                                    <span
-                                      className="text-[10px] font-mono text-gray-400 dark:text-gray-500 
-                                opacity-0 group-hover:opacity-100 transition-opacity duration-150
-                                bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded"
-                                    >
-                                      {project.key}
-                                    </span>
                                     <button
-                                      onClick={(e) => openContextMenu(e, 'project', project)}
-                                      className="p-1 rounded opacity-0 group-hover:opacity-100 
-                                  hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
-                                  text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
-                                  transition-all duration-150"
+                                      onClick={() => handleProjectClick(project)}
+                                      className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer 
+          transition-all duration-200 ease-out
+          ${
+            isProjectItemActive
+              ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
+              : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+          }`}
                                     >
-                                      <MoreHorizontal className="w-3.5 h-3.5" />
+                                      <DotIcon
+                                        className={`w-4 h-4 flex-shrink-0 transition-colors duration-200
+            ${isProjectItemActive ? 'text-violet-500' : ''}`}
+                                      />
+                                      <span className="flex-1 text-sm truncate">
+                                        {project.name}
+                                      </span>
+                                      <span
+                                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-opacity duration-150
+            ${
+              isProjectItemActive
+                ? 'bg-violet-200/50 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100'
+            }`}
+                                      >
+                                        {project.key}
+                                      </span>
+                                      <button
+                                        onClick={(e) => openContextMenu(e, 'project', project)}
+                                        className="p-1 rounded opacity-0 group-hover:opacity-100 
+            hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+            text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+            transition-all duration-150"
+                                      >
+                                        <MoreHorizontal className="w-3.5 h-3.5" />
+                                      </button>
                                     </button>
                                   </div>
                                 );
