@@ -225,7 +225,7 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ isOpen, onClose }
                             ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 scale-110'
                             : 'hover:scale-110'
                         }`}
-                        style={{ backgroundColor: c, ringColor: c }}
+                        style={{ backgroundColor: c }}
                       />
                     ))}
                   </div>

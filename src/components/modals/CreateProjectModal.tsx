@@ -5,15 +5,21 @@ import { X, AlertCircle, Info, Plus, Loader2, Hash } from 'lucide-react';
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: { name: string; key: string; description?: string }) => Promise<void>;
-  /** Optional: Display name for where the project is being created */
+  onCreate?: (data: {
+    name: string;
+    key: string;
+    description?: string;
+    spaceId?: string;
+    folderId?: string;
+  }) => Promise<void>;
   parentName?: string;
-  /** Optional: Type of parent (space or folder) */
   parentType?: 'space' | 'folder';
+  spaceId?: string;
+  folderId?: string;
 }
 
 const PROJECT_COLORS = [
-  '#6366F1', // Violet (default)
+  '#6366F1',
   '#3B82F6',
   '#10B981',
   '#F59E0B',
@@ -33,6 +39,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onCreate,
   parentName,
   parentType = 'space',
+  spaceId,
+  folderId,
 }) => {
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
@@ -43,7 +51,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Generate project key from name
   const generateKey = (projectName: string): string => {
     const words = projectName
       .trim()
@@ -53,16 +60,28 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       .filter(Boolean);
 
     if (words.length === 0) return '';
-    if (words.length === 1) {
-      return words[0].slice(0, 4);
-    }
+    if (words.length === 1) return words[0].slice(0, 4);
+
     return words
       .map((word) => word[0])
       .join('')
       .slice(0, 5);
   };
 
-  // Reset form when modal opens
+  // 🔍 DEBUG: Log props when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log('🔍 CreateProjectModal Props:', {
+        onCreate: typeof onCreate,
+        onCreateExists: !!onCreate,
+        spaceId,
+        folderId,
+        parentName,
+        parentType,
+      });
+    }
+  }, [isOpen, onCreate, spaceId, folderId, parentName, parentType]);
+
   useEffect(() => {
     if (isOpen) {
       setName('');
@@ -71,9 +90,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       setColor(PROJECT_COLORS[0]);
       setIsKeyManuallyEdited(false);
       setError(null);
-      setTimeout(() => {
-        nameInputRef.current?.focus();
-      }, 100);
+      setTimeout(() => nameInputRef.current?.focus(), 100);
       document.body.style.overflow = 'hidden';
     }
     return () => {
@@ -81,7 +98,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     };
   }, [isOpen]);
 
-  // Auto-generate key when name changes (unless manually edited)
   useEffect(() => {
     if (!isKeyManuallyEdited && name) {
       const generated = generateKey(name);
@@ -89,16 +105,11 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     }
   }, [name, isKeyManuallyEdited]);
 
-  // Handle escape key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isSubmitting) {
-        handleClose();
-      }
+      if (e.key === 'Escape' && !isSubmitting) handleClose();
     };
-    if (isOpen) {
-      document.addEventListener('keydown', handleEsc);
-    }
+    if (isOpen) document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isOpen, isSubmitting]);
 
@@ -134,14 +145,23 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       return;
     }
 
+    if (typeof onCreate !== 'function') {
+      setError('Unable to create project. onCreate handler not provided.');
+      console.error('CreateProjectModal: onCreate prop is not a function:', typeof onCreate);
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
+      // ✅ FIX: Now passing spaceId and folderId
       await onCreate({
         name: trimmedName,
         key: trimmedKey,
         description: description.trim() || undefined,
+        spaceId,
+        folderId,
       });
       handleClose();
     } catch (err) {
@@ -168,62 +188,50 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999]" onClick={handleClose} />
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in duration-200"
+        onClick={handleClose}
+      />
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
+          className="pointer-events-auto w-full max-w-xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 animate-in zoom-in-95 fade-in duration-200 flex flex-col max-h-[90vh]"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: `${color}20`, color: color }}
-              >
-                <Hash className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Create Project
-                </h2>
-                {parentName && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    in {parentType === 'folder' ? '📁' : '🗂️'} {parentName}
-                  </p>
-                )}
-              </div>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Hash className="w-5 h-5 text-violet-500" />
+                Create Project
+              </h2>
+              {parentName && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  in {parentType === 'folder' ? '📁' : '🗂️'} {parentName}
+                </p>
+              )}
             </div>
             <button
               onClick={handleClose}
               disabled={isSubmitting}
-              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors disabled:opacity-50"
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all disabled:opacity-50"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {error && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-            {/* Project Color */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Project Color
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {PROJECT_COLORS.map((c) => (
                   <button
                     key={c}
@@ -235,66 +243,73 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                         ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 scale-110'
                         : 'hover:scale-110'
                     }`}
-                    style={{ backgroundColor: c, ringColor: c }}
+                    style={{ backgroundColor: c }}
                   />
                 ))}
               </div>
             </div>
 
-            {/* Project Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Project Name <span className="text-red-500">*</span>
+              <label
+                htmlFor="project-name"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Project Name *
               </label>
               <input
                 ref={nameInputRef}
+                id="project-name"
                 type="text"
                 value={name}
                 onChange={handleNameChange}
-                placeholder="e.g., Website Redesign, Mobile App, API v2"
+                placeholder="Enter project name"
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                required
                 disabled={isSubmitting}
                 maxLength={100}
               />
             </div>
 
-            {/* Project Key */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Project Key <span className="text-red-500">*</span>
+              <label
+                htmlFor="project-key"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Project Key *
               </label>
               <div className="relative">
                 <input
+                  id="project-key"
                   type="text"
                   value={key}
                   onChange={handleKeyChange}
-                  placeholder="e.g., WEB, APP, API"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all font-mono uppercase tracking-wider"
-                  required
+                  placeholder="KEY"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all font-mono uppercase"
                   disabled={isSubmitting}
                   maxLength={10}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {!isKeyManuallyEdited && key && (
-                    <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium">
                       Auto
                     </span>
                   )}
-                  <span className="text-xs text-gray-400">{key.length}/10</span>
+                  <span className="text-xs text-gray-400 font-mono">{key.length}/10</span>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                Used for task IDs (e.g., <span className="font-mono">{key || 'KEY'}-123</span>)
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Used for task IDs (e.g., {key || 'KEY'}-123)
               </p>
             </div>
 
-            {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description <span className="text-gray-400 font-normal">(optional)</span>
+              <label
+                htmlFor="project-description"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Description (optional)
               </label>
               <textarea
+                id="project-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the project goals, scope, or key deliverables..."
@@ -306,7 +321,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               <p className="text-xs text-gray-400 mt-1 text-right">{description.length}/500</p>
             </div>
 
-            {/* Info Box */}
             <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
               <div className="flex gap-3">
                 <Info className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
@@ -321,7 +335,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </div>
           </form>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
             <button
               type="button"

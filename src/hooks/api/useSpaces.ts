@@ -1,4 +1,4 @@
-// src/hooks/useSpaces.ts
+// src/hooks/api/useSpaces.ts - FIXED VERSION
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
@@ -94,6 +94,8 @@ export const useCreateSpace = () => {
         queryKey: queryKeys.spaces.byWorkspace(variables.workspaceId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
+      // ✅ INVALIDATE ACCESSIBLE SPACES
+      queryClient.invalidateQueries({ queryKey: ['accessibleSpaces'] });
     },
   });
 };
@@ -108,6 +110,8 @@ export const useUpdateSpace = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.byWorkspace(data.workspace_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
+      // ✅ INVALIDATE ACCESSIBLE SPACES
+      queryClient.invalidateQueries({ queryKey: ['accessibleSpaces'] });
     },
   });
 };
@@ -120,6 +124,8 @@ export const useDeleteSpace = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
       queryClient.removeQueries({ queryKey: queryKeys.spaces.detail(id) });
+      // ✅ INVALIDATE ACCESSIBLE SPACES
+      queryClient.invalidateQueries({ queryKey: ['accessibleSpaces'] });
     },
   });
 };
