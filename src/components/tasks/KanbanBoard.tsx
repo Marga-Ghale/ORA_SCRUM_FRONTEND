@@ -46,6 +46,7 @@ const DropZone: React.FC<DropZoneProps> = ({ status, index, onDrop, isEmptyColum
         onDrop({ ...item, status, index });
       }
     },
+    canDrop: () => true,
     collect: (monitor) => ({
       isOver: monitor.isOver({ shallow: true }),
       canDrop: monitor.canDrop(),
@@ -58,34 +59,38 @@ const DropZone: React.FC<DropZoneProps> = ({ status, index, onDrop, isEmptyColum
     return (
       <div ref={drop} className="h-full min-h-[160px]">
         <div
-          className={`flex flex-col items-center justify-center h-full border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer group ${
+          className={`flex flex-col items-center justify-center h-full border-2 border-dashed rounded-xl cursor-pointer group ${
             isActive
-              ? 'border-brand-400 dark:border-brand-500 bg-brand-50/50 dark:bg-brand-950/30 scale-[1.02]'
+              ? 'border-brand-400 dark:border-brand-500 bg-brand-50/50 dark:bg-brand-950/30'
               : 'border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-600 hover:bg-gray-50/50 dark:hover:bg-gray-800/30'
           }`}
+          style={{ transition: 'border-color 50ms, background-color 50ms' }}
           onClick={onAddTask}
         >
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all duration-200 ${
+            className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
               isActive
-                ? 'bg-brand-100 dark:bg-brand-900/50 scale-110'
+                ? 'bg-brand-100 dark:bg-brand-900/50'
                 : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-brand-50 dark:group-hover:bg-brand-950/50'
             }`}
+            style={{ transition: 'background-color 50ms' }}
           >
             <Plus
-              className={`w-5 h-5 transition-all duration-200 ${
+              className={`w-5 h-5 ${
                 isActive
                   ? 'text-brand-600 dark:text-brand-400'
                   : 'text-gray-400 dark:text-gray-600 group-hover:text-brand-500 dark:group-hover:text-brand-400'
               }`}
+              style={{ transition: 'color 50ms' }}
             />
           </div>
           <span
-            className={`text-sm font-medium transition-all duration-200 ${
+            className={`text-sm font-medium ${
               isActive
                 ? 'text-brand-700 dark:text-brand-300 font-semibold'
                 : 'text-gray-500 dark:text-gray-500 group-hover:text-brand-600 dark:group-hover:text-brand-400'
             }`}
+            style={{ transition: 'color 50ms' }}
           >
             {isActive ? 'Drop here to add' : 'Add task'}
           </span>
@@ -97,22 +102,39 @@ const DropZone: React.FC<DropZoneProps> = ({ status, index, onDrop, isEmptyColum
     );
   }
 
+  // FIXED: Larger hit target (h-4 = 16px minimum) and instant visual feedback (50ms transitions)
   return (
     <div
       ref={drop}
-      className={`transition-all duration-200 ease-out ${isActive ? 'h-12 my-2' : 'h-2'}`}
+      className="relative"
+      style={{
+        height: isActive ? '48px' : '16px',
+        marginTop: isActive ? '4px' : '2px',
+        marginBottom: isActive ? '4px' : '2px',
+        transition: 'height 50ms ease-out, margin 50ms ease-out',
+      }}
     >
-      {isActive && (
-        <div className="h-full rounded-lg bg-gradient-to-r from-brand-500/10 via-brand-500/20 to-brand-500/10 dark:from-brand-400/10 dark:via-brand-400/20 dark:to-brand-400/10 border-2 border-dashed border-brand-500 dark:border-brand-400 flex items-center justify-center animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400 animate-pulse" />
-            <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
-              Drop here
-            </span>
-            <div className="w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400 animate-pulse" />
+      {/* Always visible subtle hit area */}
+      <div
+        className={`absolute inset-0 rounded-lg ${
+          isActive
+            ? 'bg-gradient-to-r from-brand-500/15 via-brand-500/25 to-brand-500/15 dark:from-brand-400/15 dark:via-brand-400/25 dark:to-brand-400/15 border-2 border-dashed border-brand-500 dark:border-brand-400'
+            : 'bg-transparent'
+        }`}
+        style={{ transition: 'background 50ms, border-color 50ms' }}
+      >
+        {isActive && (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400 animate-pulse" />
+              <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
+                Drop here
+              </span>
+              <div className="w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400 animate-pulse" />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
@@ -163,10 +185,13 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
   return (
     <div
       ref={ref}
-      className={`transition-all duration-200 ${
-        isDragging ? 'opacity-30 scale-95 rotate-2' : 'opacity-100 scale-100 rotate-0'
-      } ${isSubtask ? 'ml-8' : ''}`}
-      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+      className={`${isSubtask ? 'ml-8' : ''}`}
+      style={{
+        opacity: isDragging ? 0.4 : 1,
+        transform: isDragging ? 'scale(0.98) rotate(5deg)' : 'scale(1) rotate(0deg)',
+        transition: 'opacity 100ms, transform 100ms',
+        cursor: isDragging ? 'grabbing' : 'grab',
+      }}
     >
       <TaskCard task={task as any} isDragging={isDragging} />
     </div>
@@ -218,7 +243,7 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+      className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 animate-in fade-in slide-in-from-top-2 "
     >
       <button
         onClick={() => {
@@ -418,9 +443,12 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   }, [tasks]);
 
   return (
-    <div className="flex flex-col min-w-[280px] max-w-[280px] sm:min-w-[320px] sm:max-w-[320px] bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200">
+    <div
+      className="flex flex-col min-w-[280px] max-w-[280px] sm:min-w-[320px] sm:max-w-[320px] bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md"
+      style={{ transition: 'box-shadow 150ms' }}
+    >
       {/* Column Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-t-xl">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div
             className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
@@ -437,7 +465,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
             onClick={() => onAddTask(status)}
-            className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-all duration-150 hover:scale-105 active:scale-95"
+            className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-all duration-120 hover:scale-105 active:scale-95"
             title="Add task"
           >
             <Plus className="w-4 h-4" />
@@ -445,7 +473,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-all duration-150 hover:scale-105 active:scale-95"
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-all duration-120 hover:scale-105 active:scale-95"
               title="More options"
             >
               <MoreVertical className="w-4 h-4" />
@@ -467,12 +495,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       {/* Column Body */}
       <div
         ref={columnRef}
-        className={`flex-1 p-3 overflow-y-auto kanban-scrollbar transition-all duration-200 ${
+        className={`flex-1 p-3 overflow-y-auto kanban-scrollbar ${
           isActive ? 'bg-brand-50/30 dark:bg-brand-950/20' : ''
         }`}
         style={{
           maxHeight: 'calc(100vh - 280px)',
           minHeight: '200px',
+          transition: 'background-color 100ms',
         }}
       >
         {tasks.length === 0 ? (
@@ -585,60 +614,6 @@ export const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
     (col) => columns.includes(col.id) && !hiddenColumns.has(col.id)
   );
 
-  // const handleTaskMove = useCallback(
-  //   async (
-  //     taskId: string,
-  //     fromStatus: TaskStatus,
-  //     toStatus: TaskStatus,
-  //     toIndex: number,
-  //     subtaskIds?: string[]
-  //   ) => {
-  //     console.log('🚀 handleTaskMove:', { taskId, fromStatus, toStatus, toIndex, subtaskIds });
-
-  //     setUpdatingColumns((prev) => new Set([...prev, toStatus, fromStatus]));
-
-  //     try {
-  //       // Move the main task
-  //       await updatePositionMutation.mutateAsync({
-  //         id: taskId,
-  //         status: toStatus,
-  //         position: toIndex,
-  //       });
-
-  //       // If moving to a different column and task has subtasks, move them too
-  //       if (fromStatus !== toStatus && subtaskIds && subtaskIds.length > 0) {
-  //         console.log('📦 Moving subtasks:', subtaskIds);
-
-  //         // Move each subtask right after the parent
-  //         for (let i = 0; i < subtaskIds.length; i++) {
-  //           await updatePositionMutation.mutateAsync({
-  //             id: subtaskIds[i],
-  //             status: toStatus,
-  //             position: toIndex + i + 1,
-  //           });
-  //         }
-  //       }
-
-  //       const statusName = STATUS_COLUMNS.find((c) => c.id === toStatus)?.name;
-  //       toast.success(`Moved to ${statusName}`, { duration: 2000 });
-
-  //       await refetchTasks();
-  //     } catch (error) {
-  //       console.error('❌ Move failed:', error);
-  //       toast.error(getErrorMessage(error));
-  //       await refetchTasks();
-  //     } finally {
-  //       setUpdatingColumns((prev) => {
-  //         const next = new Set(prev);
-  //         next.delete(toStatus);
-  //         next.delete(fromStatus);
-  //         return next;
-  //       });
-  //     }
-  //   },
-  //   [updatePositionMutation, refetchTasks]
-  // );
-
   const handleTaskMove = useCallback(
     async (
       taskId: string,
@@ -749,7 +724,7 @@ export const KanbanBoardContent: React.FC<KanbanBoardProps> = ({
   return (
     <div className="flex flex-col h-full">
       {hiddenColumns.size > 0 && (
-        <div className="flex items-center gap-3 mb-4 px-4 py-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg animate-in slide-in-from-top duration-300">
+        <div className="flex items-center gap-3 mb-4 px-4 py-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg animate-in slide-in-from-top duration-150">
           <EyeOff className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
             {hiddenColumns.size} column{hiddenColumns.size !== 1 ? 's' : ''} hidden
