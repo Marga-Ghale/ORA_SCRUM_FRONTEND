@@ -33,6 +33,7 @@ import {
   Smartphone,
   Star,
   FolderKanban,
+  ChevronUp,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
@@ -353,6 +354,8 @@ const ProjectSidebar: React.FC = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
   const [hasInitializedFromStorage, setHasInitializedFromStorage] = useState(false);
+
+  const [isNavMinimized, setIsNavMinimized] = useState(false);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -746,13 +749,14 @@ const ProjectSidebar: React.FC = () => {
       {/* Sidebar */}
       <aside
         className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 flex flex-col
-          bg-white dark:bg-gray-900 
-          border-r border-gray-200 dark:border-gray-800 
-          transition-all duration-300 ease-in-out
-          ${showFull ? 'w-[280px]' : 'w-[72px]'}
-          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0
-          shadow-xl lg:shadow-none`}
+    bg-gradient-to-b from-white via-white to-gray-50/80 
+    dark:from-gray-900 dark:via-gray-900 dark:to-gray-950/90
+    border-r border-gray-200/80 dark:border-gray-800/60
+    transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+    ${showFull ? 'w-[280px]' : 'w-[72px]'}
+    ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+    lg:translate-x-0
+    shadow-2xl shadow-gray-200/50 dark:shadow-black/30 lg:shadow-xl lg:shadow-gray-200/30 dark:lg:shadow-black/20`}
         onMouseEnter={() => !isExpanded && setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -768,7 +772,7 @@ const ProjectSidebar: React.FC = () => {
 
         {/* Workspace Actions */}
         {currentWorkspace && showFull && (
-          <div className="flex-shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex-shrink-0 px-3 py-3 border-b border-gray-100 dark:border-gray-800/60">
             <div className="flex items-center gap-2">
               <button
                 onClick={(e) => {
@@ -780,12 +784,14 @@ const ProjectSidebar: React.FC = () => {
                     entityName: currentWorkspace.name,
                   });
                 }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium
-                  text-gray-600 dark:text-gray-400 
-                  bg-gray-100 dark:bg-gray-800 
-                  hover:bg-gray-200 dark:hover:bg-gray-700 
-                  hover:text-gray-900 dark:hover:text-white 
-                  transition-all active:scale-[0.98]"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold
+            text-gray-600 dark:text-gray-300 
+            bg-gray-100/80 dark:bg-gray-800/60 
+            hover:bg-violet-100 dark:hover:bg-violet-900/30 
+            hover:text-violet-700 dark:hover:text-violet-300 
+            border border-transparent hover:border-violet-200 dark:hover:border-violet-800/50
+            transition-all duration-200 ease-out
+            active:scale-[0.97] hover:shadow-sm"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>Invite</span>
@@ -800,12 +806,14 @@ const ProjectSidebar: React.FC = () => {
                   navigate(`/member-management/workspace/${currentWorkspace.id}`);
                   closeMobileSidebar();
                 }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium
-                  text-gray-600 dark:text-gray-400 
-                  bg-gray-100 dark:bg-gray-800 
-                  hover:bg-gray-200 dark:hover:bg-gray-700 
-                  hover:text-gray-900 dark:hover:text-white 
-                  transition-all active:scale-[0.98]"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold
+            text-gray-600 dark:text-gray-300 
+            bg-gray-100/80 dark:bg-gray-800/60 
+            hover:bg-violet-100 dark:hover:bg-violet-900/30 
+            hover:text-violet-700 dark:hover:text-violet-300 
+            border border-transparent hover:border-violet-200 dark:hover:border-violet-800/50
+            transition-all duration-200 ease-out
+            active:scale-[0.97] hover:shadow-sm"
               >
                 <Users className="w-3.5 h-3.5" />
                 <span>Manage</span>
@@ -817,22 +825,44 @@ const ProjectSidebar: React.FC = () => {
         {/* Search */}
         <div className={`flex-shrink-0 p-3 ${!showFull ? 'px-2' : ''}`}>
           {showFull ? (
-            <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm font-medium transition-all group">
-              <Search className="w-4 h-4 group-hover:scale-110 transition-transform" />
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl 
+        bg-gray-100/70 dark:bg-gray-800/50 
+        hover:bg-gray-100 dark:hover:bg-gray-800 
+        border border-gray-200/50 dark:border-gray-700/50
+        hover:border-gray-300 dark:hover:border-gray-600
+        text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 
+        text-sm font-medium transition-all duration-200 group
+        hover:shadow-md hover:shadow-gray-200/50 dark:hover:shadow-black/20"
+            >
+              <Search className="w-4 h-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
               <span>Search</span>
-              <kbd className="ml-auto text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700 font-mono">
+              <kbd
+                className="ml-auto text-[10px] px-2 py-1 rounded-lg 
+          bg-white dark:bg-gray-900 
+          text-gray-400 dark:text-gray-500 
+          border border-gray-200 dark:border-gray-700 
+          font-mono shadow-sm"
+              >
                 ⌘K
               </kbd>
             </button>
           ) : (
-            <button className="w-full p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all flex justify-center group">
-              <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <button
+              className="w-full p-3 rounded-xl 
+        hover:bg-gray-100 dark:hover:bg-gray-800 
+        text-gray-500 dark:text-gray-400 
+        hover:text-violet-600 dark:hover:text-violet-400 
+        transition-all duration-200 flex justify-center group
+        hover:shadow-md hover:shadow-gray-200/30 dark:hover:shadow-black/20"
+            >
+              <Search className="w-5 h-5 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
             </button>
           )}
         </div>
 
         {/* Main Navigation */}
-        <nav className="flex-shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-800">
+        {/* <nav className="flex-shrink-0 px-3 py-2 border-b border-gray-100 dark:border-gray-800/60">
           {[
             { icon: Home, label: 'Home', path: '/' },
             {
@@ -843,7 +873,7 @@ const ProjectSidebar: React.FC = () => {
             },
             { icon: MessageSquare, label: 'Chat', path: '/chat', badge: totalChatUnread },
             { icon: CheckSquare, label: 'My Tasks', path: '/my-tasks' },
-          ].map((item) => {
+          ].map((item, index) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             const badge = item.badge && item.badge > 0 ? item.badge : null;
@@ -853,57 +883,272 @@ const ProjectSidebar: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 onClick={closeMobileSidebar}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-1 group relative
-                  ${
-                    active
-                      ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-                  }
-                  ${!showFull ? 'justify-center' : ''}`}
+                style={{ animationDelay: `${index * 30}ms` }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium 
+            transition-all duration-200 ease-out mb-1.5 group relative
+            animate-in slide-in-from-left-2 fade-in
+            ${
+              active
+                ? 'bg-gradient-to-r from-violet-100 to-purple-50 dark:from-violet-500/20 dark:to-purple-500/10 text-violet-700 dark:text-violet-300 shadow-sm shadow-violet-200/50 dark:shadow-violet-900/30'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white'
+            }
+            ${!showFull ? 'justify-center' : ''}`}
                 title={!showFull ? item.label : undefined}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-violet-600 dark:bg-violet-400 rounded-r-full" />
+                  <span
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 
+              bg-gradient-to-b from-violet-500 to-purple-600 
+              dark:from-violet-400 dark:to-purple-500 
+              rounded-r-full shadow-lg shadow-violet-500/30"
+                  />
                 )}
                 <Icon
-                  className={`w-5 h-5 transition-transform ${active ? 'scale-110' : 'group-hover:scale-110'}`}
+                  className={`w-5 h-5 transition-all duration-200 
+              ${active ? 'scale-110 text-violet-600 dark:text-violet-400' : 'group-hover:scale-110 group-hover:text-violet-600 dark:group-hover:text-violet-400'}`}
                 />
                 {showFull && (
                   <span className="flex-1 flex items-center justify-between">
-                    <span>{item.label}</span>
+                    <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                      {item.label}
+                    </span>
                     {badge && (
-                      <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-violet-600 dark:bg-violet-500 text-white text-[10px] font-bold">
+                      <span
+                        className="min-w-[22px] h-5 px-1.5 flex items-center justify-center rounded-full 
+                  bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 
+                  text-white text-[10px] font-bold shadow-md shadow-violet-500/30
+                  animate-in zoom-in duration-300"
+                      >
                         {badge > 99 ? '99+' : badge}
                       </span>
                     )}
                   </span>
                 )}
                 {!showFull && badge && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-violet-600 dark:bg-violet-500 text-white text-[9px] font-bold border-2 border-white dark:border-gray-900">
+                  <span
+                    className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full 
+              bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 
+              text-white text-[9px] font-bold 
+              border-2 border-white dark:border-gray-900
+              shadow-lg shadow-violet-500/40
+              animate-in zoom-in duration-300"
+                  >
                     {badge > 9 ? '9+' : badge}
                   </span>
                 )}
               </Link>
             );
           })}
-        </nav>
+        </nav> */}
+
+        {/* Main Navigation - Collapsible */}
+        <div className="flex-shrink-0 px-3 py-2 border-b border-gray-100 dark:border-gray-800/60">
+          {/* Collapsible Header */}
+          <button
+            onClick={() => setIsNavMinimized(!isNavMinimized)}
+            className="w-full flex items-center justify-between px-3 py-2.5 mb-2 rounded-xl
+      bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-800/30
+      hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-800 dark:hover:to-gray-800/60
+      border border-gray-200/60 dark:border-gray-700/40
+      transition-all duration-300 group
+      hover:shadow-md hover:shadow-gray-200/50 dark:hover:shadow-black/20"
+          >
+            {showFull ? (
+              <>
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-900/30 
+            flex items-center justify-center
+            group-hover:bg-violet-200 dark:group-hover:bg-violet-900/50
+            transition-all duration-300"
+                  >
+                    <Home className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Quick Navigation
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isNavMinimized && totalChatUnread + unreadNotifications > 0 && (
+                    <span
+                      className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full 
+              bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 
+              text-white text-[10px] font-bold
+              animate-in zoom-in duration-200"
+                    >
+                      {totalChatUnread + unreadNotifications > 99
+                        ? '99+'
+                        : totalChatUnread + unreadNotifications}
+                    </span>
+                  )}
+                  <div className="p-1 rounded-md bg-white/50 dark:bg-gray-900/50">
+                    {isNavMinimized ? (
+                      <ChevronDown
+                        className="w-4 h-4 text-gray-500 dark:text-gray-400 
+                transition-transform duration-300 group-hover:text-violet-600 dark:group-hover:text-violet-400"
+                      />
+                    ) : (
+                      <ChevronUp
+                        className="w-4 h-4 text-gray-500 dark:text-gray-400
+                transition-transform duration-300 group-hover:text-violet-600 dark:group-hover:text-violet-400"
+                      />
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="w-full flex justify-center">
+                <div
+                  className="w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-900/30 
+          flex items-center justify-center"
+                >
+                  <Home className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                </div>
+              </div>
+            )}
+          </button>
+
+          {/* Navigation Items with Smooth Collapse */}
+          <div
+            className="overflow-hidden transition-all duration-500 ease-in-out"
+            style={{
+              maxHeight: isNavMinimized ? '0px' : '400px',
+              opacity: isNavMinimized ? 0 : 1,
+              transform: isNavMinimized ? 'translateY(-8px)' : 'translateY(0)',
+            }}
+          >
+            <nav className="space-y-1">
+              {[
+                { icon: Home, label: 'Home', path: '/' },
+                {
+                  icon: Bell,
+                  label: 'Notifications',
+                  path: '/notifications',
+                  badge: unreadNotifications,
+                },
+                { icon: MessageSquare, label: 'Chat', path: '/chat', badge: totalChatUnread },
+                { icon: CheckSquare, label: 'My Tasks', path: '/my-tasks' },
+              ].map((item, index) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                const badge = item.badge && item.badge > 0 ? item.badge : null;
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={closeMobileSidebar}
+                    style={{
+                      animationDelay: `${index * 40}ms`,
+                      transitionDelay: `${index * 30}ms`,
+                    }}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium 
+              transition-all duration-200 ease-out group relative
+              ${
+                active
+                  ? 'bg-gradient-to-r from-violet-100 to-purple-50 dark:from-violet-500/20 dark:to-purple-500/10 text-violet-700 dark:text-violet-300 shadow-sm shadow-violet-200/50 dark:shadow-violet-900/30'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-violet-50 hover:to-purple-50/50 dark:hover:from-violet-500/10 dark:hover:to-purple-500/5 hover:text-violet-700 dark:hover:text-violet-300'
+              }
+              hover:shadow-sm hover:shadow-violet-100 dark:hover:shadow-violet-900/20
+              hover:translate-x-0.5
+              ${!showFull ? 'justify-center' : ''}`}
+                    title={!showFull ? item.label : undefined}
+                  >
+                    {active && (
+                      <span
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 
+                  bg-gradient-to-b from-violet-500 to-purple-600 
+                  dark:from-violet-400 dark:to-purple-500 
+                  rounded-r-full shadow-lg shadow-violet-500/30"
+                      />
+                    )}
+                    <div
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center
+              ${
+                active
+                  ? 'bg-violet-100 dark:bg-violet-900/30'
+                  : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-violet-100 dark:group-hover:bg-violet-900/30'
+              }
+              transition-all duration-200
+              group-hover:scale-110 group-hover:shadow-md group-hover:shadow-violet-200/30`}
+                    >
+                      <Icon
+                        className={`w-4.5 h-4.5 transition-all duration-200 
+                  ${
+                    active
+                      ? 'text-violet-600 dark:text-violet-400'
+                      : 'text-gray-500 dark:text-gray-400 group-hover:text-violet-600 dark:group-hover:text-violet-400'
+                  }`}
+                      />
+                    </div>
+                    {showFull && (
+                      <span className="flex-1 flex items-center justify-between">
+                        <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                          {item.label}
+                        </span>
+                        {badge && (
+                          <span
+                            className="min-w-[22px] h-5 px-1.5 flex items-center justify-center rounded-full 
+                      bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 
+                      text-white text-[10px] font-bold shadow-md shadow-violet-500/30
+                      group-hover:shadow-lg group-hover:shadow-violet-500/40
+                      group-hover:scale-110
+                      transition-all duration-200"
+                          >
+                            {badge > 99 ? '99+' : badge}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {!showFull && badge && (
+                      <span
+                        className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full 
+                  bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 
+                  text-white text-[9px] font-bold 
+                  border-2 border-white dark:border-gray-900
+                  shadow-lg shadow-violet-500/40"
+                      >
+                        {badge > 9 ? '9+' : badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
 
         {/* Spaces Section */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
           {currentWorkspace ? (
             <>
               {/* Spaces Header */}
+              {/* Spaces Header */}
               <div
-                className={`sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-10 px-3 py-3 border-b border-gray-100 dark:border-gray-800/50 ${!showFull ? 'px-2' : ''}`}
+                className={`sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 px-3 py-3 
+    border-b border-gray-100/80 dark:border-gray-800/40 transition-all duration-300
+    ${isNavMinimized ? 'shadow-sm shadow-violet-100/50 dark:shadow-violet-900/10' : ''}
+    ${!showFull ? 'px-2' : ''}`}
               >
                 {showFull ? (
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Spaces
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-1.5 h-5 rounded-full bg-gradient-to-b from-violet-500 to-purple-600 
+          shadow-md shadow-violet-500/30"
+                      />
+                      <span className="text-[11px] font-bold text-gray-900 dark:text-white uppercase tracking-widest">
+                        Spaces
+                      </span>
+                    </div>
                     <button
                       onClick={() => setIsCreateSpaceModalOpen(true)}
-                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-all hover:scale-110 active:scale-95"
+                      className="p-1.5 rounded-lg 
+          hover:bg-violet-100 dark:hover:bg-violet-900/30 
+          text-gray-400 dark:text-gray-500 
+          hover:text-violet-600 dark:hover:text-violet-400 
+          transition-all duration-200 hover:scale-110 hover:rotate-90 active:scale-95
+          hover:shadow-md hover:shadow-violet-200/30"
                       title="Create Space"
                     >
                       <Plus className="w-4 h-4" />
@@ -912,7 +1157,11 @@ const ProjectSidebar: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => setIsCreateSpaceModalOpen(true)}
-                    className="w-full p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-all flex justify-center hover:scale-110 active:scale-95"
+                    className="w-full p-2.5 rounded-xl 
+        hover:bg-violet-100 dark:hover:bg-violet-900/30 
+        text-gray-400 dark:text-gray-500 
+        hover:text-violet-600 dark:hover:text-violet-400 
+        transition-all duration-200 flex justify-center hover:scale-110 hover:rotate-90 active:scale-95"
                     title="Add Space"
                   >
                     <Plus className="w-5 h-5" />
@@ -927,13 +1176,15 @@ const ProjectSidebar: React.FC = () => {
                     {[1, 2, 3].map((i) => (
                       <div
                         key={i}
-                        className="h-10 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"
+                        style={{ animationDelay: `${i * 100}ms` }}
+                        className="h-11 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-800/50 
+                    rounded-xl animate-pulse"
                       />
                     ))}
                   </div>
                 ) : spacesForCurrentWorkspace.length > 0 ? (
-                  <div className="space-y-0.5">
-                    {spacesForCurrentWorkspace.map((space) => {
+                  <div className="space-y-1">
+                    {spacesForCurrentWorkspace.map((space, spaceIndex) => {
                       const isSpaceExpanded = expandedSpaces.has(space.id);
                       const isSpaceActive = currentSpace?.id === space.id;
                       const spaceFolders = foldersBySpaceId[space.id] || [];
@@ -941,15 +1192,20 @@ const ProjectSidebar: React.FC = () => {
                       const SpaceIcon = getSpaceIcon(space.icon);
 
                       return (
-                        <div key={space.id}>
+                        <div
+                          key={space.id}
+                          style={{ animationDelay: `${spaceIndex * 40}ms` }}
+                          className="animate-in slide-in-from-left-1 fade-in"
+                        >
                           {/* Space Item */}
                           <div
-                            className={`group flex items-center gap-2 px-2 py-2 rounded-xl cursor-pointer transition-all
-                              ${
-                                isSpaceActive
-                                  ? 'bg-violet-50 dark:bg-violet-500/10'
-                                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                              }`}
+                            className={`group flex items-center gap-2 px-2.5 py-2.5 rounded-xl cursor-pointer 
+                        transition-all duration-200 ease-out
+                        ${
+                          isSpaceActive
+                            ? 'bg-gradient-to-r from-violet-50 to-purple-50/50 dark:from-violet-500/15 dark:to-purple-500/10 shadow-sm'
+                            : 'hover:bg-gray-100/80 dark:hover:bg-gray-800/50'
+                        }`}
                             onClick={() => handleSpaceClick(space)}
                           >
                             <button
@@ -957,21 +1213,28 @@ const ProjectSidebar: React.FC = () => {
                                 e.stopPropagation();
                                 toggleSpace(space.id);
                               }}
-                              className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                              className="p-1 rounded-md hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                          transition-all duration-200"
                             >
-                              {isSpaceExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                              )}
+                              <ChevronRight
+                                className={`w-4 h-4 text-gray-400 dark:text-gray-500 
+                            transition-transform duration-200 ease-out
+                            ${isSpaceExpanded ? 'rotate-90' : 'rotate-0'}`}
+                              />
                             </button>
 
                             <div
-                              className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                              style={{ backgroundColor: (space.color || '#6366f1') + '20' }}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 
+                          transition-all duration-200 group-hover:scale-105 group-hover:shadow-md"
+                              style={{
+                                backgroundColor: (space.color || '#6366f1') + '15',
+                                boxShadow: isSpaceActive
+                                  ? `0 2px 8px ${space.color || '#6366f1'}30`
+                                  : 'none',
+                              }}
                             >
                               <SpaceIcon
-                                className="w-3.5 h-3.5"
+                                className="w-4 h-4 transition-transform duration-200 group-hover:scale-110"
                                 style={{ color: space.color || '#6366f1' }}
                               />
                             </div>
@@ -979,54 +1242,69 @@ const ProjectSidebar: React.FC = () => {
                             {showFull && (
                               <>
                                 <span
-                                  className={`flex-1 text-sm font-medium truncate ${
-                                    isSpaceActive
-                                      ? 'text-violet-700 dark:text-violet-300'
-                                      : 'text-gray-700 dark:text-gray-300'
-                                  }`}
+                                  className={`flex-1 text-sm font-medium truncate transition-all duration-200
+                              ${
+                                isSpaceActive
+                                  ? 'text-violet-700 dark:text-violet-300'
+                                  : 'text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white'
+                              }`}
                                 >
                                   {space.name}
                                 </span>
 
-                                <button
-                                  onClick={(e) => openContextMenu(e, 'space', space)}
-                                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-white transition-all"
-                                >
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                  <button
+                                    onClick={(e) => openContextMenu(e, 'space', space)}
+                                    className="p-1.5 rounded-lg hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                                text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 
+                                transition-all duration-150 hover:scale-105"
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </button>
 
-                                <button
-                                  ref={(el) => {
-                                    addButtonRefs.current[space.id] = el;
-                                  }}
-                                  onClick={(e) => handleOpenSpaceAddMenu(e, space.id)}
-                                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-white transition-all"
-                                  title="Add to space"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </button>
+                                  <button
+                                    ref={(el) => {
+                                      addButtonRefs.current[space.id] = el;
+                                    }}
+                                    onClick={(e) => handleOpenSpaceAddMenu(e, space.id)}
+                                    className="p-1.5 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 
+                                text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 
+                                transition-all duration-150 hover:scale-105"
+                                    title="Add to space"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </>
                             )}
                           </div>
 
-                          {/* Space Contents */}
-                          {isSpaceExpanded && showFull && (
-                            <div className="ml-4 pl-3 border-l-2 border-gray-200 dark:border-gray-800 mt-1 space-y-0.5">
+                          {/* Space Contents - Animated Collapse */}
+                          <div
+                            className={`overflow-hidden transition-all duration-300 ease-out
+                        ${isSpaceExpanded && showFull ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}
+                          >
+                            <div className="ml-5 pl-3 border-l-2 border-gray-200/70 dark:border-gray-700/50 mt-1 space-y-0.5">
                               {/* Folders */}
-                              {spaceFolders.map((folder) => {
+                              {spaceFolders.map((folder, folderIndex) => {
                                 const isFolderExpanded = expandedFolders.has(folder.id);
                                 const isFolderActive = currentFolder?.id === folder.id;
                                 const folderProjects = projectsByFolderId[folder.id] || [];
 
                                 return (
-                                  <div key={folder.id}>
+                                  <div
+                                    key={folder.id}
+                                    style={{ animationDelay: `${folderIndex * 30}ms` }}
+                                    className="animate-in slide-in-from-left-1 fade-in"
+                                  >
                                     <div
-                                      className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all
-                                        ${
-                                          isFolderActive
-                                            ? 'bg-violet-50 dark:bg-violet-500/10'
-                                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                                        }`}
+                                      className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer 
+                                  transition-all duration-200 ease-out
+                                  ${
+                                    isFolderActive
+                                      ? 'bg-violet-50/80 dark:bg-violet-500/10'
+                                      : 'hover:bg-gray-100/70 dark:hover:bg-gray-800/40'
+                                  }`}
                                       onClick={() => handleFolderClick(folder)}
                                     >
                                       <button
@@ -1034,83 +1312,113 @@ const ProjectSidebar: React.FC = () => {
                                           e.stopPropagation();
                                           toggleFolder(folder.id);
                                         }}
-                                        className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                        className="p-0.5 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors duration-150"
                                       >
-                                        {isFolderExpanded ? (
-                                          <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                                        ) : (
-                                          <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                                        )}
+                                        <ChevronRight
+                                          className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 
+                                      transition-transform duration-200 ease-out
+                                      ${isFolderExpanded ? 'rotate-90' : 'rotate-0'}`}
+                                        />
                                       </button>
 
-                                      {isFolderExpanded ? (
-                                        <FolderOpen className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                                      ) : (
-                                        <Folder className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                                      )}
+                                      <div className="relative">
+                                        <Folder
+                                          className={`w-4 h-4 text-amber-500 flex-shrink-0 
+                                      transition-all duration-200
+                                      ${isFolderExpanded ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}`}
+                                        />
+                                        <FolderOpen
+                                          className={`w-4 h-4 text-amber-500 flex-shrink-0 absolute inset-0
+                                      transition-all duration-200
+                                      ${isFolderExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+                                        />
+                                      </div>
 
                                       <span
-                                        className={`flex-1 text-sm truncate ${
-                                          isFolderActive
-                                            ? 'text-violet-700 dark:text-violet-300 font-medium'
-                                            : 'text-gray-600 dark:text-gray-400'
-                                        }`}
+                                        className={`flex-1 text-sm truncate transition-colors duration-200
+                                    ${
+                                      isFolderActive
+                                        ? 'text-violet-700 dark:text-violet-300 font-medium'
+                                        : 'text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200'
+                                    }`}
                                       >
                                         {folder.name}
                                       </span>
 
-                                      <button
-                                        onClick={(e) => openContextMenu(e, 'folder', folder)}
-                                        className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all"
-                                      >
-                                        <MoreHorizontal className="w-3.5 h-3.5" />
-                                      </button>
+                                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                                        <button
+                                          onClick={(e) => openContextMenu(e, 'folder', folder)}
+                                          className="p-1 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                                      text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                                      transition-all duration-150"
+                                        >
+                                          <MoreHorizontal className="w-3.5 h-3.5" />
+                                        </button>
 
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCreateProjectFromFolder(
-                                            folder.id,
-                                            space.id,
-                                            folder.name
-                                          );
-                                        }}
-                                        className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all"
-                                        title="Add project"
-                                      >
-                                        <Plus className="w-3.5 h-3.5" />
-                                      </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCreateProjectFromFolder(
+                                              folder.id,
+                                              space.id,
+                                              folder.name
+                                            );
+                                          }}
+                                          className="p-1 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 
+                                      text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 
+                                      transition-all duration-150"
+                                          title="Add project"
+                                        >
+                                          <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
 
-                                    {/* Folder Projects */}
-                                    {isFolderExpanded && folderProjects.length > 0 && (
-                                      <div className="ml-4 pl-3 border-l-2 border-gray-200 dark:border-gray-800 mt-1 space-y-0.5">
-                                        {folderProjects.map((project) => {
+                                    {/* Folder Projects - Animated Collapse */}
+                                    <div
+                                      className={`overflow-hidden transition-all duration-200 ease-out
+                                  ${isFolderExpanded && folderProjects.length > 0 ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
+                                    >
+                                      <div className="ml-4 pl-3 border-l-2 border-gray-200/50 dark:border-gray-700/40 mt-1 space-y-0.5">
+                                        {folderProjects.map((project, projectIndex) => {
                                           const isProjectItemActive = isProjectActive(project.id);
 
                                           return (
                                             <div
                                               key={project.id}
-                                              className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all
-                                                ${
-                                                  isProjectItemActive
-                                                    ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300'
-                                                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                                                }`}
+                                              style={{ animationDelay: `${projectIndex * 20}ms` }}
+                                              className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer 
+                                          transition-all duration-200 ease-out
+                                          animate-in slide-in-from-left-1 fade-in
+                                          ${
+                                            isProjectItemActive
+                                              ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                                              : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                                          }`}
                                               onClick={() => handleProjectClick(project)}
                                             >
-                                              <Hash className="w-4 h-4 flex-shrink-0" />
+                                              <Hash
+                                                className={`w-4 h-4 flex-shrink-0 transition-colors duration-200
+                                          ${isProjectItemActive ? 'text-violet-500' : ''}`}
+                                              />
                                               <span className="flex-1 text-sm truncate">
                                                 {project.name}
                                               </span>
-                                              <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100">
+                                              <span
+                                                className="text-[10px] font-mono text-gray-400 dark:text-gray-500 
+                                          opacity-0 group-hover:opacity-100 transition-opacity duration-150
+                                          bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded"
+                                              >
                                                 {project.key}
                                               </span>
                                               <button
                                                 onClick={(e) =>
                                                   openContextMenu(e, 'project', project)
                                                 }
-                                                className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all"
+                                                className="p-1 rounded opacity-0 group-hover:opacity-100 
+                                            hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                                            text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                                            transition-all duration-150"
                                               >
                                                 <MoreHorizontal className="w-3.5 h-3.5" />
                                               </button>
@@ -1118,34 +1426,49 @@ const ProjectSidebar: React.FC = () => {
                                           );
                                         })}
                                       </div>
-                                    )}
+                                    </div>
                                   </div>
                                 );
                               })}
 
                               {/* Direct Space Projects (no folder) */}
-                              {spaceDirectProjects.map((project) => {
+                              {spaceDirectProjects.map((project, projectIndex) => {
                                 const isProjectItemActive = isProjectActive(project.id);
 
                                 return (
                                   <div
                                     key={project.id}
-                                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all
-                                      ${
-                                        isProjectItemActive
-                                          ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300'
-                                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                                      }`}
+                                    style={{
+                                      animationDelay: `${(spaceFolders.length + projectIndex) * 20}ms`,
+                                    }}
+                                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer 
+                                transition-all duration-200 ease-out
+                                animate-in slide-in-from-left-1 fade-in
+                                ${
+                                  isProjectItemActive
+                                    ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                                    : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                                }`}
                                     onClick={() => handleProjectClick(project)}
                                   >
-                                    <Hash className="w-4 h-4 flex-shrink-0" />
+                                    <Hash
+                                      className={`w-4 h-4 flex-shrink-0 transition-colors duration-200
+                                ${isProjectItemActive ? 'text-violet-500' : ''}`}
+                                    />
                                     <span className="flex-1 text-sm truncate">{project.name}</span>
-                                    <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100">
+                                    <span
+                                      className="text-[10px] font-mono text-gray-400 dark:text-gray-500 
+                                opacity-0 group-hover:opacity-100 transition-opacity duration-150
+                                bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded"
+                                    >
                                       {project.key}
                                     </span>
                                     <button
                                       onClick={(e) => openContextMenu(e, 'project', project)}
-                                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all"
+                                      className="p-1 rounded opacity-0 group-hover:opacity-100 
+                                  hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                                  text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                                  transition-all duration-150"
                                     >
                                       <MoreHorizontal className="w-3.5 h-3.5" />
                                     </button>
@@ -1155,28 +1478,41 @@ const ProjectSidebar: React.FC = () => {
 
                               {/* Empty State */}
                               {spaceFolders.length === 0 && spaceDirectProjects.length === 0 && (
-                                <div className="px-2 py-4 text-center">
+                                <div className="px-2 py-6 text-center animate-in fade-in duration-300">
+                                  <div
+                                    className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 
+                              flex items-center justify-center mx-auto mb-3"
+                                  >
+                                    <Folder className="w-5 h-5 text-gray-400" />
+                                  </div>
                                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
                                     No content yet
                                   </p>
                                   <button
                                     onClick={() => handleCreateFolderFromMenu(space.id, space.name)}
-                                    className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
+                                    className="text-xs font-medium text-violet-600 dark:text-violet-400 
+                                hover:text-violet-700 dark:hover:text-violet-300
+                                hover:underline underline-offset-2 transition-colors"
                                   >
                                     Add a folder
                                   </button>
                                 </div>
                               )}
                             </div>
-                          )}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="px-4 py-8 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-3">
-                      <Zap className="w-6 h-6 text-violet-600 dark:text-gray-400" />
+                  <div className="px-4 py-10 text-center animate-in fade-in zoom-in-95 duration-300">
+                    <div
+                      className="w-14 h-14 rounded-2xl 
+                bg-gradient-to-br from-violet-100 via-purple-100 to-indigo-100 
+                dark:from-violet-900/30 dark:via-purple-900/20 dark:to-indigo-900/30 
+                flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-200/30 dark:shadow-violet-900/20"
+                    >
+                      <Zap className="w-7 h-7 text-violet-600 dark:text-violet-400" />
                     </div>
                     {showFull && (
                       <>
@@ -1185,7 +1521,10 @@ const ProjectSidebar: React.FC = () => {
                         </p>
                         <button
                           onClick={() => setIsCreateSpaceModalOpen(true)}
-                          className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-semibold hover:underline"
+                          className="text-sm text-violet-600 dark:text-violet-400 
+                      hover:text-violet-700 dark:hover:text-violet-300 
+                      font-semibold hover:underline underline-offset-2 
+                      transition-colors duration-200"
                         >
                           Create a space
                         </button>
@@ -1196,18 +1535,27 @@ const ProjectSidebar: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="px-4 py-12 text-center">
+            <div className="px-4 py-16 text-center animate-in fade-in zoom-in-95 duration-300">
               {showFull && (
                 <>
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-4">
-                    <Zap className="w-8 h-8 text-violet-600 dark:text-gray-400" />
+                  <div
+                    className="w-16 h-16 rounded-2xl 
+              bg-gradient-to-br from-violet-100 via-purple-100 to-indigo-100 
+              dark:from-violet-900/30 dark:via-purple-900/20 dark:to-indigo-900/30 
+              flex items-center justify-center mx-auto mb-4 
+              shadow-xl shadow-violet-200/40 dark:shadow-violet-900/20"
+                  >
+                    <Zap className="w-8 h-8 text-violet-600 dark:text-violet-400" />
                   </div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">
                     No workspace selected
                   </p>
                   <button
                     onClick={() => setIsCreateWorkspaceModalOpen(true)}
-                    className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-semibold hover:underline"
+                    className="text-sm text-violet-600 dark:text-violet-400 
+                hover:text-violet-700 dark:hover:text-violet-300 
+                font-semibold hover:underline underline-offset-2 
+                transition-colors duration-200"
                   >
                     Create workspace
                   </button>
@@ -1218,7 +1566,10 @@ const ProjectSidebar: React.FC = () => {
         </div>
 
         {/* Bottom Navigation */}
-        <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 p-3">
+        <div
+          className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800/60 p-3 
+    bg-gradient-to-t from-gray-50/50 to-transparent dark:from-gray-950/30 dark:to-transparent"
+        >
           {[
             { icon: Users, label: 'Team', path: '/team' },
             { icon: Settings, label: 'Settings', path: '/settings' },
@@ -1231,29 +1582,49 @@ const ProjectSidebar: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 onClick={closeMobileSidebar}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-1 group
-                  ${
-                    active
-                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-                  }
-                  ${!showFull ? 'justify-center' : ''}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium 
+            transition-all duration-200 ease-out mb-1 group
+            ${
+              active
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white'
+            }
+            ${!showFull ? 'justify-center' : ''}`}
                 title={!showFull ? item.label : undefined}
               >
-                <Icon className="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                {showFull && <span>{item.label}</span>}
+                <Icon
+                  className={`w-5 h-5 flex-shrink-0 transition-all duration-200 
+            ${active ? '' : 'group-hover:scale-110 group-hover:text-violet-600 dark:group-hover:text-violet-400'}`}
+                />
+                {showFull && (
+                  <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                    {item.label}
+                  </span>
+                )}
               </Link>
             );
           })}
         </div>
 
         {/* User Profile */}
-        <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 p-3 relative">
+        <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800/60 p-3 relative">
           <button
             onClick={() => showFull && setShowUserMenu(!showUserMenu)}
-            className={`w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all group active:scale-[0.98] ${!showFull ? 'justify-center' : ''}`}
+            className={`w-full flex items-center gap-3 p-2.5 rounded-xl 
+        hover:bg-gray-100/80 dark:hover:bg-gray-800/60 
+        transition-all duration-200 ease-out group active:scale-[0.98] 
+        ${!showFull ? 'justify-center' : ''}`}
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all ring-2 ring-white dark:ring-gray-900">
+            <div
+              className="w-10 h-10 rounded-xl 
+        bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 
+        flex items-center justify-center text-white text-xs font-bold flex-shrink-0 
+        shadow-lg shadow-violet-500/30 
+        group-hover:shadow-xl group-hover:shadow-violet-500/40 
+        group-hover:scale-105 
+        transition-all duration-200 
+        ring-2 ring-white dark:ring-gray-900"
+            >
               {user?.avatar ? (
                 <img
                   src={user.avatar}
@@ -1275,26 +1646,40 @@ const ProjectSidebar: React.FC = () => {
                   </p>
                 </div>
                 <ChevronRight
-                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-90' : ''}`}
+                  className={`w-4 h-4 text-gray-400 transition-all duration-300 ease-out
+              ${showUserMenu ? 'rotate-90 text-violet-500' : 'group-hover:translate-x-0.5'}`}
                 />
               </>
             )}
           </button>
 
-          {/* User Menu */}
-          {showUserMenu && showFull && (
-            <div className="absolute bottom-full left-3 right-3 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden">
-              <div className="p-2">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group active:scale-[0.98]"
-                >
-                  <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span>Sign out</span>
-                </button>
-              </div>
+          {/* User Menu - Animated */}
+          <div
+            className={`absolute bottom-full left-3 right-3 mb-2 
+        bg-white dark:bg-gray-800 
+        border border-gray-200/80 dark:border-gray-700/80 
+        rounded-xl shadow-2xl shadow-gray-200/50 dark:shadow-black/30 
+        overflow-hidden
+        transition-all duration-200 ease-out origin-bottom
+        ${
+          showUserMenu && showFull
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        }`}
+          >
+            <div className="p-2">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium 
+            text-red-600 dark:text-red-400 
+            hover:bg-red-50 dark:hover:bg-red-900/20 
+            transition-all duration-200 group active:scale-[0.98]"
+              >
+                <LogOut className="w-4 h-4 transition-transform duration-200 group-hover:scale-110 group-hover:-translate-x-0.5" />
+                <span>Sign out</span>
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </aside>
 
