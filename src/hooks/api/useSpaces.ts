@@ -95,7 +95,7 @@ export const useCreateSpace = () => {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
       // ✅ INVALIDATE ACCESSIBLE SPACES
-      queryClient.invalidateQueries({ queryKey: ['accessibleSpaces'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
     },
   });
 };
@@ -111,7 +111,7 @@ export const useUpdateSpace = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.byWorkspace(data.workspace_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
       // ✅ INVALIDATE ACCESSIBLE SPACES
-      queryClient.invalidateQueries({ queryKey: ['accessibleSpaces'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
     },
   });
 };
@@ -125,7 +125,7 @@ export const useDeleteSpace = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
       queryClient.removeQueries({ queryKey: queryKeys.spaces.detail(id) });
       // ✅ INVALIDATE ACCESSIBLE SPACES
-      queryClient.invalidateQueries({ queryKey: ['accessibleSpaces'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
     },
   });
 };
