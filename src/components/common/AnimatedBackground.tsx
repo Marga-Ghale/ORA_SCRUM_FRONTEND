@@ -257,7 +257,7 @@ export const TypingText: React.FC<{
 
   return (
     <span className={className}>
-      <span className="inline-block bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-300 bg-clip-text text-transparent">
+      <span className="inline-block bg-gradient-to-r from-orange-400 via-indigo-400 to-orange-300 bg-clip-text text-transparent">
         {displayText || '\u00A0'}
       </span>
       <motion.span
