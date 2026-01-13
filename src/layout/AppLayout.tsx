@@ -28,7 +28,7 @@ const AppLayout: React.FC = () => {
         <AppHeader />
 
         {/* Main Content */}
-        <main className="flex-1 bg-gradient-to-l from-orange-100 to-blue w-full bg-gradient-to-b from-orange-100">
+        <main className="flex-1 bg-gradient-to-l from-orange-100 to-blue w-full dark:border-gray-800 bg-white dark:bg-gray-900">
           <div className="p-4 sm:p-5 md:p-6 lg:p-8 mx-auto max-w-[1920px]">
             <Outlet />
           </div>

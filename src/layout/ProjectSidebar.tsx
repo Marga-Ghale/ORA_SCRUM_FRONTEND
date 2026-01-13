@@ -750,7 +750,7 @@ const ProjectSidebar: React.FC = () => {
       {/* Sidebar */}
       <aside
         className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 flex flex-col
-    bg-orange-100 from-white via-white to-gray-50/80 
+    bg-orange-100 dark:border-gray-800 bg-white dark:bg-gray-900 from-white via-white to-gray-50/80 
     dark:from-gray-900 dark:via-gray-900 dark:to-gray-950/90
     border-r border-gray-200/80 dark:border-gray-800/60
     transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]

@@ -39,7 +39,7 @@ const AppHeader: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-      <div className=" flex bg-orange-100 to-blue items-center justify-between h-16 px-4 lg:px-6">
+      <div className=" flex bg-orange-100 to-blue dark:border-gray-800 bg-white dark:bg-gray-900 items-center justify-between h-16 px-4 lg:px-6">
         {/* Left Section */}
         <div className="flex items-center gap-3">
           {/* Toggle Button */}
