@@ -4,6 +4,7 @@ import { useNavigate, NavigateFunction } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useProjectContext } from '../../context/ProjectContext';
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/query-client';
 
 const STORAGE_KEYS = {
   WORKSPACE: 'selectedWorkspaceId',
@@ -136,7 +137,7 @@ export const navigateToTaskWithHierarchy = async (
     });
     localStorage.setItem(STORAGE_KEYS.PROJECT, project.id);
 
-    queryClient.invalidateQueries({ queryKey: ['tasks', project.id] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.tasks.byProject(project.id) });
 
     // ------------------------------------------------------------------------
     // 7. NAVIGATE
