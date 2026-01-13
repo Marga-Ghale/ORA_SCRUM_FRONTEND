@@ -85,7 +85,7 @@ const DropZone: React.FC<DropZoneProps> = ({ status, index, onDrop, isEmptyColum
             />
           </div>
           <span
-            className={`text-sm font-medium ${
+            className={`text-sm font-medium  bg-gradient-to-l from-orange-100 to-blue${
               isActive
                 ? 'text-brand-700 dark:text-brand-300 font-semibold'
                 : 'text-gray-500 dark:text-gray-500 group-hover:text-brand-600 dark:group-hover:text-brand-400'
@@ -448,7 +448,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       style={{ transition: 'box-shadow 150ms' }}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-t-xl">
+      <div className="flex items-center bg-gradient-to-l from-orange-100 to-blue justify-between p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-t-xl">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div
             className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
@@ -495,7 +495,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       {/* Column Body */}
       <div
         ref={columnRef}
-        className={`flex-1 p-3 overflow-y-auto kanban-scrollbar ${
+        className={`flex-1 p-3 bg-gradient-to-l from-orange-100 to-blue overflow-y-auto kanban-scrollbar ${
           isActive ? 'bg-brand-50/30 dark:bg-brand-950/20' : ''
         }`}
         style={{

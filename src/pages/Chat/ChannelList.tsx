@@ -312,7 +312,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   return (
     <div className="w-[260px] h-full flex flex-col bg-white dark:bg-[#1a1d21] border-r border-gray-200 dark:border-[#2a2e33]">
       {/* Header */}
-      <div className="p-3 border-b border-gray-200 dark:border-[#2a2e33]">
+      <div className="p-3 bg-gradient-to-l from-orange-100 to-blue border-b border-gray-200 dark:border-[#2a2e33]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-brand-400" />
@@ -391,7 +391,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
             )}
 
             {/* Channels Section */}
-            <div className="py-2">
+            <div className="py-2 bg-gradient-to-l from-orange-100 to-blue">
               <SectionHeader
                 title="Channels"
                 section="channels"
@@ -426,7 +426,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
             </div>
 
             {/* Direct Messages Section */}
-            <div className="py-2">
+            <div className="py-2 bg-gradient-to-l from-orange-100 to-blue">
               <SectionHeader
                 title="Direct Messages"
                 section="direct"

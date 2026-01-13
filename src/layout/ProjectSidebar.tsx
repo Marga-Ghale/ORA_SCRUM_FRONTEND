@@ -750,7 +750,7 @@ const ProjectSidebar: React.FC = () => {
       {/* Sidebar */}
       <aside
         className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 flex flex-col
-    bg-gradient-to-b from-white via-white to-gray-50/80 
+    bg-orange-100 from-white via-white to-gray-50/80 
     dark:from-gray-900 dark:via-gray-900 dark:to-gray-950/90
     border-r border-gray-200/80 dark:border-gray-800/60
     transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
@@ -867,7 +867,7 @@ const ProjectSidebar: React.FC = () => {
           <button
             onClick={() => setIsNavMinimized(!isNavMinimized)}
             className="w-full flex items-center justify-between px-3 py-2.5 mb-2 rounded-xl
-      bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-800/30
+      bg-gradient-to-l from-orange-100 to-blue from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-800/30
       hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-800 dark:hover:to-gray-800/60
       border border-gray-200/60 dark:border-gray-700/40
       transition-all duration-300 group
@@ -962,7 +962,7 @@ const ProjectSidebar: React.FC = () => {
                       animationDelay: `${index * 40}ms`,
                       transitionDelay: `${index * 30}ms`,
                     }}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium 
+                    className={`flex bg-gradient-to-l from-orange-100 to-blue items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium 
               transition-all duration-200 ease-out group relative
               ${
                 active
@@ -977,13 +977,13 @@ const ProjectSidebar: React.FC = () => {
                     {active && (
                       <span
                         className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 
-                  bg-gradient-to-b from-violet-500 to-purple-600 
+                  bg-gradient-to-l from-orange-100 to-blue from-violet-500 to-purple-600 
                   dark:from-violet-400 dark:to-purple-500 
                   rounded-r-full shadow-lg shadow-violet-500/30"
                       />
                     )}
                     <div
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center
+                      className={`w-9 h-9 bg-gradient-to-l from-orange-100 to-blue rounded-lg flex items-center justify-center
               ${
                 active
                   ? 'bg-violet-100 dark:bg-violet-900/30'
@@ -1045,7 +1045,7 @@ const ProjectSidebar: React.FC = () => {
               {/* Spaces Header */}
               {/* Spaces Header */}
               <div
-                className={`sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 px-3 py-3 
+                className={`sticky bg-gradient-to-l from-orange-100 to-blue top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-10 px-3 py-3 
     border-b border-gray-100/80 dark:border-gray-800/40 transition-all duration-300
     ${isNavMinimized ? 'shadow-sm shadow-violet-100/50 dark:shadow-violet-900/10' : ''}
     ${!showFull ? 'px-2' : ''}`}
@@ -1119,7 +1119,7 @@ const ProjectSidebar: React.FC = () => {
                         >
                           {/* Space Item */}
                           <div
-                            className={`group flex items-center gap-2 px-2.5 py-2.5 rounded-xl cursor-pointer 
+                            className={`group bg-gradient-to-l from-orange-100 to-blue flex items-center gap-2 px-2.5 py-2.5 rounded-xl cursor-pointer 
                         transition-all duration-200 ease-out
                         ${
                           isSpaceActive

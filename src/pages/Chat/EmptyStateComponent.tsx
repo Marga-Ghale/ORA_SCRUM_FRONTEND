@@ -7,7 +7,7 @@ import { MessageSquare, Plus } from 'lucide-react';
 export const EmptyChatState: React.FC<{ onCreateChannel: () => void }> = ({ onCreateChannel }) => (
   <div
     className="flex-1 flex flex-col items-center justify-center text-center p-6
-  bg-gray-50 dark:bg-[#0d0f11]"
+  bg-gradient-to-l from-orange-100 to-blue dark:bg-[#0d0f11]"
   >
     <div
       className="w-20 h-20 rounded-2xl

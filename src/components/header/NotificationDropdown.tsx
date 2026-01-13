@@ -351,7 +351,7 @@ const FilterTabs: React.FC<FilterTabsProps> = ({ activeFilter, onChange, counts 
   ];
 
   return (
-    <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-lg overflow-x-auto">
+    <div className="flex gap-1 p-1 bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800/50 rounded-lg overflow-x-auto">
       {tabs.map((tab) => {
         const count = counts[tab.id];
         const isActive = activeFilter === tab.id;
@@ -533,7 +533,7 @@ export default function NotificationDropdown() {
     <div className="relative">
       {/* Trigger Button */}
       <button
-        className="relative flex items-center justify-center text-gray-500 transition-colors bg-white border border-gray-200 rounded-full hover:text-gray-700 h-11 w-11 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+        className="relative flex items-center justify-center text-gray-500 transition-colors bg-gradient-to-l from-orange-100 to-blue border border-gray-200 rounded-full hover:text-gray-700 h-11 w-11 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
         onClick={toggleDropdown}
         aria-label={`Notifications${hasUnread ? ` (${unreadCount} unread)` : ''}`}
       >
@@ -562,7 +562,7 @@ export default function NotificationDropdown() {
         className="absolute right-0 mt-2 flex h-[580px] w-[420px] flex-col rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl"
       >
         {/* Header */}
-        <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex-shrink-0 bg-gradient-to-l from-orange-100 to-blue p-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Bell className="w-5 h-5 text-brand-600 dark:text-brand-400" />
@@ -600,7 +600,7 @@ export default function NotificationDropdown() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 bg-gradient-to-l from-orange-100 to-blue overflow-y-auto">
           {isLoading ? (
             <LoadingSkeleton />
           ) : filteredNotifications.length === 0 ? (

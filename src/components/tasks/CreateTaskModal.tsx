@@ -233,7 +233,7 @@ const CreateTaskModal: React.FC = () => {
         <div
           ref={modalRef}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white dark:bg-gray-900 rounded-none sm:rounded-3xl shadow-2xl w-full h-full sm:max-w-6xl sm:max-h-[92vh] overflow-hidden flex flex-col border-0 sm:border border-gray-200/50 dark:border-gray-700/50"
+          className="bg-orange-100 to-blue dark:bg-gray-900 rounded-none sm:rounded-3xl shadow-2xl w-full h-full sm:max-w-6xl sm:max-h-[92vh] overflow-hidden flex flex-col border-0 sm:border border-gray-200/50 dark:border-gray-700/50"
         >
           {/* Header - Compact on mobile */}
           <div className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/30">
@@ -302,13 +302,13 @@ const CreateTaskModal: React.FC = () => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => updateField('description', e.target.value)}
-                  className="w-full min-h-[120px] sm:min-h-[150px] p-4 sm:p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm sm:text-base"
+                  className="w-full bg-gradient-to-l from-orange-100 to-blue min-h-[120px] sm:min-h-[150px] p-4 sm:p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm sm:text-base"
                   placeholder="Describe the task..."
                 />
               </div>
 
               {/* Subtasks Section */}
-              <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-gray-50 dark:bg-gray-800/30 rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="mb-6 bg-gradient-to-l from-orange-100 to-blue sm:mb-8 p-4 sm:p-6 bg-gray-50 dark:bg-gray-800/30 rounded-xl border border-gray-200 dark:border-gray-700">
                 <SubtasksSection
                   subtasks={subtasks}
                   users={users as any}
@@ -495,7 +495,7 @@ const CreateTaskModal: React.FC = () => {
           </div>
 
           {/* Footer - Fixed at bottom on mobile */}
-          <div className="border-t border-gray-200 dark:border-gray-800 px-4 sm:px-8 py-3 sm:py-5 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 bg-white dark:bg-gray-900">
+          <div className=" bg-gradient-to-l from-orange-100 to-blue border-t border-gray-200 dark:border-gray-800 px-4 sm:px-8 py-3 sm:py-5 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 bg-white dark:bg-gray-900">
             <button
               onClick={handleCancel}
               disabled={isCreating}

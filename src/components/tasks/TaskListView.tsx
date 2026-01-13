@@ -246,10 +246,10 @@ interface TaskGroupProps {
 
 const TaskGroup: React.FC<TaskGroupProps> = ({ title, color, tasks, isOpen, onToggle }) => {
   return (
-    <div className="mb-3">
+    <div className="mb-3 ">
       <button
         onClick={onToggle}
-        className="flex items-center gap-3 w-full px-4 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/50 hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 rounded-xl transition-all border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow"
+        className="flex items-center bg-gradient-to-l from-orange-100 to-blue gap-3 w-full px-4 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/50 hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 rounded-xl transition-all border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow"
       >
         {isOpen ? (
           <ChevronDown className="w-4 h-4 text-gray-400 transition-transform" />

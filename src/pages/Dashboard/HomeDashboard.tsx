@@ -69,7 +69,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-brand-300 dark:hover:border-brand-700 transition-all ${onClick ? 'cursor-pointer' : ''}`}
+      className={`bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-brand-300 dark:hover:border-brand-700 transition-all ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
@@ -121,7 +121,7 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, onViewProfile }
   return (
     <div
       onClick={onViewProfile}
-      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+      className="flex bg-gradient-to-l from-green-100 to-blue items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="relative flex-shrink-0">
@@ -185,7 +185,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className="p-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-brand-300 dark:hover:border-brand-700 transition-all cursor-pointer group"
+      className="p-5 bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-brand-300 dark:hover:border-brand-700 transition-all cursor-pointer group"
     >
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
@@ -235,7 +235,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+      className="p-4 bg-orange-100 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
     >
       <div className="flex items-center gap-3 mb-2">
         <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -449,7 +449,7 @@ const HomeDashboard: React.FC = () => {
           {/* Workspaces & Projects - Takes 2 columns */}
           <div className="lg:col-span-2 space-y-6">
             {/* Workspaces */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-brand-600 dark:text-brand-400" />
@@ -498,7 +498,7 @@ const HomeDashboard: React.FC = () => {
             </div>
 
             {/* Recent Projects */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <Target className="w-5 h-5 text-brand-600 dark:text-brand-400" />
@@ -548,7 +548,7 @@ const HomeDashboard: React.FC = () => {
           {/* Sidebar - Takes 1 column */}
           <div className="space-y-6">
             {/* Team Members */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-brand-600 dark:text-brand-400" />
@@ -604,7 +604,7 @@ const HomeDashboard: React.FC = () => {
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="bg-gradient-to-l from-green-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2 mb-4">
                 <BarChart3 className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                 <h3 className="font-semibold text-gray-900 dark:text-white">Quick Stats</h3>
@@ -645,7 +645,7 @@ const HomeDashboard: React.FC = () => {
         {/* Analytics Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Task Activity Trends */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-brand-600 dark:text-brand-400" />
@@ -664,7 +664,7 @@ const HomeDashboard: React.FC = () => {
           </div>
 
           {/* Task Status Distribution */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <PieChart className="w-5 h-5 text-brand-600 dark:text-brand-400" />
@@ -683,7 +683,7 @@ const HomeDashboard: React.FC = () => {
           </div>
 
           {/* Priority Distribution */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-brand-600 dark:text-brand-400" />
@@ -702,7 +702,7 @@ const HomeDashboard: React.FC = () => {
           </div>
 
           {/* Recent Activity Feed */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <ActivityIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />

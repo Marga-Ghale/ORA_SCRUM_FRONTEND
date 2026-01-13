@@ -117,7 +117,7 @@ const ProjectBoard: React.FC = () => {
       <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
         {/* Header - Professional gradient background */}
         <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
-          <div className="px-6 py-4">
+          <div className="px-6 bg-gradient-to-l from-orange-100 to-blue py-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1.5">
@@ -154,7 +154,7 @@ const ProjectBoard: React.FC = () => {
           </div>
 
           {/* Toolbar */}
-          <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-800">
+          <div className="px-6 py-3 bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-800">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               {/* Left side */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -249,7 +249,7 @@ const ProjectBoard: React.FC = () => {
               </div>
 
               {/* Right side - View Toggle */}
-              <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="flex items-center gap-1 bg-orange-200 to-blue dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700 shadow-sm">
                 {viewOptions.map((option) => {
                   const Icon = option.icon;
                   return (
@@ -411,7 +411,7 @@ const ProjectBoard: React.FC = () => {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden py-5">
+        <div className="flex-1 bg-gradient-to-l from-orange-100 to-blue to-blue overflow-hidden py-5">
           {tasksLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">

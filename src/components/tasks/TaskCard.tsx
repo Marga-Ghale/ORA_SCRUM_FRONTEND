@@ -180,7 +180,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
         onClick={() => openTaskModal(task as any)}
         className={`
           task-card group relative mb-2.5 rounded-xl cursor-pointer overflow-hidden
-          bg-white dark:bg-gray-900
+          bg-gradient-to-l from-orange-100 to-blue dark:bg-gray-900
           border border-gray-200 dark:border-gray-800
           hover:border-gray-300 dark:hover:border-gray-700
           card-shadow hover:card-shadow-hover

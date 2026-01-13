@@ -202,7 +202,7 @@ const NotificationPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] transition-colors">
         <div className="mx-auto h-screen flex flex-col">
           {/* Modern Header with Glassmorphism */}
-          <div className="sticky top-0 z-10 bg-white/80 dark:bg-[#111111]/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/5">
+          <div className="sticky top-0 z-10 bg-gradient-to-l from-orange-100 to-blue dark:bg-[#111111]/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/5">
             <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div className="flex items-center gap-3">
@@ -340,7 +340,7 @@ const NotificationPage: React.FC = () => {
                 ))}
               </div>
             ) : filteredNotifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center px-4 py-12 sm:py-16">
+              <div className="flex flex-col bg-gradient-to-l from-orange-100 to-blue items-center justify-center h-full text-center px-4 py-12 sm:py-16">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-[#1a1a1a] dark:to-[#222222] flex items-center justify-center mb-4 sm:mb-6 shadow-inner">
                   <Inbox
                     className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-600"
