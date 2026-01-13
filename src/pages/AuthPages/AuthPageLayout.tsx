@@ -164,7 +164,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <AnimatedBackground isTyping={isTyping} />
           <FloatingParticles />
 
-          <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          <div className="relative bg-gradient-to-l from-pink-400 to-blue z-10 flex flex-col justify-between p-12 w-full">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -204,7 +204,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                       'Team Collaboration',
                       'Project Success',
                     ]}
-                    className="text-5xl font-black"
+                    className="text-4xl font-black"
                     onTypingChange={setIsTyping}
                   />
                 </h2>
