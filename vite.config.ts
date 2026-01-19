@@ -1,16 +1,16 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import svgr from "vite-plugin-svgr";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import svgr from 'vite-plugin-svgr';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react({
       babel: {
         plugins: [
           [
-            "@locator/babel-jsx/dist",
+            '@locator/babel-jsx/dist',
             {
-              env: "development",
+              env: mode, // ✅ dynamic (dev / production)
             },
           ],
         ],
@@ -19,21 +19,25 @@ export default defineConfig({
     svgr({
       svgrOptions: {
         icon: true,
-        exportType: "named",
-        namedExport: "ReactComponent",
+        exportType: 'named',
+        namedExport: 'ReactComponent',
       },
     }),
   ],
+
   build: {
     rollupOptions: {
       onwarn(warning, warn) {
-        // Suppress warnings
         if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
         warn(warning);
       },
     },
   },
+
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' },
+
+    // ✅ controlled by .env
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
   },
-});
+}));
