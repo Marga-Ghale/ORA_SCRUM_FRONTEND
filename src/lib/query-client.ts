@@ -197,25 +197,20 @@ export const queryKeys = {
   // ============================================
   chat: {
     all: ['chat'] as const,
-    // Channels
     channels: () => [...queryKeys.chat.all, 'channels'] as const,
     workspaceChannels: (workspaceId: string) =>
       [...queryKeys.chat.all, 'channels', 'workspace', workspaceId] as const,
     channel: (channelId: string) => [...queryKeys.chat.all, 'channel', channelId] as const,
     channelByTarget: (targetType: string, targetId: string) =>
       [...queryKeys.chat.all, 'channel', 'target', targetType, targetId] as const,
-    // Messages
-    messages: (channelId: string, limit?: number, offset?: number) =>
+    // ✅ CRITICAL: Consistent message query keys
+    messages: (channelId: string, limit: number = 50, offset: number = 0) =>
       [...queryKeys.chat.all, 'messages', channelId, { limit, offset }] as const,
     thread: (parentId: string) => [...queryKeys.chat.all, 'thread', parentId] as const,
-    // Members
     members: (channelId: string) => [...queryKeys.chat.all, 'members', channelId] as const,
-    // Unread
     unreadCounts: () => [...queryKeys.chat.all, 'unread'] as const,
     unreadCount: (channelId: string) => [...queryKeys.chat.all, 'unread', channelId] as const,
-    // Reactions
     reactions: (messageId: string) => [...queryKeys.chat.all, 'reactions', messageId] as const,
-    // Direct messages
     directChannel: (user1Id: string, user2Id: string) =>
       [...queryKeys.chat.all, 'direct', user1Id, user2Id] as const,
   },

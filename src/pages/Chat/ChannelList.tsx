@@ -140,17 +140,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     const unread = unreadCounts[channel.id] || 0;
     const isHovered = hoveredChannel === channel.id;
 
-    // 🔍 DEBUG: Check channel data
-    if (channel.type === 'direct') {
-      console.log('Direct channel:', {
-        id: channel.id,
-        name: channel.name,
-        type: channel.type,
-        otherUser: channel.otherUser,
-        hasOtherUser: !!channel.otherUser,
-      });
-    }
-
     const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown';
     console.log(displayName);
     const isStarred = starredChannels.has(channel.id);

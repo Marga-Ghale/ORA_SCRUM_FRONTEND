@@ -24,11 +24,36 @@ import { CreateChannelModal } from './CreateChannelModal';
 import { CreateDMModal } from './CreateDMModal';
 import { ThreadPanel } from './ThreadPanel';
 import { ChannelMembersPanel } from './ChannelMembersPanel';
+import { useWebSocket } from '../../hooks/api/useWebsocket';
 
 const ChatPage: React.FC = () => {
   const { channelId } = useParams<{ channelId?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // ✅ ADD: WebSocket integration
+  const { isConnected, joinRoom, leaveRoom } = useWebSocket({
+    onMessage: (message) => {
+      // Additional message handling if needed
+      if (message.type === 'chat_message') {
+        console.log('[ChatPage] Received chat message via WebSocket');
+      }
+    },
+  });
+  const { data: currentChannel } = useChannel(channelId);
+
+  useEffect(() => {
+    if (!currentChannel?.workspaceId || !isConnected) return;
+
+    const workspaceRoom = `workspace:${currentChannel.workspaceId}`;
+    console.log('[ChatPage] 🔌 Joining workspace room:', workspaceRoom);
+    joinRoom(workspaceRoom);
+
+    return () => {
+      console.log('[ChatPage] 👋 Leaving workspace room:', workspaceRoom);
+      leaveRoom(workspaceRoom);
+    };
+  }, [currentChannel?.workspaceId, isConnected, joinRoom, leaveRoom]);
 
   // Modal states
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -41,7 +66,6 @@ const ChatPage: React.FC = () => {
 
   // Queries
   const { data: channels = [], isLoading: channelsLoading } = useChannels();
-  const { data: currentChannel } = useChannel(channelId);
   const { data: messages = [], isLoading: messagesLoading } = useMessages(channelId);
   const { data: unreadCounts = {} } = useUnreadCounts();
 
@@ -75,14 +99,31 @@ const ChatPage: React.FC = () => {
     navigate(`/chat/${newChannelId}`);
   };
 
+  // const handleSendMessage = (content: string, parentId?: string) => {
+  //   if (!channelId) return;
+  //   sendMessage.mutate({
+  //     channelId,
+  //     content,
+  //     parentId,
+  //     currentUserId: '',
+  //     currentUser: undefined,
+  //   });
+  // };
+
   const handleSendMessage = (content: string, parentId?: string) => {
-    if (!channelId) return;
+    if (!channelId || !user) return; // ✅ Add user check
+
     sendMessage.mutate({
       channelId,
       content,
       parentId,
-      currentUserId: '',
-      currentUser: undefined,
+      currentUserId: user.id, // ✅ Pass user data
+      currentUser: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+      },
     });
   };
 
