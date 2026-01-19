@@ -568,26 +568,33 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         setIsInitializing(true);
         setInitError(null);
 
-        let workspace = workspacesData?.[0];
+        // ✅ FIX 1: Check if we already have workspaces
+        if (!workspacesData || workspacesData.length === 0) {
+          // Only create if truly no workspaces exist
+          const newWorkspace = await createWorkspaceMutation.mutateAsync({
+            name: 'My Workspace',
+          });
+          const mappedWorkspace = mapWorkspace(newWorkspace);
+          setCurrentWorkspaceState(mappedWorkspace);
+          localStorage.setItem(STORAGE_KEYS.WORKSPACE, mappedWorkspace.id);
+          hasRestoredRef.current = true;
+          return;
+        }
 
+        // We have workspaces - select one
+        let workspace = workspacesData[0];
         const savedWorkspaceId = localStorage.getItem(STORAGE_KEYS.WORKSPACE);
-        if (savedWorkspaceId && workspacesData) {
+
+        if (savedWorkspaceId) {
           const savedWorkspace = workspacesData.find((w) => w.id === savedWorkspaceId);
           if (savedWorkspace) {
             workspace = savedWorkspace;
           }
         }
 
-        if (!workspace) {
-          workspace = await createWorkspaceMutation.mutateAsync({
-            name: 'My Workspace',
-          });
-        }
-
         const mappedWorkspace = mapWorkspace(workspace);
         setCurrentWorkspaceState(mappedWorkspace);
         localStorage.setItem(STORAGE_KEYS.WORKSPACE, mappedWorkspace.id);
-
         hasRestoredRef.current = true;
       } catch (error) {
         console.error('[ProjectContext] Initialization error:', error);
@@ -598,7 +605,11 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
     initialize();
-  }, [isAuthenticated, workspacesLoading, workspacesData, createWorkspaceMutation]);
+
+    // ✅ FIX 2: Only depend on primitive values, not objects/arrays
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, workspacesLoading]);
+  // Remove workspacesData and createWorkspaceMutation from dependencies!
 
   useEffect(() => {
     if (!currentWorkspace || !spacesData || spacesData.length === 0) return;

@@ -1,9 +1,9 @@
 // src/components/workspace/WorkspaceSettingsModal.tsx
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useProject } from '../../context/ProjectContext';
 import MembersList from '../members/MembersList';
 import { InviteMemberModal } from '../modals';
+import { useProjectContext } from '../../context/ProjectContext';
 
 interface WorkspaceSettingsModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ interface WorkspaceSettingsModalProps {
 type Tab = 'general' | 'members' | 'billing' | 'danger';
 
 const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({ isOpen, onClose }) => {
-  const { currentWorkspace } = useProject();
+  const { currentWorkspace } = useProjectContext();
   const [activeTab, setActiveTab] = useState<Tab>('members'); // Default to members
   const [showInviteModal, setShowInviteModal] = useState(false);
 

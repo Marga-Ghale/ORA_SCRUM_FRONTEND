@@ -87,7 +87,7 @@ export default function SignInForm() {
           navigate('/');
         },
         onError: (err: any) => {
-          setError(err.message || 'Invalid email or password');
+          setError('Invalid credentials. Please try again.');
         },
       }
     );
