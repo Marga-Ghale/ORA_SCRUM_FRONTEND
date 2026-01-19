@@ -261,6 +261,21 @@ export function useUpdateChannel() {
 /**
  * Get messages for a channel with pagination
  */
+// export function useMessages(channelId: string | undefined, limit = 50) {
+//   return useQuery({
+//     queryKey: queryKeys.chat.messages(channelId!, limit, 0),
+//     queryFn: async () => {
+//       const data = await apiClient.get<ChatMessage[]>(
+//         `/chat/channels/${channelId}/messages?limit=${limit}`
+//       );
+//       return data || [];
+//     },
+//     enabled: !!channelId,
+//     staleTime: 10 * 1000,
+//     refetchInterval: 15 * 1000, // Refetch every 15 seconds for new messages
+//   });
+// }
+
 export function useMessages(channelId: string | undefined, limit = 50) {
   return useQuery({
     queryKey: queryKeys.chat.messages(channelId!, limit, 0),
@@ -271,8 +286,11 @@ export function useMessages(channelId: string | undefined, limit = 50) {
       return data || [];
     },
     enabled: !!channelId,
-    staleTime: 10 * 1000,
-    refetchInterval: 15 * 1000, // Refetch every 15 seconds for new messages
+    staleTime: 0, // ✅ Always fresh
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    // ❌ REMOVED: refetchInterval - WebSocket handles real-time
   });
 }
 
@@ -315,6 +333,72 @@ export function useThreadMessages(parentId: string | undefined) {
 /**
  * Send a new message
  */
+// export function useSendMessage() {
+//   const queryClient = useQueryClient();
+
+//   return useMutation({
+//     mutationFn: ({
+//       channelId,
+//       content,
+//       messageType = 'text',
+//       parentId,
+//       currentUserId,
+//       currentUser,
+//     }: {
+//       channelId: string;
+//       content: string;
+//       messageType?: string;
+//       parentId?: string;
+//       currentUserId: string; // ADD THIS
+//       currentUser: ChatUser; // ADD THIS
+//     }) =>
+//       apiClient.post<ChatMessage>(`/chat/channels/${channelId}/messages`, {
+//         content,
+//         messageType,
+//         parentId,
+//       }),
+//     // Line 281 - useSendMessage
+//     onMutate: async ({ channelId, content, parentId }) => {
+//       // Use the SAME key format as useMessages
+//       const queryKey = queryKeys.chat.messages(channelId, 50, 0); // MATCH THE FORMAT
+
+//       await queryClient.cancelQueries({ queryKey });
+
+//       const previousMessages = queryClient.getQueryData<ChatMessage[]>(queryKey);
+
+//       const optimisticMessage: ChatMessage = {
+//         id: `temp-${Date.now()}`,
+//         channelId,
+//         userId: 'current-user',
+//         content,
+//         messageType: 'text',
+//         parentId,
+//         isEdited: false,
+//         createdAt: new Date().toISOString(),
+//         updatedAt: new Date().toISOString(),
+//         reactions: [],
+//       };
+
+//       queryClient.setQueryData<ChatMessage[]>(queryKey, (old) =>
+//         old ? [optimisticMessage, ...old] : [optimisticMessage]
+//       );
+
+//       return { previousMessages, channelId, queryKey }; // Return queryKey
+//     },
+//     onError: (_err, { channelId }, context) => {
+//       if (context?.previousMessages) {
+//         queryClient.setQueryData(context.queryKey, context.previousMessages); // Use saved queryKey
+//       }
+//       toast.error('Failed to send message');
+//     },
+//     onSettled: (_, __, { channelId }) => {
+//       queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(channelId, 50, 0) }); // MATCH
+//     },
+//   });
+// }
+
+// src/hooks/api/useChat.ts - FIX LINE 281-325
+
 export function useSendMessage() {
   const queryClient = useQueryClient();
 
@@ -324,57 +408,75 @@ export function useSendMessage() {
       content,
       messageType = 'text',
       parentId,
-      currentUserId,
-      currentUser,
     }: {
       channelId: string;
       content: string;
       messageType?: string;
       parentId?: string;
-      currentUserId: string; // ADD THIS
-      currentUser: ChatUser; // ADD THIS
+      currentUserId?: string; // ✅ Optional - not used in API call
+      currentUser?: ChatUser; // ✅ Optional - not used in API call
     }) =>
       apiClient.post<ChatMessage>(`/chat/channels/${channelId}/messages`, {
         content,
         messageType,
         parentId,
       }),
-    // Line 281 - useSendMessage
-    onMutate: async ({ channelId, content, parentId }) => {
-      // Use the SAME key format as useMessages
-      const queryKey = queryKeys.chat.messages(channelId, 50, 0); // MATCH THE FORMAT
-
+    onMutate: async ({ channelId, content, parentId, currentUser }) => {
+      const queryKey = queryKeys.chat.messages(channelId, 50, 0);
       await queryClient.cancelQueries({ queryKey });
 
       const previousMessages = queryClient.getQueryData<ChatMessage[]>(queryKey);
 
-      const optimisticMessage: ChatMessage = {
-        id: `temp-${Date.now()}`,
-        channelId,
-        userId: 'current-user',
-        content,
-        messageType: 'text',
-        parentId,
-        isEdited: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        reactions: [],
-      };
+      // ✅ Only create optimistic message if currentUser is provided
+      if (currentUser) {
+        const optimisticMessage: ChatMessage = {
+          id: `temp-${Date.now()}`,
+          channelId,
+          userId: currentUser.id,
+          content,
+          messageType: 'text',
+          parentId,
+          isEdited: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          reactions: [],
+          user: currentUser,
+        };
 
-      queryClient.setQueryData<ChatMessage[]>(queryKey, (old) =>
-        old ? [optimisticMessage, ...old] : [optimisticMessage]
-      );
+        queryClient.setQueryData<ChatMessage[]>(queryKey, (old) => [
+          optimisticMessage,
+          ...(old || []),
+        ]);
+      }
 
-      return { previousMessages, channelId, queryKey }; // Return queryKey
+      return { previousMessages, channelId, queryKey };
     },
     onError: (_err, { channelId }, context) => {
-      if (context?.previousMessages) {
-        queryClient.setQueryData(context.queryKey, context.previousMessages); // Use saved queryKey
+      if (context?.previousMessages && context.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousMessages);
       }
       toast.error('Failed to send message');
     },
+    onSuccess: (newMessage, { channelId }) => {
+      const queryKey = queryKeys.chat.messages(channelId, 50, 0);
+      queryClient.setQueryData<ChatMessage[]>(queryKey, (old) => {
+        if (!old) return [newMessage];
+        // ✅ Replace temp message with real one
+        return old
+          .map((msg) =>
+            msg.id.startsWith('temp-') && msg.content === newMessage.content ? newMessage : msg
+          )
+          .filter(
+            (msg, index, arr) =>
+              // ✅ Remove duplicates by ID
+              arr.findIndex((m) => m.id === msg.id) === index
+          );
+      });
+    },
     onSettled: (_, __, { channelId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(channelId, 50, 0) }); // MATCH
+      queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(channelId, 50, 0) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCounts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
     },
   });
 }
@@ -701,6 +803,18 @@ export function useMarkChannelRead() {
 /**
  * Get all unread counts
  */
+// export function useUnreadCounts(p0: { enabled: boolean }) {
+//   return useQuery({
+//     queryKey: queryKeys.chat.unreadCounts(),
+//     queryFn: async () => {
+//       const data = await apiClient.get<Record<string, number>>('/chat/unread');
+//       return data || {};
+//     },
+//     staleTime: 30 * 1000,
+//     refetchInterval: 30 * 1000,
+//   });
+// }
+
 export function useUnreadCounts(p0: { enabled: boolean }) {
   return useQuery({
     queryKey: queryKeys.chat.unreadCounts(),
@@ -708,8 +822,11 @@ export function useUnreadCounts(p0: { enabled: boolean }) {
       const data = await apiClient.get<Record<string, number>>('/chat/unread');
       return data || {};
     },
-    staleTime: 30 * 1000,
-    refetchInterval: 30 * 1000,
+    staleTime: 0, // ✅ Always fresh
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    // ❌ REMOVED: refetchInterval - WebSocket handles real-time
   });
 }
 
@@ -755,34 +872,84 @@ export function useSearchMessages(channelId: string | undefined, query: string) 
 /**
  * Format message time
  */
+// export function formatMessageTime(dateString: string): string {
+//   const date = new Date(dateString);
+//   const now = new Date();
+//   const diffMs = now.getTime() - date.getTime();
+//   const diffMins = Math.floor(diffMs / 60000);
+//   const diffHours = Math.floor(diffMs / 3600000);
+//   const diffDays = Math.floor(diffMs / 86400000);
+
+//   if (diffMins < 1) return 'Just now';
+//   if (diffMins < 60) return `${diffMins}m ago`;
+//   if (diffHours < 24) {
+//     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+//   }
+
+//   const yesterday = new Date(now);
+//   yesterday.setDate(yesterday.getDate() - 1);
+//   if (date.toDateString() === yesterday.toDateString()) {
+//     return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+//   }
+
+//   if (diffDays < 7) {
+//     return (
+//       date.toLocaleDateString('en-US', { weekday: 'short' }) +
+//       ` at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+//     );
+//   }
+
+//   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+// }
+
 export function formatMessageTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  if (!dateString) return 'Just now';
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Just now';
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+    }
+
+    if (diffHours < 168) {
+      // 7 days
+      return (
+        date.toLocaleDateString('en-US', { weekday: 'short' }) +
+        ` at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+      );
+    }
+
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch (error) {
+    console.error('Error formatting message time:', error, dateString);
+    return 'Just now';
   }
+}
 
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) {
-    return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+export function getChannelDisplayName(channel: ChatChannel, _currentUserId?: string): string {
+  if (!channel) return 'Unknown Channel';
+
+  if (channel.type === 'direct' && channel.otherUser) {
+    const otherUser = channel.otherUser as any;
+    const name = otherUser.Name || otherUser.name || otherUser.Email || otherUser.email;
+    return name || 'Unknown User';
   }
-
-  if (diffDays < 7) {
-    return (
-      date.toLocaleDateString('en-US', { weekday: 'short' }) +
-      ` at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-    );
-  }
-
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return channel.name || 'Unknown Channel';
 }
 
 /**
@@ -843,14 +1010,14 @@ export function groupMessagesByDate(
 /**
  * Get channel display name
  */
-export function getChannelDisplayName(channel: ChatChannel, _currentUserId?: string): string {
-  if (channel.type === 'direct' && channel.otherUser) {
-    // Backend returns capitalized "Name" field
-    const otherUser = channel.otherUser as any;
-    return otherUser.Name || otherUser.name || 'Unknown User';
-  }
-  return channel.name || 'Unknown Channel';
-}
+// export function getChannelDisplayName(channel: ChatChannel, _currentUserId?: string): string {
+//   if (channel.type === 'direct' && channel.otherUser) {
+//     // Backend returns capitalized "Name" field
+//     const otherUser = channel.otherUser as any;
+//     return otherUser.Name || otherUser.name || 'Unknown User';
+//   }
+//   return channel.name || 'Unknown Channel';
+// }
 /**
  * Get channel icon
  */

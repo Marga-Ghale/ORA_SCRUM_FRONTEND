@@ -1,5 +1,5 @@
 // src/layout/ProjectSidebar.tsx - UPDATED VERSION
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
@@ -60,6 +60,7 @@ import { useProjectContext } from '../context/ProjectContext';
 import { EditSpaceModal } from '../components/modals/EditSpaceModal';
 import { EditFolderModal } from '../components/modals/EditFolderModal';
 import { EditProjectModal } from '../components/modals/EditProjectModal';
+import { useWebSocket } from '../hooks/api/useWebsocket';
 
 const STORAGE_KEYS = {
   WORKSPACE: 'selectedWorkspaceId',
@@ -97,6 +98,16 @@ const SpaceAddMenu: React.FC<SpaceAddMenuProps> = ({
   onCreateProject,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useWebSocket({
+    onMessage: (message) => {
+      // Chat updates are handled automatically by queryClient invalidation
+      // in useWebsocket.ts, but we can add logging here
+      if (message.type === 'chat_message') {
+        console.log('[Sidebar] Chat message received, unread counts will update');
+      }
+    },
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -305,6 +316,22 @@ const ProjectSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const { isConnected, joinRoom, leaveRoom } = useWebSocket();
+
+  // ✅ Join workspace room for real-time updates
+  useEffect(() => {
+    if (!currentWorkspace?.id || !isConnected) return;
+
+    const workspaceRoom = `workspace:${currentWorkspace.id}`;
+    console.log('[Sidebar] 🔌 Joining workspace room:', workspaceRoom);
+    joinRoom(workspaceRoom);
+
+    return () => {
+      console.log('[Sidebar] 👋 Leaving workspace room:', workspaceRoom);
+      leaveRoom(workspaceRoom);
+    };
+  }, [currentWorkspace?.id, isConnected, joinRoom, leaveRoom]);
+
   const { data: workspaces, isLoading: workspacesLoading } = useAccessibleWorkspaces({
     enabled: !!user,
   });
@@ -320,6 +347,8 @@ const ProjectSidebar: React.FC = () => {
 
   const { data: notificationData } = useNotificationCount({ enabled: !!user });
   const { data: channels = [] } = useChannels({ enabled: !!user });
+  // const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown';
+
   const { data: chatUnreadData = {} } = useUnreadCounts({ enabled: !!user });
 
   const [spaceAddMenu, setSpaceAddMenu] = useState<{

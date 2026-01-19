@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../components/UserProfile/AuthContext';
 import { queryKeys } from '../../lib/query-client';
 import { NotificationType } from './useNotifications';
+import { ChatMessage, ChatReaction } from './useChat';
 
 export type WebSocketEventType =
   | 'notification'
@@ -90,51 +91,90 @@ function cleanupProcessedMessages() {
 /**
  * Check if message should be processed (not a duplicate)
  */
-function shouldProcessMessage(message: WebSocketMessage): boolean {
-  cleanupProcessedMessages();
+// function shouldProcessMessage(message: WebSocketMessage): boolean {
+//   cleanupProcessedMessages();
 
-  // Create a unique message ID based on type and content
-  const messageData = message.payload || message.data || {};
-  const notificationId = messageData.id as string | undefined;
+//   // Create a unique message ID based on type and content
+//   const messageData = message.payload || message.data || {};
+//   const notificationId = messageData.id as string | undefined;
+//   const channelId = messageData.channelId as string | undefined;
+//   const content = messageData.content as string | undefined;
 
-  // For notification messages, use the notification ID
-  if (message.type === 'notification' && notificationId) {
-    const messageId = `notification-${notificationId}`;
+//   // For notification messages, use the notification ID
+//   if (message.type === 'notification' && notificationId) {
+//     const messageId = `notification-${notificationId}`;
 
-    if (processedMessages.has(messageId)) {
-      return false;
-    }
+//     if (processedMessages.has(messageId)) {
+//       return false;
+//     }
 
-    processedMessages.set(messageId, {
-      id: messageId,
-      timestamp: Date.now(),
-    });
+//     processedMessages.set(messageId, {
+//       id: messageId,
+//       timestamp: Date.now(),
+//     });
 
-    return true;
-  }
+//     return true;
+//   }
 
-  // For other messages, use type + key data
-  const taskId = messageData.taskId as string | undefined;
-  const projectId = messageData.projectId as string | undefined;
-  const channelId = messageData.channelId as string | undefined;
+//   // For other messages, use type + key data
+//   const taskId = messageData.taskId as string | undefined;
+//   const projectId = messageData.projectId as string | undefined;
 
-  const messageId = `${message.type}-${taskId || projectId || channelId || Date.now()}`;
+//   const messageId = `${message.type}-${taskId || projectId || channelId || Date.now()}`;
 
-  if (processedMessages.has(messageId)) {
-    return false;
-  }
+//   if (processedMessages.has(messageId)) {
+//     return false;
+//   }
 
-  processedMessages.set(messageId, {
-    id: messageId,
-    timestamp: Date.now(),
-  });
+//   processedMessages.set(messageId, {
+//     id: messageId,
+//     timestamp: Date.now(),
+//   });
 
-  return true;
-}
+//   return true;
+// }
 
 // ============================================
 // WEBSOCKET HOOK
 // ============================================
+
+function shouldProcessMessage(message: WebSocketMessage): boolean {
+  cleanupProcessedMessages();
+
+  const messageData = message.payload || message.data || {};
+  const messageId = messageData.messageId as string | undefined;
+  const channelId = messageData.channelId as string | undefined;
+  const content = messageData.content as string | undefined;
+
+  // ✅ For chat messages, use messageId if available
+  if (message.type === 'chat_message' && messageId) {
+    const dedupKey = `chat-msg-${messageId}`;
+    if (processedMessages.has(dedupKey)) {
+      console.log('[WebSocket] 🚫 Duplicate chat message blocked:', messageId);
+      return false;
+    }
+    processedMessages.set(dedupKey, { id: dedupKey, timestamp: Date.now() });
+    return true;
+  }
+
+  // ✅ For notifications with ID
+  if (message.type === 'notification' && messageData.id) {
+    const dedupKey = `notification-${messageData.id}`;
+    if (processedMessages.has(dedupKey)) {
+      return false;
+    }
+    processedMessages.set(dedupKey, { id: dedupKey, timestamp: Date.now() });
+    return true;
+  }
+
+  // ✅ Fallback for other messages
+  const dedupKey = `${message.type}-${channelId || ''}-${content?.substring(0, 20) || Date.now()}`;
+  if (processedMessages.has(dedupKey)) {
+    return false;
+  }
+  processedMessages.set(dedupKey, { id: dedupKey, timestamp: Date.now() });
+  return true;
+}
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const {
@@ -174,10 +214,20 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     (message: WebSocketMessage) => {
       // ✅ Check if we should process this message (deduplication)
       if (!shouldProcessMessage(message)) {
+        console.log('[WebSocket] 🚫 DUPLICATE MESSAGE BLOCKED:', message.type);
         return;
       }
 
       const messageData = message.payload || message.data || {};
+
+      // ✅ LOG ALL CHAT EVENTS
+      if (message.type.startsWith('chat_')) {
+        console.group(`[WebSocket] 🔔 ${message.type}`);
+        console.log('Raw message:', message);
+        console.log('Message data:', messageData);
+        console.log('Timestamp:', new Date().toISOString());
+        console.groupEnd();
+      }
 
       if (
         message.type !== 'ping' &&
@@ -203,6 +253,33 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
 
           if (messageData && typeof messageData === 'object') {
+            const notificationType = messageData.type as string;
+
+            if (notificationType === 'CHAT_MESSAGE') {
+              console.group('[WebSocket] 💬 CHAT MESSAGE VIA NOTIFICATION');
+
+              const channelId = (messageData as any).data?.channelId;
+
+              if (channelId) {
+                console.log('📍 Invalidating messages for channel:', channelId);
+
+                // ✅ Only invalidate, don't update counts (already done in chat_message case)
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.chat.messages(channelId, 50, 0),
+                  refetchType: 'active',
+                });
+
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.chat.channels(),
+                  refetchType: 'active',
+                });
+
+                console.log('✅ Chat queries invalidated');
+              }
+
+              console.groupEnd();
+            }
+
             import('../../lib/NotificationToast').then(({ showWebSocketNotificationToast }) => {
               showWebSocketNotificationToast(
                 message.type.toUpperCase() as NotificationType,
@@ -211,9 +288,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             });
           }
           break;
-
-          break;
-
         case 'notification_count':
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
           break;
@@ -266,35 +340,140 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           break;
 
         case 'chat_message':
+          console.group('[WebSocket] 📨 PROCESSING CHAT MESSAGE');
+
           if (messageData.channelId) {
-            queryClient.invalidateQueries({
-              queryKey: ['chat', 'messages', messageData.channelId as string],
+            const channelId = messageData.channelId as string;
+
+            // ✅ FIX: Extract the actual message from nested structure
+            const rawMessage = (messageData as any).message || messageData;
+
+            // ✅ FIX: Normalize user data (backend sends capitalized fields)
+            const normalizedMessage: ChatMessage = {
+              id: rawMessage.id || rawMessage.ID,
+              channelId: rawMessage.channelId || rawMessage.ChannelID,
+              userId: rawMessage.userId || rawMessage.UserID,
+              content: rawMessage.content || rawMessage.Content,
+              messageType: rawMessage.messageType || rawMessage.MessageType || 'text',
+              parentId: rawMessage.parentId || rawMessage.ParentID,
+              isEdited: rawMessage.isEdited || rawMessage.IsEdited || false,
+              createdAt: rawMessage.createdAt || rawMessage.CreatedAt || new Date().toISOString(),
+              updatedAt: rawMessage.updatedAt || rawMessage.UpdatedAt || new Date().toISOString(),
+              reactions: rawMessage.reactions || rawMessage.Reactions || [],
+              user:
+                rawMessage.user || rawMessage.User
+                  ? {
+                      id: rawMessage.user?.id || rawMessage.user?.ID || rawMessage.User?.ID,
+                      name: rawMessage.user?.name || rawMessage.user?.Name || rawMessage.User?.Name,
+                      email:
+                        rawMessage.user?.email || rawMessage.user?.Email || rawMessage.User?.Email,
+                      avatar:
+                        rawMessage.user?.avatar ||
+                        rawMessage.user?.Avatar ||
+                        rawMessage.User?.Avatar,
+                    }
+                  : undefined,
+            };
+
+            console.log('📍 Normalized message:', {
+              id: normalizedMessage.id,
+              userId: normalizedMessage.userId,
+              userName: normalizedMessage.user?.name,
+              createdAt: normalizedMessage.createdAt,
             });
-            queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCounts() });
-            queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
+
+            const messagesQueryKey = queryKeys.chat.messages(channelId, 50, 0);
+
+            queryClient.setQueryData<ChatMessage[]>(messagesQueryKey, (old) => {
+              if (!old) return [normalizedMessage];
+
+              const exists = old.some((msg) => msg.id === normalizedMessage.id);
+              if (exists) {
+                console.log('⚠️ Message already exists');
+                return old;
+              }
+
+              console.log('✅ Adding normalized message to cache');
+              return [normalizedMessage, ...old];
+            });
+
+            queryClient.setQueryData<Record<string, number>>(
+              queryKeys.chat.unreadCounts(),
+              (old) => {
+                const current = old || {};
+                return {
+                  ...current,
+                  [channelId]: (current[channelId] || 0) + 1,
+                };
+              }
+            );
+
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.chat.channels(),
+              refetchType: 'active',
+            });
           }
+
+          console.groupEnd();
           break;
 
         case 'chat_message_updated':
         case 'chat_message_deleted':
+          console.group(`[WebSocket] 🔄 ${message.type}`);
+
           if (messageData.channelId) {
-            queryClient.invalidateQueries({
-              queryKey: ['chat', 'messages', messageData.channelId as string],
+            const channelId = messageData.channelId as string;
+            const messageId = messageData.messageId as string;
+            const messagesQueryKey = queryKeys.chat.messages(channelId, 50, 0);
+
+            console.log('Processing message update/delete', {
+              channelId,
+              messageId,
+              type: message.type,
             });
+
+            const beforeUpdate = queryClient.getQueryData<ChatMessage[]>(messagesQueryKey);
+            console.log('Messages before update:', beforeUpdate?.length);
+
+            queryClient.setQueryData<ChatMessage[]>(messagesQueryKey, (old) => {
+              if (!old) return old;
+
+              if (message.type === 'chat_message_deleted') {
+                const filtered = old.filter((msg) => msg.id !== messageId);
+                console.log('After delete:', { before: old.length, after: filtered.length });
+                return filtered;
+              } else {
+                const updated = old.map((msg) =>
+                  msg.id === messageId ? { ...msg, ...(messageData as Partial<ChatMessage>) } : msg
+                );
+                console.log('After update: same count but message modified');
+                return updated;
+              }
+            });
+
+            const afterUpdate = queryClient.getQueryData<ChatMessage[]>(messagesQueryKey);
+            console.log('Messages after update:', afterUpdate?.length);
           }
+
+          console.groupEnd();
           break;
 
         case 'chat_channel_created':
         case 'chat_channel_updated':
         case 'chat_channel_deleted':
+          console.log('[WebSocket] 📢 Channel update:', message.type);
+          // ✅ These can invalidate (not critical for speed)
           queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
           break;
 
         case 'chat_member_added':
         case 'chat_member_removed':
           if (messageData.channelId) {
+            const channelId = messageData.channelId as string;
+            console.log('[WebSocket] 👥 Member update:', { channelId, type: message.type });
+
             queryClient.invalidateQueries({
-              queryKey: queryKeys.chat.members(messageData.channelId as string),
+              queryKey: queryKeys.chat.members(channelId),
             });
             queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
           }
@@ -302,15 +481,62 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
         case 'chat_reaction_added':
         case 'chat_reaction_removed':
-          if (messageData.channelId) {
-            queryClient.invalidateQueries({
-              queryKey: ['chat', 'messages', messageData.channelId as string],
+          console.group(`[WebSocket] 😀 ${message.type}`);
+
+          if (messageData.channelId && messageData.messageId) {
+            const channelId = messageData.channelId as string;
+            const messageId = messageData.messageId as string;
+            const messagesQueryKey = queryKeys.chat.messages(channelId, 50, 0);
+
+            console.log('Processing reaction', {
+              channelId,
+              messageId,
+              emoji: messageData.emoji,
+              userId: messageData.userId,
+            });
+
+            queryClient.setQueryData<ChatMessage[]>(messagesQueryKey, (old) => {
+              if (!old) {
+                console.log('No messages in cache');
+                return old;
+              }
+
+              return old.map((msg) => {
+                if (msg.id !== messageId) return msg;
+
+                console.log('Found target message, updating reactions');
+
+                if (message.type === 'chat_reaction_added') {
+                  const newReaction = messageData.reaction as ChatReaction;
+                  const updated = {
+                    ...msg,
+                    reactions: [...(msg.reactions || []), newReaction],
+                  };
+                  console.log('Added reaction:', {
+                    before: msg.reactions?.length || 0,
+                    after: updated.reactions.length,
+                  });
+                  return updated;
+                } else {
+                  const emoji = messageData.emoji as string;
+                  const userId = messageData.userId as string;
+                  const updated = {
+                    ...msg,
+                    reactions: msg.reactions?.filter(
+                      (r) => !(r.emoji === emoji && r.userId === userId)
+                    ),
+                  };
+                  console.log('Removed reaction:', {
+                    before: msg.reactions?.length || 0,
+                    after: updated.reactions?.length || 0,
+                  });
+                  return updated;
+                }
+              });
             });
           }
-          break;
 
-        case 'pong':
-        case 'ack':
+          console.groupEnd();
           break;
       }
 
