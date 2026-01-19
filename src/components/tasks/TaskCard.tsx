@@ -1,4 +1,4 @@
-// TaskCard.tsx - Compact Professional Design for Kanban
+// TaskCard.tsx - Clean Bordio-Inspired Design
 import React, { useState, useRef, useEffect } from 'react';
 import { PRIORITY_CONFIG, TASK_TYPE_CONFIG, Priority, TaskType } from '../../types/project';
 import { TaskResponse } from '../../hooks/api/useTasks';
@@ -73,35 +73,41 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
       'bg-amber-500',
       'bg-rose-500',
       'bg-cyan-500',
+      'bg-indigo-500',
+      'bg-pink-500',
     ];
     return colors[index % colors.length];
   };
 
   // ============================================
-  // SUBTASK CARD
+  // SUBTASK CARD - Clean & Compact
   // ============================================
   if (isSubtask) {
     return (
       <>
         <div
           onClick={() => openTaskModal(task as any)}
+          style={{
+            backgroundColor: `${priorityConfig.color}05`,
+          }}
           className={`
-            group relative ml-3 mb-1.5 px-2.5 py-2 rounded-lg cursor-pointer
-            border border-gray-200 dark:border-gray-700/80
-            bg-gray-50/80 dark:bg-gray-800/50
-            hover:bg-gray-100 dark:hover:bg-gray-750
+            group relative ml-3 mb-1.5 rounded-md cursor-pointer
+            border border-gray-200 dark:border-gray-700
             hover:border-gray-300 dark:hover:border-gray-600
-            transition-colors duration-150
-            ${isDragging ? 'opacity-50 scale-[0.98]' : ''}
+            hover:shadow-sm
+            transition-all duration-150
+            ${isDragging ? 'opacity-50' : ''}
           `}
         >
-          <div className="flex items-center gap-2">
-            <CornerDownRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          <div className="px-2 py-1.5 flex items-center gap-1.5">
+            <CornerDownRight className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+
             <div
               className="w-1.5 h-1.5 rounded-full flex-shrink-0"
               style={{ backgroundColor: priorityConfig.color }}
             />
-            <span className="flex-1 text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+
+            <span className="flex-1 text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate">
               {task.title}
             </span>
 
@@ -112,7 +118,9 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
                   return (
                     <div
                       key={userId}
-                      className={`w-5 h-5 rounded-full ${getAssigneeColor(idx)} flex items-center justify-center text-[8px] font-bold text-white ring-1 ring-white dark:ring-gray-800`}
+                      className={`w-4 h-4 rounded-full ${getAssigneeColor(idx)} 
+                        flex items-center justify-center text-[7px] font-bold text-white 
+                        ring-1 ring-white dark:ring-gray-800`}
                     >
                       {isLoading ? '' : initials}
                     </div>
@@ -123,20 +131,20 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
 
             <div
               ref={menuRef}
-              className="relative opacity-0 group-hover:opacity-100 transition-opacity"
+              className="relative opacity-0 group-hover:opacity-100 transition-opacity duration-150"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400"
+                className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 transition-colors"
               >
                 <MoreVertical className="w-3 h-3" />
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-6 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 py-1">
+                <div className="absolute right-0 top-5 w-28 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
                   <button
-                    className="w-full px-3 py-1.5 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                    className="w-full px-2.5 py-1.5 text-left text-[11px] hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-1.5 text-gray-700 dark:text-gray-300"
                     onClick={() => {
                       openTaskModal(task as any);
                       setMenuOpen(false);
@@ -146,7 +154,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
                     Edit
                   </button>
                   <button
-                    className="w-full px-3 py-1.5 text-left text-xs hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2"
+                    className="w-full px-2.5 py-1.5 text-left text-[11px] hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-1.5"
                     onClick={handleDeleteClick}
                   >
                     <Trash2 className="w-3 h-3" />
@@ -172,45 +180,48 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
   }
 
   // ============================================
-  // MAIN TASK CARD - Compact Design
+  // MAIN TASK CARD - Bordio Style
   // ============================================
   return (
     <>
       <div
         onClick={() => openTaskModal(task as any)}
+        style={{
+          backgroundColor: `${priorityConfig.color}05`,
+        }}
         className={`
-          task-card group relative mb-2.5 rounded-xl cursor-pointer overflow-hidden
-          bg-white dark:bg-gray-900
+          task-card group relative mb-2 rounded-lg cursor-pointer
           border border-gray-200 dark:border-gray-800
           hover:border-gray-300 dark:hover:border-gray-700
-          card-shadow hover:card-shadow-hover
+          hover:shadow-md
           transition-all duration-150
-          ${isDragging ? 'dragging opacity-90 shadow-2xl ring-2 ring-brand-500/30' : ''}
+          ${isDragging ? 'opacity-60 shadow-lg' : ''}
         `}
       >
-        {/* Priority Accent Bar */}
-        <div className="h-[3px] w-full" style={{ backgroundColor: priorityConfig.color }} />
-
-        <div className="p-3">
-          {/* Header: Type + Priority + Menu */}
-          <div className="flex items-center gap-1.5 mb-2">
-            {/* Type Badge */}
+        {/* Subtle Header Background */}
+        <div
+          className="h-6 rounded-t-lg px-2.5 py-1 flex items-center justify-between border-b border-gray-100 dark:border-gray-800"
+          style={{
+            backgroundColor: `${priorityConfig.color}12`,
+          }}
+        >
+          {/* Type & Priority Badges */}
+          <div className="flex items-center gap-1">
             <span
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider"
               style={{
-                backgroundColor: `${typeConfig.color}15`,
+                backgroundColor: `${typeConfig.color}30`,
                 color: typeConfig.color,
               }}
             >
-              <span className="text-xs leading-none">{typeConfig.icon}</span>
+              <span className="text-[9px]">{typeConfig.icon}</span>
               {typeKey}
             </span>
 
-            {/* Priority Badge */}
             <span
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider"
               style={{
-                backgroundColor: `${priorityConfig.color}15`,
+                backgroundColor: `${priorityConfig.color}30`,
                 color: priorityConfig.color,
               }}
             >
@@ -221,80 +232,82 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
               {priorityKey}
             </span>
 
-            {/* Blocked Badge */}
             {task.blocked && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400">
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400">
                 <AlertTriangle className="w-2.5 h-2.5" />
-                Blocked
+                BLOCK
               </span>
             )}
-
-            <div className="flex-1" />
-
-            {/* Menu Button */}
-            <div
-              ref={menuRef}
-              className="relative opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400"
-              >
-                <MoreVertical className="w-3.5 h-3.5" />
-              </button>
-
-              {menuOpen && (
-                <div className="absolute right-0 top-7 w-36 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 py-1">
-                  <button
-                    className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
-                    onClick={() => {
-                      openTaskModal(task as any);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    Edit Task
-                  </button>
-                  <button
-                    className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2"
-                    onClick={handleDeleteClick}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
 
+          {/* Menu Button */}
+          <div
+            ref={menuRef}
+            className="relative opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-0.5 rounded hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-gray-400 transition-colors"
+            >
+              <MoreVertical className="w-3 h-3" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-5 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
+                <button
+                  className="w-full px-2.5 py-1.5 text-left text-[11px] hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-1.5 text-gray-700 dark:text-gray-300"
+                  onClick={() => {
+                    openTaskModal(task as any);
+                    setMenuOpen(false);
+                  }}
+                >
+                  <Edit2 className="w-3 h-3" />
+                  Edit Task
+                </button>
+                <button
+                  className="w-full px-2.5 py-1.5 text-left text-[11px] hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-1.5"
+                  onClick={handleDeleteClick}
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Card Body */}
+        <div className="p-2.5">
           {/* Title */}
-          <h4 className="font-medium text-sm text-gray-900 dark:text-white leading-snug line-clamp-2 mb-2">
+          <h4 className="font-semibold text-[12px] text-gray-900 dark:text-white leading-snug line-clamp-2 mb-2">
             {task.title}
           </h4>
 
           {/* Footer: Meta + Assignees */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-gray-800">
             {/* Left: Meta Info */}
-            <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-1.5 text-[9px]">
               {/* Story Points */}
               {task.storyPoints && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-bold">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-200/50 dark:border-indigo-800/30">
                   {task.storyPoints}
                 </span>
               )}
 
               {/* Due Date */}
               {dueInfo && (
-                <span className={`inline-flex items-center gap-1 font-medium ${dueInfo.color}`}>
-                  <Clock className="w-3 h-3" />
+                <span
+                  className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold ${dueInfo.color} border border-current/20`}
+                >
+                  <Clock className="w-2.5 h-2.5" />
                   {dueInfo.text}
                 </span>
               )}
 
               {/* Subtask Count */}
               {task.subtaskCount > 0 && (
-                <span className="inline-flex items-center gap-1 font-medium">
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   📋 {task.subtaskCount}
                 </span>
               )}
@@ -302,32 +315,33 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
 
             {/* Right: Assignees */}
             {assigneeIds.length > 0 ? (
-              <div className="flex -space-x-1.5">
+              <div className="flex -space-x-1">
                 {assigneeIds.slice(0, 3).map((userId, idx) => {
                   const initials = initialsByUserId[userId] || '?';
                   return (
                     <div
                       key={userId}
                       className={`
-                        w-6 h-6 rounded-full ${getAssigneeColor(idx)} 
-                        flex items-center justify-center text-[9px] font-bold text-white 
+                        w-5 h-5 rounded-full ${getAssigneeColor(idx)} 
+                        flex items-center justify-center text-[8px] font-bold text-white 
                         ring-2 ring-white dark:ring-gray-900
-                        transition-transform duration-150 hover:scale-110 hover:z-10
+                        hover:scale-110 transition-transform duration-150
                       `}
+                      title={initials}
                     >
                       {isLoading ? '' : initials}
                     </div>
                   );
                 })}
                 {assigneeIds.length > 3 && (
-                  <div className="w-6 h-6 rounded-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center text-[9px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
+                  <div className="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center text-[8px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
                     +{assigneeIds.length - 3}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-800/50">
-                <span className="text-[9px] text-gray-400">+</span>
+              <div className="w-5 h-5 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-800/50 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors cursor-pointer">
+                <span className="text-[8px] text-gray-400 dark:text-gray-500 font-bold">+</span>
               </div>
             )}
           </div>
