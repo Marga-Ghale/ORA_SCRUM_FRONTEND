@@ -61,6 +61,7 @@ import { EditSpaceModal } from '../components/modals/EditSpaceModal';
 import { EditFolderModal } from '../components/modals/EditFolderModal';
 import { EditProjectModal } from '../components/modals/EditProjectModal';
 import { useWebSocket } from '../hooks/api/useWebsocket';
+import { ChatIcon } from '../icons';
 
 const STORAGE_KEYS = {
   WORKSPACE: 'selectedWorkspaceId',
@@ -916,6 +917,7 @@ const ProjectSidebar: React.FC = () => {
             <nav className="space-y-0.5">
               {[
                 { icon: Home, label: 'Home', path: '/' },
+                { icon: ChatIcon, label: 'Chat', path: '/chat' },
                 {
                   icon: Bell,
                   label: 'Notifications',
