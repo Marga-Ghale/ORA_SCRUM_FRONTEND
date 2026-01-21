@@ -29,6 +29,7 @@ import ChatPage from './pages/Chat/ChatPage';
 import NotificationPage from './pages/Notification/NotificationPage';
 import HomeDashboard from './pages/Dashboard/HomeDashboard';
 import MembersManagementPage from './pages/Member/MembersManagementPage';
+import ProjectAccessGuard from './components/Protected/ProjectAccessGuard';
 
 if (process.env.NODE_ENV === 'development') {
   setupLocatorUI();
@@ -83,7 +84,14 @@ export default function App() {
                 element={<MembersManagementPage />}
               />
               <Route path="/my-tasks" element={<MyTasks />} />
-              <Route path="/project/:projectId/board" element={<ProjectBoard />} />
+              <Route
+                path="/project/:projectId/board"
+                element={
+                  <ProjectAccessGuard>
+                    <ProjectBoard />
+                  </ProjectAccessGuard>
+                }
+              />
               <Route path="/board" element={<ProjectBoard />} />
               <Route path="/backlog" element={<Backlog />} />
               <Route path="/calendar" element={<Calendar />} />
