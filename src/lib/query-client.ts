@@ -159,6 +159,11 @@ export const queryKeys = {
     myMemberships: () => ['members', 'my', 'memberships'] as const,
     myAccess: () => ['members', 'my', 'access'] as const,
 
+    accessInfo: (entityType: string, entityId: string) =>
+      ['members', entityType, entityId, 'access-info'] as const,
+
+    visibleSpaces: () => ['members', 'visible-spaces'] as const,
+
     // ✅ ADD THESE NEW KEYS
     accessibleWorkspaces: () => ['members', 'my', 'accessible', 'workspaces'] as const,
     accessibleSpaces: () => ['members', 'my', 'accessible', 'spaces'] as const,

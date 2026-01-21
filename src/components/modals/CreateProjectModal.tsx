@@ -68,20 +68,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       .slice(0, 5);
   };
 
-  // 🔍 DEBUG: Log props when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      console.log('🔍 CreateProjectModal Props:', {
-        onCreate: typeof onCreate,
-        onCreateExists: !!onCreate,
-        spaceId,
-        folderId,
-        parentName,
-        parentType,
-      });
-    }
-  }, [isOpen, onCreate, spaceId, folderId, parentName, parentType]);
-
   useEffect(() => {
     if (isOpen) {
       setName('');

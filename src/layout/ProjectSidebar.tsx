@@ -55,6 +55,7 @@ import {
   useAccessibleProjects,
   useAccessibleSpaces,
   useAccessibleWorkspaces,
+  useVisibleSpaces, // ✅ ADDED
 } from '../hooks/api/useAccessibleEntities';
 import { useProjectContext } from '../context/ProjectContext';
 import { EditSpaceModal } from '../components/modals/EditSpaceModal';
@@ -62,6 +63,7 @@ import { EditFolderModal } from '../components/modals/EditFolderModal';
 import { EditProjectModal } from '../components/modals/EditProjectModal';
 import { useWebSocket } from '../hooks/api/useWebsocket';
 import { ChatIcon } from '../icons';
+import toast from 'react-hot-toast';
 
 const STORAGE_KEYS = {
   WORKSPACE: 'selectedWorkspaceId',
@@ -102,8 +104,6 @@ const SpaceAddMenu: React.FC<SpaceAddMenuProps> = ({
 
   useWebSocket({
     onMessage: (message) => {
-      // Chat updates are handled automatically by queryClient invalidation
-      // in useWebsocket.ts, but we can add logging here
       if (message.type === 'chat_message') {
         console.log('[Sidebar] Chat message received, unread counts will update');
       }
@@ -319,7 +319,6 @@ const ProjectSidebar: React.FC = () => {
 
   const { isConnected, joinRoom, leaveRoom } = useWebSocket();
 
-  // ✅ Join workspace room for real-time updates
   useEffect(() => {
     if (!currentWorkspace?.id || !isConnected) return;
 
@@ -336,9 +335,29 @@ const ProjectSidebar: React.FC = () => {
   const { data: workspaces, isLoading: workspacesLoading } = useAccessibleWorkspaces({
     enabled: !!user,
   });
-  const { data: allSpaces, isLoading: spacesLoading } = useAccessibleSpaces({
+
+  // ✅ UPDATED: Fetch both accessible and visible spaces
+  const { data: accessibleSpaces, isLoading: spacesLoading } = useAccessibleSpaces({
     enabled: !!user,
   });
+  const { data: visibleSpaces } = useVisibleSpaces({
+    enabled: !!user,
+  });
+
+  const allSpaces = useMemo(() => {
+    if (!visibleSpaces) return accessibleSpaces || [];
+    if (!accessibleSpaces) return visibleSpaces || [];
+
+    // Create a Set of accessible space IDs for fast lookup
+    const accessibleSpaceIds = new Set(accessibleSpaces.map((s) => s.id));
+
+    // Return all visible spaces with access flag
+    return visibleSpaces.map((space) => ({
+      ...space,
+      hasAccess: accessibleSpaceIds.has(space.id),
+    }));
+  }, [accessibleSpaces, visibleSpaces]);
+
   const { data: allProjects } = useAccessibleProjects({
     enabled: !!user,
   });
@@ -348,7 +367,6 @@ const ProjectSidebar: React.FC = () => {
 
   const { data: notificationData } = useNotificationCount({ enabled: !!user });
   const { data: channels = [] } = useChannels({ enabled: !!user });
-  // const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown';
 
   const { data: chatUnreadData = {} } = useUnreadCounts({ enabled: !!user });
 
@@ -513,7 +531,18 @@ const ProjectSidebar: React.FC = () => {
     setCurrentProject(null);
   };
 
+  // ✅ UPDATED: Check access before allowing space click
   const handleSpaceClick = (space: any) => {
+    // ✅ FIXED: Check if user has content access
+    const canAccessContent = accessibleSpaces?.some((s) => s.id === space.id) ?? false;
+
+    if (!canAccessContent) {
+      toast.error(
+        '🔒 You can see this space but need to be added as a member to access its content. Contact an admin to request access.'
+      );
+      return;
+    }
+
     setCurrentSpace(space);
     localStorage.setItem(STORAGE_KEYS.SPACE, space.id);
     toggleSpace(space.id);
@@ -802,44 +831,6 @@ const ProjectSidebar: React.FC = () => {
             </div>
           </div>
         )}
-
-        <div className={`flex-shrink-0 p-2.5 ${!showFull ? 'px-2' : ''}`}>
-          {showFull ? (
-            <button
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg 
-        bg-gray-100/70 dark:bg-gray-800/50 
-        hover:bg-gray-100 dark:hover:bg-gray-800 
-        border border-gray-200/50 dark:border-gray-700/50
-        hover:border-gray-300 dark:hover:border-gray-600
-        text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 
-        text-xs font-medium transition-all duration-200 group
-        hover:shadow-md hover:shadow-gray-200/50 dark:hover:shadow-black/20"
-            >
-              <Search className="w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
-              <span>Search</span>
-              <kbd
-                className="ml-auto text-[10px] px-1.5 py-0.5 rounded-md 
-          bg-white dark:bg-gray-900 
-          text-gray-400 dark:text-gray-500 
-          border border-gray-200 dark:border-gray-700 
-          font-mono shadow-sm"
-              >
-                ⌘K
-              </kbd>
-            </button>
-          ) : (
-            <button
-              className="w-full p-2.5 rounded-lg 
-        hover:bg-gray-100 dark:hover:bg-gray-800 
-        text-gray-500 dark:text-gray-400 
-        hover:text-violet-600 dark:hover:text-violet-400 
-        transition-all duration-200 flex justify-center group
-        hover:shadow-md hover:shadow-gray-200/30 dark:hover:shadow-black/20"
-            >
-              <Search className="w-4 h-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
-            </button>
-          )}
-        </div>
 
         <div className="flex-shrink-0 px-2.5 py-2 border-b border-gray-100 dark:border-gray-800/60">
           <button
@@ -1270,6 +1261,8 @@ const ProjectSidebar: React.FC = () => {
                       const spaceFolders = foldersBySpaceId[space.id] || [];
                       const spaceDirectProjects = projectsBySpaceId[space.id] || [];
                       const SpaceIcon = getSpaceIcon(space.icon);
+                      // ✅ ADDED: Check if user can access content
+                      const canAccessSpace = space.hasAccess === true; // ✅ EXPLICIT CHECK
 
                       return (
                         <div
@@ -1284,27 +1277,32 @@ const ProjectSidebar: React.FC = () => {
                           isSpaceActive
                             ? 'bg-gradient-to-r from-violet-50 to-purple-50/50 dark:from-violet-500/15 dark:to-purple-500/10 shadow-sm'
                             : 'hover:bg-gray-100/80 dark:hover:bg-gray-800/50'
-                        }`}
+                        }
+                        ${!canAccessSpace ? 'opacity-70' : ''}`}
                             onClick={() => handleSpaceClick(space)}
                           >
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleSpace(space.id);
+                                // ✅ UPDATED: Only allow expansion if user has access
+                                if (canAccessSpace) {
+                                  toggleSpace(space.id);
+                                }
                               }}
                               className="p-0.5 rounded-md hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
                           transition-all duration-200"
+                              disabled={!canAccessSpace}
                             >
                               <ChevronRight
                                 className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 
                             transition-transform duration-200 ease-out
-                            ${isSpaceExpanded ? 'rotate-90' : 'rotate-0'}`}
+                            ${isSpaceExpanded && canAccessSpace ? 'rotate-90' : 'rotate-0'}`}
                               />
                             </button>
 
+                            {/* ✅ UPDATED: Add lock overlay for visible-only spaces */}
                             <div
-                              className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 
-                          transition-all duration-200 group-hover:scale-105 group-hover:shadow-md"
+                              className="relative w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:scale-105 group-hover:shadow-md"
                               style={{
                                 backgroundColor: (space.color || '#6366f1') + '15',
                                 boxShadow: isSpaceActive
@@ -1312,6 +1310,11 @@ const ProjectSidebar: React.FC = () => {
                                   : 'none',
                               }}
                             >
+                              {!canAccessSpace && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/60 dark:bg-gray-900/80 rounded-md z-10">
+                                  <Lock className="w-3 h-3 text-white" />
+                                </div>
+                              )}
                               <SpaceIcon
                                 className="w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110"
                                 style={{ color: space.color || '#6366f1' }}
@@ -1329,265 +1332,279 @@ const ProjectSidebar: React.FC = () => {
                               }`}
                                 >
                                   {space.name}
+                                  {/* ✅ ADDED: View Only badge */}
+                                  {!canAccessSpace && (
+                                    <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                                      View Only
+                                    </span>
+                                  )}
                                 </span>
 
-                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                  <button
-                                    onClick={(e) => openContextMenu(e, 'space', space)}
-                                    className="p-1 rounded-md hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
-                                text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 
-                                transition-all duration-150 hover:scale-105"
-                                  >
-                                    <MoreHorizontal className="w-3.5 h-3.5" />
-                                  </button>
+                                {/* ✅ UPDATED: Only show actions if user has access */}
+                                {canAccessSpace && (
+                                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <button
+                                      onClick={(e) => openContextMenu(e, 'space', space)}
+                                      className="p-1 rounded-md hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                                  text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 
+                                  transition-all duration-150 hover:scale-105"
+                                    >
+                                      <MoreHorizontal className="w-3.5 h-3.5" />
+                                    </button>
 
-                                  <button
-                                    ref={(el) => {
-                                      addButtonRefs.current[space.id] = el;
-                                    }}
-                                    onClick={(e) => handleOpenSpaceAddMenu(e, space.id)}
-                                    className="p-1 rounded-md hover:bg-violet-100 dark:hover:bg-violet-900/30 
-                                text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 
-                                transition-all duration-150 hover:scale-105"
-                                    title="Add to space"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
+                                    <button
+                                      ref={(el) => {
+                                        addButtonRefs.current[space.id] = el;
+                                      }}
+                                      onClick={(e) => handleOpenSpaceAddMenu(e, space.id)}
+                                      className="p-1 rounded-md hover:bg-violet-100 dark:hover:bg-violet-900/30 
+                                  text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 
+                                  transition-all duration-150 hover:scale-105"
+                                      title="Add to space"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                )}
                               </>
                             )}
                           </div>
 
-                          <div
-                            className={`overflow-hidden transition-all duration-300 ease-out
-                        ${isSpaceExpanded && showFull ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}
-                          >
-                            <div className="ml-4 pl-2.5 border-l-2 border-gray-200/70 dark:border-gray-700/50 mt-0.5 space-y-0.5">
-                              {spaceFolders.map((folder, folderIndex) => {
-                                const isFolderExpanded = expandedFolders.has(folder.id);
-                                const isFolderActive = currentFolder?.id === folder.id;
-                                const folderProjects = projectsByFolderId[folder.id] || [];
+                          {/* ✅ UPDATED: Only show content if user has access */}
+                          {canAccessSpace && (
+                            <div
+                              className={`overflow-hidden transition-all duration-300 ease-out
+                          ${isSpaceExpanded && showFull ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}
+                            >
+                              <div className="ml-4 pl-2.5 border-l-2 border-gray-200/70 dark:border-gray-700/50 mt-0.5 space-y-0.5">
+                                {spaceFolders.map((folder, folderIndex) => {
+                                  const isFolderExpanded = expandedFolders.has(folder.id);
+                                  const isFolderActive = currentFolder?.id === folder.id;
+                                  const folderProjects = projectsByFolderId[folder.id] || [];
 
-                                return (
-                                  <div
-                                    key={folder.id}
-                                    style={{ animationDelay: `${folderIndex * 30}ms` }}
-                                    className="animate-in slide-in-from-left-1 fade-in"
-                                  >
+                                  return (
                                     <div
-                                      className={`group flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer 
-                                  transition-all duration-200 ease-out
-                                  ${
-                                    isFolderActive
-                                      ? 'bg-violet-50/80 dark:bg-violet-500/10'
-                                      : 'hover:bg-gray-100/70 dark:hover:bg-gray-800/40'
-                                  }`}
-                                      onClick={() => handleFolderClick(folder)}
+                                      key={folder.id}
+                                      style={{ animationDelay: `${folderIndex * 30}ms` }}
+                                      className="animate-in slide-in-from-left-1 fade-in"
                                     >
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          toggleFolder(folder.id);
-                                        }}
-                                        className="p-0.5 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors duration-150"
-                                      >
-                                        <ChevronRight
-                                          className={`w-3 h-3 text-gray-400 dark:text-gray-500 
-                                      transition-transform duration-200 ease-out
-                                      ${isFolderExpanded ? 'rotate-90' : 'rotate-0'}`}
-                                        />
-                                      </button>
-
-                                      <div className="relative">
-                                        <Folder
-                                          className={`w-3.5 h-3.5 text-amber-500 flex-shrink-0 
-                                      transition-all duration-200
-                                      ${isFolderExpanded ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}`}
-                                        />
-                                        <FolderOpen
-                                          className={`w-3.5 h-3.5 text-amber-500 flex-shrink-0 absolute inset-0
-                                      transition-all duration-200
-                                      ${isFolderExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
-                                        />
-                                      </div>
-
-                                      <span
-                                        className={`flex-1 text-[11px] truncate transition-colors duration-200
+                                      <div
+                                        className={`group flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer 
+                                    transition-all duration-200 ease-out
                                     ${
                                       isFolderActive
-                                        ? 'text-violet-700 dark:text-violet-300 font-medium'
-                                        : 'text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200'
+                                        ? 'bg-violet-50/80 dark:bg-violet-500/10'
+                                        : 'hover:bg-gray-100/70 dark:hover:bg-gray-800/40'
                                     }`}
+                                        onClick={() => handleFolderClick(folder)}
                                       >
-                                        {folder.name}
-                                      </span>
-
-                                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                                        <button
-                                          onClick={(e) => openContextMenu(e, 'folder', folder)}
-                                          className="p-0.5 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
-                                      text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
-                                      transition-all duration-150"
-                                        >
-                                          <MoreHorizontal className="w-3 h-3" />
-                                        </button>
-
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleCreateProjectFromFolder(
-                                              folder.id,
-                                              space.id,
-                                              folder.name
-                                            );
+                                            toggleFolder(folder.id);
                                           }}
-                                          className="p-0.5 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 
-                                      text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 
-                                      transition-all duration-150"
-                                          title="Add project"
+                                          className="p-0.5 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors duration-150"
                                         >
-                                          <Plus className="w-3 h-3" />
+                                          <ChevronRight
+                                            className={`w-3 h-3 text-gray-400 dark:text-gray-500 
+                                        transition-transform duration-200 ease-out
+                                        ${isFolderExpanded ? 'rotate-90' : 'rotate-0'}`}
+                                          />
                                         </button>
+
+                                        <div className="relative">
+                                          <Folder
+                                            className={`w-3.5 h-3.5 text-amber-500 flex-shrink-0 
+                                        transition-all duration-200
+                                        ${isFolderExpanded ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}`}
+                                          />
+                                          <FolderOpen
+                                            className={`w-3.5 h-3.5 text-amber-500 flex-shrink-0 absolute inset-0
+                                        transition-all duration-200
+                                        ${isFolderExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+                                          />
+                                        </div>
+
+                                        <span
+                                          className={`flex-1 text-[11px] truncate transition-colors duration-200
+                                      ${
+                                        isFolderActive
+                                          ? 'text-violet-700 dark:text-violet-300 font-medium'
+                                          : 'text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200'
+                                      }`}
+                                        >
+                                          {folder.name}
+                                        </span>
+
+                                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                                          <button
+                                            onClick={(e) => openContextMenu(e, 'folder', folder)}
+                                            className="p-0.5 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                                        text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                                        transition-all duration-150"
+                                          >
+                                            <MoreHorizontal className="w-3 h-3" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCreateProjectFromFolder(
+                                                folder.id,
+                                                space.id,
+                                                folder.name
+                                              );
+                                            }}
+                                            className="p-0.5 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 
+                                        text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 
+                                        transition-all duration-150"
+                                            title="Add project"
+                                          >
+                                            <Plus className="w-3 h-3" />
+                                          </button>
+                                        </div>
                                       </div>
-                                    </div>
 
-                                    <div
-                                      className={`overflow-hidden transition-all duration-200 ease-out
-    ${isFolderExpanded && folderProjects.length > 0 ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
-                                    >
-                                      <div className="ml-3.5 pl-2.5 border-l-2 border-gray-200/50 dark:border-gray-700/40 mt-0.5 space-y-0.5">
-                                        {folderProjects.map((project, projectIndex) => {
-                                          const isProjectItemActive = isProjectActive(project.id);
+                                      <div
+                                        className={`overflow-hidden transition-all duration-200 ease-out
+      ${isFolderExpanded && folderProjects.length > 0 ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
+                                      >
+                                        <div className="ml-3.5 pl-2.5 border-l-2 border-gray-200/50 dark:border-gray-700/40 mt-0.5 space-y-0.5">
+                                          {folderProjects.map((project, projectIndex) => {
+                                            const isProjectItemActive = isProjectActive(project.id);
 
-                                          return (
-                                            <div
-                                              key={project.id}
-                                              style={{ animationDelay: `${projectIndex * 20}ms` }}
-                                              className="animate-in slide-in-from-left-1 fade-in"
-                                            >
-                                              <button
-                                                onClick={() => handleProjectClick(project)}
-                                                className={`group w-full flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer 
-              transition-all duration-200 ease-out
-              ${
-                isProjectItemActive
-                  ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
-                  : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-              }`}
+                                            return (
+                                              <div
+                                                key={project.id}
+                                                style={{ animationDelay: `${projectIndex * 20}ms` }}
+                                                className="animate-in slide-in-from-left-1 fade-in"
                                               >
-                                                <DotIcon
-                                                  className={`w-3.5 h-3.5 flex-shrink-0 transition-colors duration-200
-                ${isProjectItemActive ? 'text-violet-500' : ''}`}
-                                                />
-                                                <span className="flex-1 text-[11px] truncate">
-                                                  {project.name}
-                                                </span>
-                                                <span
-                                                  className={`text-[9px] font-mono px-1 py-0.5 rounded transition-opacity duration-150
+                                                <button
+                                                  onClick={() => handleProjectClick(project)}
+                                                  className={`group w-full flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer 
+                transition-all duration-200 ease-out
                 ${
                   isProjectItemActive
-                    ? 'bg-violet-200/50 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100'
+                    ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                    : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                 }`}
                                                 >
-                                                  {project.key}
-                                                </span>
-                                                <button
-                                                  onClick={(e) =>
-                                                    openContextMenu(e, 'project', project)
-                                                  }
-                                                  className="p-0.5 rounded opacity-0 group-hover:opacity-100 
-                hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
-                text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
-                transition-all duration-150"
-                                                >
-                                                  <MoreHorizontal className="w-3 h-3" />
+                                                  <DotIcon
+                                                    className={`w-3.5 h-3.5 flex-shrink-0 transition-colors duration-200
+                  ${isProjectItemActive ? 'text-violet-500' : ''}`}
+                                                  />
+                                                  <span className="flex-1 text-[11px] truncate">
+                                                    {project.name}
+                                                  </span>
+                                                  <span
+                                                    className={`text-[9px] font-mono px-1 py-0.5 rounded transition-opacity duration-150
+                  ${
+                    isProjectItemActive
+                      ? 'bg-violet-200/50 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100'
+                  }`}
+                                                  >
+                                                    {project.key}
+                                                  </span>
+                                                  <button
+                                                    onClick={(e) =>
+                                                      openContextMenu(e, 'project', project)
+                                                    }
+                                                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 
+                  hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+                  text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                  transition-all duration-150"
+                                                  >
+                                                    <MoreHorizontal className="w-3 h-3" />
+                                                  </button>
                                                 </button>
-                                              </button>
-                                            </div>
-                                          );
-                                        })}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
 
-                              {spaceDirectProjects.map((project, projectIndex) => {
-                                const isProjectItemActive = isProjectActive(project.id);
+                                {spaceDirectProjects.map((project, projectIndex) => {
+                                  const isProjectItemActive = isProjectActive(project.id);
 
-                                return (
-                                  <div
-                                    key={project.id}
-                                    style={{
-                                      animationDelay: `${(spaceFolders.length + projectIndex) * 20}ms`,
-                                    }}
-                                    className="animate-in slide-in-from-left-1 fade-in"
-                                  >
-                                    <button
-                                      onClick={() => handleProjectClick(project)}
-                                      className={`group w-full flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer 
-          transition-all duration-200 ease-out
-          ${
-            isProjectItemActive
-              ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
-              : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-          }`}
+                                  return (
+                                    <div
+                                      key={project.id}
+                                      style={{
+                                        animationDelay: `${(spaceFolders.length + projectIndex) * 20}ms`,
+                                      }}
+                                      className="animate-in slide-in-from-left-1 fade-in"
                                     >
-                                      <DotIcon
-                                        className={`w-3.5 h-3.5 flex-shrink-0 transition-colors duration-200
-            ${isProjectItemActive ? 'text-violet-500' : ''}`}
-                                      />
-                                      <span className="flex-1 text-[11px] truncate">
-                                        {project.name}
-                                      </span>
-                                      <span
-                                        className={`text-[9px] font-mono px-1 py-0.5 rounded transition-opacity duration-150
+                                      <button
+                                        onClick={() => handleProjectClick(project)}
+                                        className={`group w-full flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer 
+            transition-all duration-200 ease-out
             ${
               isProjectItemActive
-                ? 'bg-violet-200/50 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100'
+                ? 'bg-violet-100/80 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300'
+                : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/30 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
             }`}
                                       >
-                                        {project.key}
-                                      </span>
-                                      <button
-                                        onClick={(e) => openContextMenu(e, 'project', project)}
-                                        className="p-0.5 rounded opacity-0 group-hover:opacity-100 
-            hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
-            text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
-            transition-all duration-150"
-                                      >
-                                        <MoreHorizontal className="w-3 h-3" />
+                                        <DotIcon
+                                          className={`w-3.5 h-3.5 flex-shrink-0 transition-colors duration-200
+              ${isProjectItemActive ? 'text-violet-500' : ''}`}
+                                        />
+                                        <span className="flex-1 text-[11px] truncate">
+                                          {project.name}
+                                        </span>
+                                        <span
+                                          className={`text-[9px] font-mono px-1 py-0.5 rounded transition-opacity duration-150
+              ${
+                isProjectItemActive
+                  ? 'bg-violet-200/50 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100'
+              }`}
+                                        >
+                                          {project.key}
+                                        </span>
+                                        <button
+                                          onClick={(e) => openContextMenu(e, 'project', project)}
+                                          className="p-0.5 rounded opacity-0 group-hover:opacity-100 
+              hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
+              text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+              transition-all duration-150"
+                                        >
+                                          <MoreHorizontal className="w-3 h-3" />
+                                        </button>
                                       </button>
+                                    </div>
+                                  );
+                                })}
+
+                                {spaceFolders.length === 0 && spaceDirectProjects.length === 0 && (
+                                  <div className="px-2 py-5 text-center animate-in fade-in duration-300">
+                                    <div
+                                      className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 
+                                flex items-center justify-center mx-auto mb-2"
+                                    >
+                                      <Folder className="w-4 h-4 text-gray-400" />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-1.5">
+                                      No content yet
+                                    </p>
+                                    <button
+                                      onClick={() =>
+                                        handleCreateFolderFromMenu(space.id, space.name)
+                                      }
+                                      className="text-[10px] font-medium text-violet-600 dark:text-violet-400 
+                                  hover:text-violet-700 dark:hover:text-violet-300
+                                  hover:underline underline-offset-2 transition-colors"
+                                    >
+                                      Add a folder
                                     </button>
                                   </div>
-                                );
-                              })}
-
-                              {spaceFolders.length === 0 && spaceDirectProjects.length === 0 && (
-                                <div className="px-2 py-5 text-center animate-in fade-in duration-300">
-                                  <div
-                                    className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 
-                              flex items-center justify-center mx-auto mb-2"
-                                  >
-                                    <Folder className="w-4 h-4 text-gray-400" />
-                                  </div>
-                                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-1.5">
-                                    No content yet
-                                  </p>
-                                  <button
-                                    onClick={() => handleCreateFolderFromMenu(space.id, space.name)}
-                                    className="text-[10px] font-medium text-violet-600 dark:text-violet-400 
-                                hover:text-violet-700 dark:hover:text-violet-300
-                                hover:underline underline-offset-2 transition-colors"
-                                  >
-                                    Add a folder
-                                  </button>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       );
                     })}

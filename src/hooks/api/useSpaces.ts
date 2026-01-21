@@ -1,4 +1,4 @@
-// src/hooks/api/useSpaces.ts - FIXED VERSION
+// src/hooks/api/useSpaces.ts - COMPLETE FIXED VERSION
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
@@ -25,7 +25,7 @@ export interface UpdateSpaceRequest {
 }
 
 export interface SpaceResponse {
-  projects: boolean;
+  // ✅ REMOVED: projects: boolean
   id: string;
   workspace_id: string;
   name: string;
@@ -94,8 +94,8 @@ export const useCreateSpace = () => {
         queryKey: queryKeys.spaces.byWorkspace(variables.workspaceId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
-      // ✅ INVALIDATE ACCESSIBLE SPACES
       queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() }); // ✅ ADDED
     },
   });
 };
@@ -110,8 +110,8 @@ export const useUpdateSpace = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.byWorkspace(data.workspace_id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
-      // ✅ INVALIDATE ACCESSIBLE SPACES
       queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() }); // ✅ ADDED
     },
   });
 };
@@ -124,8 +124,11 @@ export const useDeleteSpace = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
       queryClient.removeQueries({ queryKey: queryKeys.spaces.detail(id) });
-      // ✅ INVALIDATE ACCESSIBLE SPACES
       queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() }); // ✅ ADDED
+      // ✅ ADDED: Cascade invalidation for child entities
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
     },
   });
 };

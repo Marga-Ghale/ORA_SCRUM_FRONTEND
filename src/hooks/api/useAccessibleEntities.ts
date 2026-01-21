@@ -116,6 +116,25 @@ export const useAccessibleProjects = (options?: { enabled?: boolean }) => {
   });
 };
 
+export const useVisibleSpaces = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.members.visibleSpaces(),
+    queryFn: async () => {
+      const response = await apiClient.get<any[]>('/members/my/visible/spaces');
+      return response.map((s: any) => ({
+        id: s.ID,
+        name: s.Name,
+        description: s.Description,
+        workspaceId: s.WorkspaceID,
+        color: s.Color,
+        icon: s.Icon,
+        createdAt: s.CreatedAt,
+      }));
+    },
+    enabled: options?.enabled ?? true,
+  });
+};
+
 export const useAllAccessibleEntities = () => {
   const { data: workspaces = [], isLoading: wLoading } = useAccessibleWorkspaces();
   const { data: spaces = [], isLoading: sLoading } = useAccessibleSpaces();
