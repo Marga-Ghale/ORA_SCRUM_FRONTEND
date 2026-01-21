@@ -1,4 +1,4 @@
-// src/components/modals/MemberManagementModal.tsx - COMPLETE FINAL VERSION
+// src/components/modals/MemberManagementModal.tsx
 import React, { useState, useMemo } from 'react';
 import {
   X,
@@ -16,7 +16,6 @@ import {
   Info,
 } from 'lucide-react';
 import { EntityType } from '../../hooks/api/useMembers';
-import { useProjectContext } from '../../context/ProjectContext';
 
 const ROLE_OPTIONS = [
   {
@@ -129,9 +128,7 @@ const MemberRow: React.FC<MemberRowProps> = ({
         </div>
         {member.isInherited && showAccessInfo === member.userId && (
           <div className="mt-1 text-xs text-[#9ca3af] bg-[#1a1d21] px-2 py-1 rounded">
-            {accessBadge.text === 'Visible Only'
-              ? 'Can see space name but cannot access content. Add as member to grant access.'
-              : `Access inherited from parent ${member.inheritedFrom}. Cannot modify here.`}
+            Access inherited from parent {member.inheritedFrom}. Cannot modify here.
           </div>
         )}
       </div>
@@ -204,36 +201,12 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
   const [selectedUsers, setSelectedUsers] = useState(new Set<string>());
   const [showAccessInfo, setShowAccessInfo] = useState<string | null>(null);
 
-  // ✅ Get current workspace for filtering
-  const { currentWorkspace } = useProjectContext();
-
-  // ✅ Fetch workspace members for filtering
-  const { data: workspaceMembers = [] } = useEffectiveMembers(
-    'workspace',
-    currentWorkspace?.id || '',
-    { enabled: !!currentWorkspace?.id && isOpen && entityType !== 'workspace' }
-  );
-
-  const workspaceMemberIds = useMemo(
-    () => new Set(workspaceMembers.map((m: any) => m.userId)),
-    [workspaceMembers]
-  );
-
   const { data: members = [], isLoading: membersLoading } = useEffectiveMembers(
     entityType,
     entityId,
     { enabled: isOpen }
   );
 
-  const { data: searchResults = [], isLoading: searchLoading } = useSearchUsers(searchQuery, {
-    enabled: searchQuery.length >= 2,
-  });
-
-  const addMember = useAddMember();
-  const updateRole = useUpdateMemberRole();
-  const removeMember = useRemoveMember();
-
-  // ✅ Categorize members including visible-only
   const categorizedMembers = useMemo(() => {
     const direct: any[] = [];
     const inherited: any[] = [];
@@ -243,8 +216,10 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
       if (!m.isInherited) {
         direct.push(m);
       } else if (entityType === 'space' && m.inheritedFrom === 'workspace') {
+        // ✅ Workspace members in space → Visible only
         visibleOnly.push(m);
       } else {
+        // Real inherited access (e.g., space members in folder)
         inherited.push(m);
       }
     });
@@ -252,19 +227,25 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
     return { direct, inherited, visibleOnly };
   }, [members, entityType]);
 
-  // ✅ Filter search to workspace members only (except for workspace entity)
-  const workspaceFilteredResults = useMemo(() => {
-    if (entityType === 'workspace') {
-      return searchResults;
-    }
-    return searchResults.filter((user: any) => workspaceMemberIds.has(user.id));
-  }, [searchResults, workspaceMemberIds, entityType]);
+  const { data: searchResults = [], isLoading: searchLoading } = useSearchUsers(searchQuery, {
+    enabled: searchQuery.length >= 2,
+  });
+
+  const addMember = useAddMember();
+  const updateRole = useUpdateMemberRole();
+  const removeMember = useRemoveMember();
+
+  const { directMembers, inheritedMembers } = useMemo(() => {
+    const direct = members.filter((m: any) => !m.isInherited);
+    const inherited = members.filter((m: any) => m.isInherited);
+    return { directMembers: direct, inheritedMembers: inherited };
+  }, [members]);
 
   const memberUserIds = useMemo(() => new Set(members.map((m: any) => m.userId)), [members]);
 
   const availableUsers = useMemo(() => {
-    return workspaceFilteredResults.filter((user: any) => !memberUserIds.has(user.id));
-  }, [workspaceFilteredResults, memberUserIds]);
+    return searchResults.filter((user: any) => !memberUserIds.has(user.id));
+  }, [searchResults, memberUserIds]);
 
   const handleAddMembers = async () => {
     if (selectedUsers.size === 0) return;
@@ -323,14 +304,6 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
   const getAccessBadge = (member: any) => {
     if (!member.isInherited) {
       return { text: 'Direct', color: 'bg-green-500/20 text-green-400', icon: Check };
-    }
-
-    if (entityType === 'space' && member.inheritedFrom === 'workspace') {
-      return {
-        text: 'Visible Only',
-        color: 'bg-gray-500/20 text-gray-400',
-        icon: Eye,
-      };
     }
 
     const sourceMap: Record<string, any> = {
@@ -410,46 +383,27 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                     <h3 className="text-sm font-medium text-white mb-1">Access Overview</h3>
                     <p className="text-xs text-[#9ca3af] leading-relaxed">
                       <span className="text-green-400 font-medium">
-                        {categorizedMembers.direct.length} direct
+                        {directMembers.length} direct
                       </span>{' '}
-                      {categorizedMembers.direct.length === 1 ? 'member has' : 'members have'} full
-                      access.
-                      {categorizedMembers.inherited.length > 0 && (
-                        <>
-                          {' '}
-                          <span className="text-purple-400 font-medium">
-                            {categorizedMembers.inherited.length} inherited
-                          </span>{' '}
-                          {categorizedMembers.inherited.length === 1
-                            ? 'member has'
-                            : 'members have'}{' '}
-                          access through parent entities.
-                        </>
-                      )}
-                      {categorizedMembers.visibleOnly.length > 0 && (
-                        <>
-                          {' '}
-                          <span className="text-gray-400 font-medium">
-                            {categorizedMembers.visibleOnly.length} visible-only
-                          </span>{' '}
-                          {categorizedMembers.visibleOnly.length === 1 ? 'member' : 'members'} can
-                          see this {entityType} name but need to be added for content access.
-                        </>
-                      )}
+                      members have been explicitly added.
+                      <span className="text-purple-400 font-medium ml-1">
+                        {inheritedMembers.length} inherited
+                      </span>{' '}
+                      members have access through parent hierarchy.
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Direct Members */}
-              {categorizedMembers.direct.length > 0 && (
+              {directMembers.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-[#e5e7eb] mb-3 flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-400" />
-                    Direct Members ({categorizedMembers.direct.length})
+                    Direct Members ({directMembers.length})
                   </h3>
                   <div className="space-y-2">
-                    {categorizedMembers.direct.map((member: any) => (
+                    {directMembers.map((member: any) => (
                       <MemberRow
                         key={member.userId}
                         member={member}
@@ -466,17 +420,14 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
               )}
 
               {/* Inherited Members */}
-              {categorizedMembers.inherited.length > 0 && (
+              {inheritedMembers.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-[#e5e7eb] mb-3 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-purple-400" />
-                    Inherited Members ({categorizedMembers.inherited.length})
+                    Inherited Members ({inheritedMembers.length})
                   </h3>
-                  <p className="text-xs text-[#6b7280] mb-3">
-                    These members have content access inherited from parent entities
-                  </p>
                   <div className="space-y-2">
-                    {categorizedMembers.inherited.map((member: any) => (
+                    {inheritedMembers.map((member: any) => (
                       <MemberRow
                         key={member.userId}
                         member={member}
@@ -487,47 +438,6 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                         showAccessInfo={showAccessInfo}
                         setShowAccessInfo={setShowAccessInfo}
                       />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Visible Only Members */}
-              {categorizedMembers.visibleOnly.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-[#e5e7eb] mb-3 flex items-center gap-2">
-                    <Eye className="w-4 h-4 text-gray-400" />
-                    Visible Only ({categorizedMembers.visibleOnly.length})
-                  </h3>
-                  <p className="text-xs text-[#6b7280] mb-3">
-                    These workspace members can see this {entityType} name but cannot access
-                    content. Add them as direct members to grant full access.
-                  </p>
-                  <div className="space-y-2">
-                    {categorizedMembers.visibleOnly.map((member: any) => (
-                      <div key={member.userId} className="relative">
-                        <MemberRow
-                          member={member}
-                          onUpdateRole={handleUpdateRole}
-                          onRemove={handleRemoveMember}
-                          canEdit={false}
-                          getAccessBadge={getAccessBadge}
-                          showAccessInfo={showAccessInfo}
-                          setShowAccessInfo={setShowAccessInfo}
-                        />
-                        <button
-                          onClick={() => {
-                            setSearchQuery(member.user?.email || '');
-                            setActiveTab('add');
-                            setTimeout(() => {
-                              setSelectedUsers(new Set([member.userId]));
-                            }, 100);
-                          }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-md transition-colors font-medium"
-                        >
-                          Grant Access
-                        </button>
-                      </div>
                     ))}
                   </div>
                 </div>
@@ -562,7 +472,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
               {/* Search */}
               <div>
                 <label className="block text-sm font-medium text-[#e5e7eb] mb-2">
-                  Search {entityType === 'workspace' ? 'Users' : 'Workspace Members'}
+                  Search Users
                 </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280]" />
@@ -570,11 +480,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={
-                      entityType === 'workspace'
-                        ? 'Search by name or email...'
-                        : 'Search workspace members...'
-                    }
+                    placeholder="Search by name or email..."
                     className="w-full pl-10 pr-4 py-2.5 bg-[#25282c] border border-[#2a2e33] rounded-lg text-white placeholder-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
                   />
                   {searchLoading && (
@@ -582,9 +488,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                   )}
                 </div>
                 <p className="text-xs text-[#6b7280] mt-1.5">
-                  {entityType === 'workspace'
-                    ? 'Type at least 2 characters to search all users'
-                    : 'Only workspace members can be added to this ' + entityType}
+                  Type at least 2 characters to search
                 </p>
               </div>
 
@@ -668,16 +572,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                     ) : (
                       <div className="p-8 text-center">
                         <Search className="w-8 h-8 text-[#6b7280] mx-auto mb-2" />
-                        <p className="text-sm text-[#9ca3af]">
-                          {entityType === 'workspace'
-                            ? 'No users found'
-                            : 'No workspace members found'}
-                        </p>
-                        {entityType !== 'workspace' && (
-                          <p className="text-xs text-[#6b7280] mt-1">
-                            Users must be workspace members first
-                          </p>
-                        )}
+                        <p className="text-sm text-[#9ca3af]">No users found</p>
                       </div>
                     )}
                   </div>
