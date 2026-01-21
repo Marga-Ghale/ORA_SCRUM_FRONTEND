@@ -1,4 +1,4 @@
-// src/hooks/useProjects.ts
+// src/hooks/useProjects.ts - FIXED VERSION
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
@@ -27,22 +27,23 @@ export interface UpdateProjectRequest {
   leadId?: string;
 }
 
+// ✅ FIXED: Use snake_case to match backend
 export interface ProjectResponse {
   id: string;
-  spaceId: string;
-  folderId?: string;
+  space_id: string;
+  folder_id?: string;
   name: string;
   key: string;
   description?: string;
   icon?: string;
   color?: string;
-  leadId?: string;
+  lead_id?: string;
   visibility?: string;
-  allowedUsers: string[];
-  allowedTeams: string[];
-  createdBy?: string;
-  createdAt: string;
-  updatedAt: string;
+  allowed_users: string[];
+  allowed_teams: string[];
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================
@@ -65,16 +66,12 @@ const projectApi = {
 // Query Hooks
 // ============================================
 
-// Fetch projects by space (for projects without folders)
+// ✅ FIXED: Use queryKeys helper
 export const useProjectsBySpace = (spaceId: string, options?: { enabled?: boolean }) => {
   return useQuery({
-    queryKey: ['projects', 'by-space', spaceId],
-    queryFn: async () => {
-      const response = await apiClient.get<ProjectResponse[]>(`/spaces/${spaceId}/projects`);
-      return response;
-    },
+    queryKey: queryKeys.projects.bySpace(spaceId),
+    queryFn: () => projectApi.listBySpace(spaceId),
     enabled: options?.enabled ?? !!spaceId,
-    staleTime: 30000,
   });
 };
 
@@ -105,12 +102,11 @@ export const useCreateProject = () => {
     mutationFn: ({ spaceId, data }: { spaceId: string; data: CreateProjectRequest }) =>
       projectApi.create(spaceId, data),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.bySpace(data.spaceId) });
-      if (data.folderId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.projects.byFolder(data.folderId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.bySpace(data.space_id) });
+      if (data.folder_id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.byFolder(data.folder_id) });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      // ✅ INVALIDATE ACCESSIBLE PROJECTS
       queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
     },
   });
@@ -124,12 +120,11 @@ export const useUpdateProject = () => {
       projectApi.update(id, data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(data.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.bySpace(data.spaceId) });
-      if (data.folderId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.projects.byFolder(data.folderId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.bySpace(data.space_id) });
+      if (data.folder_id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.byFolder(data.folder_id) });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      // ✅ INVALIDATE ACCESSIBLE PROJECTS
       queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
     },
   });
@@ -143,7 +138,6 @@ export const useDeleteProject = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       queryClient.removeQueries({ queryKey: queryKeys.projects.detail(id) });
-      // ✅ INVALIDATE ACCESSIBLE PROJECTS
       queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
     },
   });

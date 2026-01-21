@@ -59,6 +59,16 @@ export interface UserMembership {
   role: string;
 }
 
+// ✅ ADD THIS NEW TYPE after EntityType
+export interface AccessInfoResponse {
+  has_access: boolean;
+  access_type: 'none' | 'visible' | 'member' | 'inherited';
+  role: string;
+  inherited_from: string;
+  can_read_content: boolean;
+  can_write: boolean;
+}
+
 export type EntityType = 'workspace' | 'space' | 'folder' | 'project';
 
 // ============================================
@@ -110,6 +120,13 @@ const memberApi = {
   getUserMemberships: () => apiClient.get<UserMembership[]>('/members/my/memberships'),
 
   getUserAllAccess: () => apiClient.get<Record<string, unknown>>('/members/my/access'),
+
+  getAccessInfo: (entityType: EntityType, entityId: string, userId?: string) =>
+    apiClient.get<AccessInfoResponse>(
+      `/members/${entityType}/${entityId}/access-info${userId ? `?userId=${userId}` : ''}`
+    ),
+
+  getVisibleSpaces: () => apiClient.get<any[]>('/members/my/visible/spaces'),
 };
 
 // ============================================
@@ -182,6 +199,38 @@ export const useMyAccess = (options?: { enabled?: boolean }) => {
   });
 };
 
+export const useAccessInfo = (
+  entityType: EntityType,
+  entityId: string,
+  userId?: string,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery({
+    queryKey: queryKeys.members.accessInfo(entityType, entityId),
+    queryFn: () => memberApi.getAccessInfo(entityType, entityId, userId),
+    enabled: options?.enabled ?? !!(entityType && entityId),
+  });
+};
+
+export const useVisibleSpaces = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: queryKeys.members.visibleSpaces(),
+    queryFn: async () => {
+      const response = await memberApi.getVisibleSpaces();
+      return response.map((s: any) => ({
+        id: s.ID,
+        name: s.Name,
+        description: s.Description,
+        workspaceId: s.WorkspaceID,
+        color: s.Color,
+        icon: s.Icon,
+        createdAt: s.CreatedAt,
+      }));
+    },
+    enabled: options?.enabled ?? true,
+  });
+};
+
 // ============================================
 // Mutation Hooks
 // ============================================
@@ -200,6 +249,7 @@ export const useAddMember = () => {
       data: AddMemberRequest;
     }) => memberApi.addMember(entityType, entityId, data),
     onSuccess: (_, variables) => {
+      // Existing invalidations
       queryClient.invalidateQueries({
         queryKey: queryKeys.members.direct(variables.entityType, variables.entityId),
       });
@@ -207,6 +257,25 @@ export const useAddMember = () => {
         queryKey: queryKeys.members.effective(variables.entityType, variables.entityId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.members.myMemberships() });
+
+      // ✅ ADD THESE: Invalidate accessible entities based on what was added
+      if (variables.entityType === 'workspace') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
+      }
+      if (variables.entityType === 'space') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
+      }
+      if (variables.entityType === 'folder') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
+      }
+      if (variables.entityType === 'project') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
+      }
     },
   });
 };

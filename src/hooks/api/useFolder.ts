@@ -150,8 +150,8 @@ export const useDeleteFolder = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
       queryClient.removeQueries({ queryKey: queryKeys.folders.detail(id) });
-      // ✅ INVALIDATE ACCESSIBLE FOLDERS
       queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() }); // ✅ ADDED
     },
   });
 };
