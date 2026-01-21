@@ -1,5 +1,5 @@
 // ✅ ENHANCED: src/hooks/api/useWebsocket.ts
-// Added message deduplication to prevent duplicate processing
+// Added handlers for workspace, space, folder, project CRUD events
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,24 +8,32 @@ import { queryKeys } from '../../lib/query-client';
 import { NotificationType } from './useNotifications';
 import { ChatMessage, ChatReaction } from './useChat';
 
+// ✅ UPDATED: Added entity CRUD event types
 export type WebSocketEventType =
   | 'notification'
   | 'notification_count'
+  // Task events
   | 'task_created'
   | 'task_updated'
   | 'task_deleted'
   | 'task_assigned'
   | 'task_status_changed'
+  // Sprint events
   | 'sprint_started'
   | 'sprint_completed'
+  // Comment events
   | 'comment_added'
+  // Member events
   | 'member_added'
   | 'member_removed'
+  // User presence
   | 'user_online'
   | 'user_offline'
+  // Connection events
   | 'ping'
   | 'pong'
   | 'ack'
+  // Chat events
   | 'chat_message'
   | 'chat_message_updated'
   | 'chat_message_deleted'
@@ -35,7 +43,23 @@ export type WebSocketEventType =
   | 'chat_member_added'
   | 'chat_member_removed'
   | 'chat_reaction_added'
-  | 'chat_reaction_removed';
+  | 'chat_reaction_removed'
+  // ✅ NEW: Workspace CRUD events
+  | 'workspace_created'
+  | 'workspace_updated'
+  | 'workspace_deleted'
+  // ✅ NEW: Space CRUD events
+  | 'space_created'
+  | 'space_updated'
+  | 'space_deleted'
+  // ✅ NEW: Folder CRUD events
+  | 'folder_created'
+  | 'folder_updated'
+  | 'folder_deleted'
+  // ✅ NEW: Project CRUD events
+  | 'project_created'
+  | 'project_updated'
+  | 'project_deleted';
 
 export interface WebSocketMessage {
   type: WebSocketEventType;
@@ -88,56 +112,6 @@ function cleanupProcessedMessages() {
   entriesToDelete.forEach((id) => processedMessages.delete(id));
 }
 
-/**
- * Check if message should be processed (not a duplicate)
- */
-// function shouldProcessMessage(message: WebSocketMessage): boolean {
-//   cleanupProcessedMessages();
-
-//   // Create a unique message ID based on type and content
-//   const messageData = message.payload || message.data || {};
-//   const notificationId = messageData.id as string | undefined;
-//   const channelId = messageData.channelId as string | undefined;
-//   const content = messageData.content as string | undefined;
-
-//   // For notification messages, use the notification ID
-//   if (message.type === 'notification' && notificationId) {
-//     const messageId = `notification-${notificationId}`;
-
-//     if (processedMessages.has(messageId)) {
-//       return false;
-//     }
-
-//     processedMessages.set(messageId, {
-//       id: messageId,
-//       timestamp: Date.now(),
-//     });
-
-//     return true;
-//   }
-
-//   // For other messages, use type + key data
-//   const taskId = messageData.taskId as string | undefined;
-//   const projectId = messageData.projectId as string | undefined;
-
-//   const messageId = `${message.type}-${taskId || projectId || channelId || Date.now()}`;
-
-//   if (processedMessages.has(messageId)) {
-//     return false;
-//   }
-
-//   processedMessages.set(messageId, {
-//     id: messageId,
-//     timestamp: Date.now(),
-//   });
-
-//   return true;
-// }
-
-// ============================================
-// WEBSOCKET HOOK
-// ============================================
-
 function shouldProcessMessage(message: WebSocketMessage): boolean {
   cleanupProcessedMessages();
 
@@ -145,6 +119,7 @@ function shouldProcessMessage(message: WebSocketMessage): boolean {
   const messageId = messageData.messageId as string | undefined;
   const channelId = messageData.channelId as string | undefined;
   const content = messageData.content as string | undefined;
+  const entityId = messageData.id as string | undefined;
 
   // ✅ For chat messages, use messageId if available
   if (message.type === 'chat_message' && messageId) {
@@ -167,6 +142,22 @@ function shouldProcessMessage(message: WebSocketMessage): boolean {
     return true;
   }
 
+  // ✅ For entity CRUD events (workspace, space, folder, project)
+  if (
+    message.type.includes('workspace_') ||
+    message.type.includes('space_') ||
+    message.type.includes('folder_') ||
+    message.type.includes('project_')
+  ) {
+    const dedupKey = `${message.type}-${entityId || Date.now()}`;
+    if (processedMessages.has(dedupKey)) {
+      console.log('[WebSocket] 🚫 Duplicate entity event blocked:', message.type, entityId);
+      return false;
+    }
+    processedMessages.set(dedupKey, { id: dedupKey, timestamp: Date.now() });
+    return true;
+  }
+
   // ✅ Fallback for other messages
   const dedupKey = `${message.type}-${channelId || ''}-${content?.substring(0, 20) || Date.now()}`;
   if (processedMessages.has(dedupKey)) {
@@ -175,6 +166,10 @@ function shouldProcessMessage(message: WebSocketMessage): boolean {
   processedMessages.set(dedupKey, { id: dedupKey, timestamp: Date.now() });
   return true;
 }
+
+// ============================================
+// WEBSOCKET HOOK
+// ============================================
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const {
@@ -229,6 +224,19 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         console.groupEnd();
       }
 
+      // ✅ LOG ENTITY CRUD EVENTS
+      if (
+        message.type.includes('workspace_') ||
+        message.type.includes('space_') ||
+        message.type.includes('folder_') ||
+        message.type.includes('project_')
+      ) {
+        console.group(`[WebSocket] 📦 ${message.type}`);
+        console.log('Entity data:', messageData);
+        console.log('Timestamp:', new Date().toISOString());
+        console.groupEnd();
+      }
+
       if (
         message.type !== 'ping' &&
         message.type !== 'pong' &&
@@ -263,7 +271,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               if (channelId) {
                 console.log('📍 Invalidating messages for channel:', channelId);
 
-                // ✅ Only invalidate, don't update counts (already done in chat_message case)
                 queryClient.invalidateQueries({
                   queryKey: queryKeys.chat.messages(channelId, 50, 0),
                   refetchType: 'active',
@@ -288,10 +295,134 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             });
           }
           break;
+
         case 'notification_count':
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
           break;
 
+        // ============================================
+        // ✅ NEW: WORKSPACE CRUD EVENTS
+        // ============================================
+        case 'workspace_created':
+        case 'workspace_updated':
+        case 'workspace_deleted':
+          console.log('[WebSocket] 🏢 Workspace change:', message.type, messageData);
+
+          // Invalidate all workspace-related queries
+          queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.my() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
+
+          // If specific workspace ID provided, invalidate detail
+          if (messageData.id || messageData.workspaceId) {
+            const wsId = (messageData.id || messageData.workspaceId) as string;
+            queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.detail(wsId) });
+          }
+          break;
+
+        // ============================================
+        // ✅ NEW: SPACE CRUD EVENTS
+        // ============================================
+        case 'space_created':
+        case 'space_updated':
+        case 'space_deleted':
+          console.log('[WebSocket] 📁 Space change:', message.type, messageData);
+
+          // Invalidate all space-related queries
+          queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.spaces.list() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
+
+          // If workspace ID provided, invalidate workspace-specific space list
+          if (messageData.workspaceId) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.spaces.byWorkspace(messageData.workspaceId as string),
+            });
+          }
+
+          // If specific space ID provided, invalidate detail
+          if (messageData.id || messageData.spaceId) {
+            const spaceId = (messageData.id || messageData.spaceId) as string;
+            queryClient.invalidateQueries({ queryKey: queryKeys.spaces.detail(spaceId) });
+          }
+          break;
+
+        // ============================================
+        // ✅ NEW: FOLDER CRUD EVENTS
+        // ============================================
+        case 'folder_created':
+        case 'folder_updated':
+        case 'folder_deleted':
+          console.log('[WebSocket] 📂 Folder change:', message.type, messageData);
+
+          // Invalidate all folder-related queries
+          queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.folders.list() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.folders.byUser() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
+
+          // If space ID provided, invalidate space-specific folder list
+          if (messageData.spaceId) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.folders.bySpace(messageData.spaceId as string),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.spaces.folders(messageData.spaceId as string),
+            });
+          }
+
+          // If specific folder ID provided, invalidate detail
+          if (messageData.id || messageData.folderId) {
+            const folderId = (messageData.id || messageData.folderId) as string;
+            queryClient.invalidateQueries({ queryKey: queryKeys.folders.detail(folderId) });
+          }
+          break;
+
+        // ============================================
+        // ✅ NEW: PROJECT CRUD EVENTS
+        // ============================================
+        case 'project_created':
+        case 'project_updated':
+        case 'project_deleted':
+          console.log('[WebSocket] 📋 Project change:', message.type, messageData);
+
+          // Invalidate all project-related queries
+          queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
+
+          // If space ID provided, invalidate space-specific project list
+          if (messageData.spaceId) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.projects.bySpace(messageData.spaceId as string),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.spaces.projects(messageData.spaceId as string),
+            });
+          }
+
+          // If folder ID provided, invalidate folder-specific project list
+          if (messageData.folderId) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.projects.byFolder(messageData.folderId as string),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.folders.projects(messageData.folderId as string),
+            });
+          }
+
+          // If specific project ID provided, invalidate detail
+          if (messageData.id || messageData.projectId) {
+            const projectId = (messageData.id || messageData.projectId) as string;
+            queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+          }
+          break;
+
+        // ============================================
+        // TASK EVENTS
+        // ============================================
         case 'task_created':
         case 'task_updated':
         case 'task_deleted':
@@ -329,6 +460,37 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
           break;
 
+        // ============================================
+        // ✅ MEMBER EVENTS - Also refresh entity lists
+        // ============================================
+        case 'member_added':
+        case 'member_removed':
+          console.log('[WebSocket] 👥 Member change:', message.type, messageData);
+
+          // Invalidate member queries
+          if (messageData.entityType && messageData.entityId) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.members.effective(
+                messageData.entityType as string,
+                messageData.entityId as string
+              ),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.members.direct(
+                messageData.entityType as string,
+                messageData.entityId as string
+              ),
+            });
+          }
+
+          // ✅ Also invalidate accessible entities since membership changed
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
+          break;
+
         case 'user_online':
         case 'user_offline':
           break;
@@ -339,6 +501,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           }
           break;
 
+        // ============================================
+        // CHAT EVENTS
+        // ============================================
         case 'chat_message':
           console.group('[WebSocket] 📨 PROCESSING CHAT MESSAGE');
 
@@ -462,7 +627,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         case 'chat_channel_updated':
         case 'chat_channel_deleted':
           console.log('[WebSocket] 📢 Channel update:', message.type);
-          // ✅ These can invalidate (not critical for speed)
           queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
           break;
 

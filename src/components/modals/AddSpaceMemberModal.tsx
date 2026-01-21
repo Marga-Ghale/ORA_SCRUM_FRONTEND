@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/modals/AddSpaceMemberModal.tsx
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { useAddMember } from '../../hooks/api/useMembers';
+import { useInviteMemberByEmail } from '../../hooks/api/useMembers';
 import { Modal } from '../ui/modal';
 
 interface AddSpaceMemberModalProps {
@@ -12,15 +13,17 @@ interface AddSpaceMemberModalProps {
 
 const AddSpaceMemberModal: React.FC<AddSpaceMemberModalProps> = ({ spaceId, isOpen, onClose }) => {
   const [email, setEmail] = useState('');
-  const { mutateAsync: addMember, isLoading } = useAddMember({
-    entityType: 'space', // Ensure this uses 'space'
-    entityId: spaceId,
-  });
+  const [role, setRole] = useState('member');
+  const inviteMember = useInviteMemberByEmail();
 
   const handleAddMember = async () => {
     if (!email) return toast.error('Please enter an email.');
     try {
-      await addMember({ email });
+      await inviteMember.mutateAsync({
+        entityType: 'space',
+        entityId: spaceId,
+        data: { email, role },
+      });
       toast.success('Member added successfully!');
       setEmail('');
       onClose();
