@@ -102,7 +102,7 @@ const MemberRow: React.FC<MemberRowProps> = ({
   const RoleIcon = roleConfig?.icon || Users;
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-[#25282c] rounded-lg border border-[#2a2e33] hover:border-[#3a3e43] transition-colors">
+    <div className="flex items-center gap-3 p-3 bg-[#25282c] z-50 rounded-lg border border-[#2a2e33] hover:border-[#3a3e43] transition-colors">
       {/* Avatar */}
       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
         {member.user?.avatar ? (
@@ -396,8 +396,8 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
   const totalMembers = direct.length + inherited.length;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#1a1d21] rounded-xl border border-[#2a2e33] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+      <div className="bg-[#1a1d21] rounded-xl border border-[#2a2e33] w-full max-w-3xl max-h-[90vh] z-50 flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[#2a2e33]">
           <div>
@@ -450,7 +450,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto  p-6">
           {activeTab === 'members' ? (
             <div className="space-y-6">
               {/* Summary Card */}

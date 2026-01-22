@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
+import toast from 'react-hot-toast';
 
 // ============================================
 // Types
@@ -250,6 +251,7 @@ export const useAddMember = () => {
     }) => memberApi.addMember(entityType, entityId, data),
     onSuccess: (_, variables) => {
       // Invalidate direct/effective members for the specific entity
+      toast.success('Member added successfully');
       queryClient.invalidateQueries({
         queryKey: queryKeys.members.direct(variables.entityType, variables.entityId),
       });
@@ -284,7 +286,7 @@ export const useAddMember = () => {
       }
     },
     onError: (error) => {
-      console.error('❌ ADD MEMBER ERROR:', error);
+      toast.error('❌ ADD MEMBER ERROR: ' + (error as Error).message);
     },
   });
 };
@@ -303,6 +305,7 @@ export const useInviteMemberByEmail = () => {
       data: InviteMemberRequest;
     }) => memberApi.inviteMemberByEmail(entityType, entityId, data),
     onSuccess: (_, variables) => {
+      toast.success('Invitation sent successfully!');
       queryClient.invalidateQueries({
         queryKey: queryKeys.members.direct(variables.entityType, variables.entityId),
       });
@@ -329,6 +332,7 @@ export const useUpdateMemberRole = () => {
       data: UpdateMemberRoleRequest;
     }) => memberApi.updateMemberRole(entityType, entityId, userId, data),
     onSuccess: (_, variables) => {
+      toast.success('Member role updated successfully');
       queryClient.invalidateQueries({
         queryKey: queryKeys.members.direct(variables.entityType, variables.entityId),
       });
@@ -341,6 +345,9 @@ export const useUpdateMemberRole = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.members.accessLevel(variables.entityType, variables.entityId),
       });
+    },
+    onError: (error) => {
+      toast.error('❌ UPDATE ERROR: ' + (error as Error).message);
     },
   });
 };
@@ -359,6 +366,7 @@ export const useRemoveMember = () => {
       userId: string;
     }) => memberApi.removeMember(entityType, entityId, userId),
     onSuccess: (_, variables) => {
+      toast.success('Member removed successfully');
       queryClient.invalidateQueries({
         queryKey: queryKeys.members.direct(variables.entityType, variables.entityId),
       });
@@ -366,6 +374,9 @@ export const useRemoveMember = () => {
         queryKey: queryKeys.members.effective(variables.entityType, variables.entityId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.members.myMemberships() });
+    },
+    onError: (error) => {
+      toast.error('❌ REMOVE MEMBER ERROR: ' + (error as Error).message);
     },
   });
 };

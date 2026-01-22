@@ -361,14 +361,7 @@ const taskApi = {
     apiClient.post<{ message: string }>('/tasks/bulk/move-sprint', data),
 
   updateTaskPositionAndStatus: (id: string, status: string, position: number) => {
-    console.log('🚀 updateTaskPositionAndStatus called with:', { id, status, position });
-    console.log('🚀 typeof position:', typeof position);
-    console.log('🚀 position value:', position);
-
     const payload = { status, position };
-    console.log('📦 Payload object:', payload);
-    console.log('📦 Payload JSON:', JSON.stringify(payload));
-
     return apiClient.patch<TaskResponse>(`/tasks/${id}/move`, payload);
   },
 };
