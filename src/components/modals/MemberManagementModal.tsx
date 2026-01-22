@@ -14,6 +14,9 @@ import {
   Loader,
   ChevronDown,
   Info,
+  Building2,
+  FolderTree,
+  Layers,
 } from 'lucide-react';
 import { EntityType } from '../../hooks/api/useMembers';
 
@@ -78,9 +81,10 @@ interface MemberRowProps {
   onUpdateRole: (userId: string, role: string) => void;
   onRemove: (userId: string, userName: string) => void;
   canEdit: boolean;
-  getAccessBadge: (member: any) => any;
+  accessBadge: { text: string; color: string; icon?: any };
   showAccessInfo: string | null;
   setShowAccessInfo: (userId: string | null) => void;
+  showInheritedTooltip?: boolean;
 }
 
 const MemberRow: React.FC<MemberRowProps> = ({
@@ -88,12 +92,12 @@ const MemberRow: React.FC<MemberRowProps> = ({
   onUpdateRole,
   onRemove,
   canEdit,
-  getAccessBadge,
+  accessBadge,
   showAccessInfo,
   setShowAccessInfo,
+  showInheritedTooltip = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const accessBadge = getAccessBadge(member);
   const roleConfig = ROLE_OPTIONS.find((r) => r.value === member.role);
   const RoleIcon = roleConfig?.icon || Users;
 
@@ -126,9 +130,9 @@ const MemberRow: React.FC<MemberRowProps> = ({
             {accessBadge.text}
           </span>
         </div>
-        {member.isInherited && showAccessInfo === member.userId && (
+        {showInheritedTooltip && showAccessInfo === member.userId && (
           <div className="mt-1 text-xs text-[#9ca3af] bg-[#1a1d21] px-2 py-1 rounded">
-            Access inherited from parent {member.inheritedFrom}. Cannot modify here.
+            Access inherited from {member.inheritedFrom}. Manage in parent entity.
           </div>
         )}
       </div>
@@ -183,6 +187,35 @@ const MemberRow: React.FC<MemberRowProps> = ({
   );
 };
 
+// Selected user chip component for bulk selection preview
+interface SelectedUserChipProps {
+  user: any;
+  onRemove: () => void;
+}
+
+const SelectedUserChip: React.FC<SelectedUserChipProps> = ({ user, onRemove }) => (
+  <div className="flex items-center gap-2 px-2 py-1 bg-[#7c3aed]/20 border border-[#7c3aed]/40 rounded-full">
+    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-[10px] font-semibold">
+      {user.avatar ? (
+        <img
+          src={user.avatar}
+          alt={user.name}
+          className="w-full h-full rounded-full object-cover"
+        />
+      ) : (
+        user.name?.[0]?.toUpperCase() || 'U'
+      )}
+    </div>
+    <span className="text-xs text-white truncate max-w-[100px]">{user.name}</span>
+    <button
+      onClick={onRemove}
+      className="p-0.5 hover:bg-[#7c3aed]/30 rounded-full transition-colors"
+    >
+      <X className="w-3 h-3 text-[#a78bfa]" />
+    </button>
+  </div>
+);
+
 const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
   isOpen,
   onClose,
@@ -198,15 +231,17 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
   const [activeTab, setActiveTab] = useState<'members' | 'add'>('members');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
-  const [selectedUsers, setSelectedUsers] = useState(new Set<string>());
+  const [selectedUsers, setSelectedUsers] = useState<Map<string, any>>(new Map());
   const [showAccessInfo, setShowAccessInfo] = useState<string | null>(null);
 
+  // Fetch effective members
   const { data: members = [], isLoading: membersLoading } = useEffectiveMembers(
     entityType,
     entityId,
     { enabled: isOpen }
   );
 
+  // Categorize members into direct, inherited, and visible-only
   const categorizedMembers = useMemo(() => {
     const direct: any[] = [];
     const inherited: any[] = [];
@@ -214,12 +249,14 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
 
     members.forEach((m: any) => {
       if (!m.isInherited) {
+        // Direct member - explicitly added to this entity
         direct.push(m);
       } else if (entityType === 'space' && m.inheritedFrom === 'workspace') {
-        // ✅ Workspace members in space → Visible only
+        // Workspace members viewing a space - they can see but not edit
+        // This is "visible only" access - they see the space in sidebar but aren't members
         visibleOnly.push(m);
       } else {
-        // Real inherited access (e.g., space members in folder)
+        // Real inherited access (e.g., space members in folder, folder members in project)
         inherited.push(m);
       }
     });
@@ -227,38 +264,38 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
     return { direct, inherited, visibleOnly };
   }, [members, entityType]);
 
+  // Search users
   const { data: searchResults = [], isLoading: searchLoading } = useSearchUsers(searchQuery, {
     enabled: searchQuery.length >= 2,
   });
 
+  // Mutations
   const addMember = useAddMember();
   const updateRole = useUpdateMemberRole();
   const removeMember = useRemoveMember();
 
-  const { directMembers, inheritedMembers } = useMemo(() => {
-    const direct = members.filter((m: any) => !m.isInherited);
-    const inherited = members.filter((m: any) => m.isInherited);
-    return { directMembers: direct, inheritedMembers: inherited };
-  }, [members]);
+  // Get IDs of users who already have access
+  const existingMemberIds = useMemo(() => new Set(members.map((m: any) => m.userId)), [members]);
 
-  const memberUserIds = useMemo(() => new Set(members.map((m: any) => m.userId)), [members]);
-
+  // Filter search results to exclude existing members
   const availableUsers = useMemo(() => {
-    return searchResults.filter((user: any) => !memberUserIds.has(user.id));
-  }, [searchResults, memberUserIds]);
+    return searchResults.filter((user: any) => !existingMemberIds.has(user.id));
+  }, [searchResults, existingMemberIds]);
 
+  // Handle adding multiple members
   const handleAddMembers = async () => {
     if (selectedUsers.size === 0) return;
 
     try {
-      for (const userId of selectedUsers) {
+      const userIds = Array.from(selectedUsers.keys());
+      for (const userId of userIds) {
         await addMember.mutateAsync({
           entityType,
           entityId,
           data: { userId, role: selectedRole },
         });
       }
-      setSelectedUsers(new Set());
+      setSelectedUsers(new Map());
       setSearchQuery('');
       setActiveTab('members');
     } catch (error) {
@@ -266,6 +303,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
     }
   };
 
+  // Handle removing a member
   const handleRemoveMember = async (userId: string, userName: string) => {
     if (!confirm(`Remove ${userName} from this ${entityType}?`)) return;
 
@@ -276,6 +314,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
     }
   };
 
+  // Handle updating a member's role
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
       await updateRole.mutateAsync({
@@ -289,27 +328,47 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
     }
   };
 
-  const toggleUserSelection = (userId: string) => {
+  // Toggle user selection for bulk add
+  const toggleUserSelection = (user: any) => {
     setSelectedUsers((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) {
-        next.delete(userId);
+      const next = new Map(prev);
+      if (next.has(user.id)) {
+        next.delete(user.id);
       } else {
-        next.add(userId);
+        next.set(user.id, user);
       }
       return next;
     });
   };
 
-  const getAccessBadge = (member: any) => {
-    if (!member.isInherited) {
+  // Remove user from selection
+  const removeFromSelection = (userId: string) => {
+    setSelectedUsers((prev) => {
+      const next = new Map(prev);
+      next.delete(userId);
+      return next;
+    });
+  };
+
+  // Get access badge configuration based on member type
+  const getAccessBadge = (member: any, category: 'direct' | 'inherited' | 'visibleOnly') => {
+    if (category === 'direct') {
       return { text: 'Direct', color: 'bg-green-500/20 text-green-400', icon: Check };
     }
 
+    if (category === 'visibleOnly') {
+      return { text: 'Workspace Member', color: 'bg-gray-500/20 text-gray-400', icon: Building2 };
+    }
+
+    // Inherited - show source
     const sourceMap: Record<string, any> = {
-      workspace: { text: 'From Workspace', color: 'bg-purple-500/20 text-purple-400' },
-      space: { text: 'From Space', color: 'bg-blue-500/20 text-blue-400' },
-      folder: { text: 'From Folder', color: 'bg-yellow-500/20 text-yellow-400' },
+      workspace: {
+        text: 'From Workspace',
+        color: 'bg-purple-500/20 text-purple-400',
+        icon: Building2,
+      },
+      space: { text: 'From Space', color: 'bg-blue-500/20 text-blue-400', icon: Layers },
+      folder: { text: 'From Folder', color: 'bg-yellow-500/20 text-yellow-400', icon: FolderTree },
     };
 
     return (
@@ -320,7 +379,21 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
     );
   };
 
+  // Get entity type label
+  const getEntityLabel = (type: EntityType) => {
+    const labels: Record<EntityType, string> = {
+      workspace: 'Workspace',
+      space: 'Space',
+      folder: 'Folder',
+      project: 'Project',
+    };
+    return labels[type] || type;
+  };
+
   if (!isOpen) return null;
+
+  const { direct, inherited, visibleOnly } = categorizedMembers;
+  const totalMembers = direct.length + inherited.length;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -330,7 +403,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
           <div>
             <h2 className="text-xl font-semibold text-white">Manage Members</h2>
             <p className="text-sm text-[#6b7280] mt-1">
-              <span className="capitalize">{entityType}</span>: {entityName}
+              {getEntityLabel(entityType)}: {entityName}
             </p>
           </div>
           <button
@@ -350,7 +423,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
           >
             <span className="flex items-center justify-center gap-2">
               <Users className="w-4 h-4" />
-              Members ({members.length})
+              Members ({totalMembers})
             </span>
             {activeTab === 'members' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7c3aed]" />
@@ -364,6 +437,11 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
             <span className="flex items-center justify-center gap-2">
               <UserPlus className="w-4 h-4" />
               Add Members
+              {selectedUsers.size > 0 && (
+                <span className="px-1.5 py-0.5 bg-[#7c3aed] text-white text-xs rounded-full">
+                  {selectedUsers.size}
+                </span>
+              )}
             </span>
             {activeTab === 'add' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7c3aed]" />
@@ -382,35 +460,48 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                   <div>
                     <h3 className="text-sm font-medium text-white mb-1">Access Overview</h3>
                     <p className="text-xs text-[#9ca3af] leading-relaxed">
-                      <span className="text-green-400 font-medium">
-                        {directMembers.length} direct
-                      </span>{' '}
-                      members have been explicitly added.
-                      <span className="text-purple-400 font-medium ml-1">
-                        {inheritedMembers.length} inherited
-                      </span>{' '}
-                      members have access through parent hierarchy.
+                      <span className="text-green-400 font-medium">{direct.length} direct</span>{' '}
+                      member{direct.length !== 1 ? 's' : ''} explicitly added to this {entityType}.
+                      {inherited.length > 0 && (
+                        <>
+                          {' '}
+                          <span className="text-blue-400 font-medium">
+                            {inherited.length} inherited
+                          </span>{' '}
+                          member{inherited.length !== 1 ? 's' : ''} from parent hierarchy.
+                        </>
+                      )}
+                      {visibleOnly.length > 0 && (
+                        <>
+                          {' '}
+                          <span className="text-gray-400 font-medium">
+                            {visibleOnly.length} workspace
+                          </span>{' '}
+                          member{visibleOnly.length !== 1 ? 's' : ''} can view but aren't{' '}
+                          {entityType} members.
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Direct Members */}
-              {directMembers.length > 0 && (
+              {direct.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-[#e5e7eb] mb-3 flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-400" />
-                    Direct Members ({directMembers.length})
+                    Direct Members ({direct.length})
                   </h3>
                   <div className="space-y-2">
-                    {directMembers.map((member: any) => (
+                    {direct.map((member: any) => (
                       <MemberRow
                         key={member.userId}
                         member={member}
                         onUpdateRole={handleUpdateRole}
                         onRemove={handleRemoveMember}
                         canEdit={true}
-                        getAccessBadge={getAccessBadge}
+                        accessBadge={getAccessBadge(member, 'direct')}
                         showAccessInfo={showAccessInfo}
                         setShowAccessInfo={setShowAccessInfo}
                       />
@@ -420,24 +511,95 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
               )}
 
               {/* Inherited Members */}
-              {inheritedMembers.length > 0 && (
+              {inherited.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-[#e5e7eb] mb-3 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-purple-400" />
-                    Inherited Members ({inheritedMembers.length})
+                    <AlertCircle className="w-4 h-4 text-blue-400" />
+                    Inherited Members ({inherited.length})
+                    <span className="text-xs text-[#6b7280] font-normal ml-1">
+                      — manage in parent entity
+                    </span>
                   </h3>
                   <div className="space-y-2">
-                    {inheritedMembers.map((member: any) => (
+                    {inherited.map((member: any) => (
                       <MemberRow
                         key={member.userId}
                         member={member}
                         onUpdateRole={handleUpdateRole}
                         onRemove={handleRemoveMember}
                         canEdit={false}
-                        getAccessBadge={getAccessBadge}
+                        accessBadge={getAccessBadge(member, 'inherited')}
                         showAccessInfo={showAccessInfo}
                         setShowAccessInfo={setShowAccessInfo}
+                        showInheritedTooltip={true}
                       />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Visible Only (Workspace members in Space view) */}
+              {visibleOnly.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-[#e5e7eb] mb-3 flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-gray-400" />
+                    Workspace Members ({visibleOnly.length})
+                    <span className="text-xs text-[#6b7280] font-normal ml-1">
+                      — can view, not {entityType} members
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#6b7280] mb-3 bg-[#1a1d21] p-2 rounded border border-[#2a2e33]">
+                    These users are workspace members who can see this {entityType} in the sidebar,
+                    but they're not members of this {entityType}. Add them as direct members to
+                    grant full access.
+                  </p>
+                  <div className="space-y-2">
+                    {visibleOnly.map((member: any) => (
+                      <div
+                        key={member.userId}
+                        className="flex items-center gap-3 p-3 bg-[#25282c]/50 rounded-lg border border-[#2a2e33] opacity-75"
+                      >
+                        {/* Avatar */}
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6b7280] to-[#4b5563] flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                          {member.user?.avatar ? (
+                            <img
+                              src={member.user.avatar}
+                              alt={member.user.name}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            member.user?.name?.[0]?.toUpperCase() || 'U'
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#9ca3af] truncate">
+                            {member.user?.name || 'Unknown'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-[#6b7280] truncate">
+                              {member.user?.email || ''}
+                            </p>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-500/20 text-gray-400 flex items-center gap-1">
+                              <Building2 className="w-2.5 h-2.5" />
+                              Workspace Only
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Quick Add Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedUsers(new Map([[member.userId, member.user]]));
+                            setActiveTab('add');
+                          }}
+                          className="px-3 py-1.5 text-xs bg-[#7c3aed]/20 hover:bg-[#7c3aed]/30 text-[#a78bfa] rounded-md transition-colors flex items-center gap-1"
+                        >
+                          <UserPlus className="w-3 h-3" />
+                          Add to {getEntityLabel(entityType)}
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -457,7 +619,9 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                 <div className="text-center py-12">
                   <Users className="w-12 h-12 text-[#6b7280] mx-auto mb-3" />
                   <p className="text-sm text-[#9ca3af] mb-1">No members yet</p>
-                  <p className="text-xs text-[#6b7280] mb-4">Start building your team</p>
+                  <p className="text-xs text-[#6b7280] mb-4">
+                    Start building your team by adding members
+                  </p>
                   <button
                     onClick={() => setActiveTab('add')}
                     className="px-4 py-2 bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm rounded-lg font-medium transition-colors"
@@ -469,6 +633,33 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Selected Users Preview */}
+              {selectedUsers.size > 0 && (
+                <div className="bg-[#25282c] rounded-lg p-4 border border-[#7c3aed]/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-[#7c3aed]" />
+                      Selected Users ({selectedUsers.size})
+                    </h4>
+                    <button
+                      onClick={() => setSelectedUsers(new Map())}
+                      className="text-xs text-[#6b7280] hover:text-red-400 transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(selectedUsers.entries()).map(([userId, user]) => (
+                      <SelectedUserChip
+                        key={userId}
+                        user={user}
+                        onRemove={() => removeFromSelection(userId)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Search */}
               <div>
                 <label className="block text-sm font-medium text-[#e5e7eb] mb-2">
@@ -494,8 +685,10 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
 
               {/* Role Selection */}
               <div>
-                <label className="block text-sm font-medium text-[#e5e7eb] mb-2">Select Role</label>
-                <div className="space-y-2">
+                <label className="block text-sm font-medium text-[#e5e7eb] mb-2">
+                  Role for new members
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {ROLE_OPTIONS.map((role) => {
                     const Icon = role.icon;
                     return (
@@ -503,20 +696,20 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                         key={role.value}
                         type="button"
                         onClick={() => setSelectedRole(role.value)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all
                           ${
                             selectedRole === role.value
                               ? 'bg-[#7c3aed]/10 border-[#7c3aed] text-white'
                               : 'bg-[#25282c] border-[#2a2e33] text-[#9ca3af] hover:bg-[#2a2e33] hover:text-white'
                           }`}
                       >
-                        <Icon className="w-5 h-5" style={{ color: role.color }} />
-                        <div className="flex-1 text-left">
+                        <Icon className="w-5 h-5 flex-shrink-0" style={{ color: role.color }} />
+                        <div className="flex-1 text-left min-w-0">
                           <p className="text-sm font-medium">{role.label}</p>
-                          <p className="text-xs text-[#6b7280]">{role.description}</p>
+                          <p className="text-xs text-[#6b7280] truncate">{role.description}</p>
                         </div>
                         {selectedRole === role.value && (
-                          <div className="w-5 h-5 rounded-full bg-[#7c3aed] flex items-center justify-center">
+                          <div className="w-5 h-5 rounded-full bg-[#7c3aed] flex items-center justify-center flex-shrink-0">
                             <Check className="w-3 h-3 text-white" />
                           </div>
                         )}
@@ -530,7 +723,7 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
               {searchQuery.length >= 2 && (
                 <div>
                   <label className="block text-sm font-medium text-[#e5e7eb] mb-2">
-                    Available Users ({selectedUsers.size} selected)
+                    Available Users
                   </label>
                   <div className="border border-[#2a2e33] rounded-lg overflow-hidden">
                     {searchLoading ? (
@@ -540,39 +733,54 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
                       </div>
                     ) : availableUsers.length > 0 ? (
                       <div className="max-h-64 overflow-y-auto">
-                        {availableUsers.map((user: any) => (
-                          <label
-                            key={user.id}
-                            className="flex items-center gap-3 p-3 hover:bg-[#25282c] cursor-pointer transition-colors border-b border-[#2a2e33] last:border-0"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedUsers.has(user.id)}
-                              onChange={() => toggleUserSelection(user.id)}
-                              className="w-4 h-4 rounded border-[#2a2e33] bg-[#25282c] text-[#7c3aed]"
-                            />
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                              {user.avatar ? (
-                                <img
-                                  src={user.avatar}
-                                  alt={user.name}
-                                  className="w-full h-full rounded-full object-cover"
-                                />
-                              ) : (
-                                user.name?.[0]?.toUpperCase() || 'U'
+                        {availableUsers.map((user: any) => {
+                          const isSelected = selectedUsers.has(user.id);
+                          return (
+                            <button
+                              key={user.id}
+                              onClick={() => toggleUserSelection(user)}
+                              className={`w-full flex items-center gap-3 p-3 transition-colors border-b border-[#2a2e33] last:border-0
+                                ${isSelected ? 'bg-[#7c3aed]/10' : 'hover:bg-[#25282c]'}`}
+                            >
+                              <div
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
+                                ${
+                                  isSelected
+                                    ? 'bg-[#7c3aed] border-[#7c3aed]'
+                                    : 'border-[#4b5563] bg-transparent'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                                {user.avatar ? (
+                                  <img
+                                    src={user.avatar}
+                                    alt={user.name}
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  user.name?.[0]?.toUpperCase() || 'U'
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0 text-left">
+                                <p className="text-sm font-medium text-white truncate">
+                                  {user.name}
+                                </p>
+                                <p className="text-xs text-[#6b7280] truncate">{user.email}</p>
+                              </div>
+                              {isSelected && (
+                                <span className="text-xs text-[#a78bfa] font-medium">Selected</span>
                               )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                              <p className="text-xs text-[#6b7280] truncate">{user.email}</p>
-                            </div>
-                          </label>
-                        ))}
+                            </button>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="p-8 text-center">
                         <Search className="w-8 h-8 text-[#6b7280] mx-auto mb-2" />
                         <p className="text-sm text-[#9ca3af]">No users found</p>
+                        <p className="text-xs text-[#6b7280] mt-1">Try a different search term</p>
                       </div>
                     )}
                   </div>
@@ -580,25 +788,36 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
               )}
 
               {/* Add Button */}
-              <button
-                type="button"
-                onClick={handleAddMembers}
-                disabled={selectedUsers.size === 0 || addMember.isPending}
-                className="w-full px-4 py-2.5 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {addMember.isPending ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Adding...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    Add {selectedUsers.size > 0 ? `${selectedUsers.size} ` : ''}Member
-                    {selectedUsers.size !== 1 ? 's' : ''}
-                  </>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleAddMembers}
+                  disabled={selectedUsers.size === 0 || addMember.isPending}
+                  className="w-full px-4 py-3 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {addMember.isPending ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Adding {selectedUsers.size} member{selectedUsers.size !== 1 ? 's' : ''}...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      Add {selectedUsers.size > 0 ? `${selectedUsers.size} ` : ''}
+                      Member{selectedUsers.size !== 1 ? 's' : ''} as{' '}
+                      {ROLE_OPTIONS.find((r) => r.value === selectedRole)?.label}
+                    </>
+                  )}
+                </button>
+                {selectedUsers.size > 0 && (
+                  <p className="text-xs text-[#6b7280] text-center mt-2">
+                    {Array.from(selectedUsers.values())
+                      .map((u) => u.name)
+                      .join(', ')}{' '}
+                    will be added as {ROLE_OPTIONS.find((r) => r.value === selectedRole)?.label}
+                  </p>
                 )}
-              </button>
+              </div>
             </div>
           )}
         </div>

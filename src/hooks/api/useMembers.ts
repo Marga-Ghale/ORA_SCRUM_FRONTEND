@@ -249,7 +249,7 @@ export const useAddMember = () => {
       data: AddMemberRequest;
     }) => memberApi.addMember(entityType, entityId, data),
     onSuccess: (_, variables) => {
-      // Existing invalidations
+      // Invalidate direct/effective members for the specific entity
       queryClient.invalidateQueries({
         queryKey: queryKeys.members.direct(variables.entityType, variables.entityId),
       });
@@ -258,24 +258,33 @@ export const useAddMember = () => {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.members.myMemberships() });
 
-      // ✅ ADD THESE: Invalidate accessible entities based on what was added
-      if (variables.entityType === 'workspace') {
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
+      // Force refetch accessible entities based on entity type
+      switch (variables.entityType) {
+        case 'workspace':
+          queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
+          queryClient.refetchQueries({ queryKey: queryKeys.members.visibleSpaces() });
+          break;
+
+        case 'space':
+          console.log('🔄 Refetching space-related queries...');
+          queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleSpaces() });
+          queryClient.refetchQueries({ queryKey: queryKeys.members.visibleSpaces() });
+          queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleFolders() });
+          queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleProjects() });
+          break;
+
+        case 'folder':
+          queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleFolders() });
+          queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleProjects() });
+          break;
+
+        case 'project':
+          queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleProjects() });
+          break;
       }
-      if (variables.entityType === 'space') {
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
-      }
-      if (variables.entityType === 'folder') {
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
-      }
-      if (variables.entityType === 'project') {
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
-      }
+    },
+    onError: (error) => {
+      console.error('❌ ADD MEMBER ERROR:', error);
     },
   });
 };
