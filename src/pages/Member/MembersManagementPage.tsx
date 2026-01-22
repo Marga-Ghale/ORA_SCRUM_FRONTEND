@@ -28,6 +28,7 @@ import { useWorkspace } from '../../hooks/api/useWorkspaces';
 import { useSpace } from '../../hooks/api/useSpaces';
 import { useFolder } from '../../hooks/api/useFolder';
 import { useProject } from '../../hooks/api/useProjects';
+import toast from 'react-hot-toast';
 
 const ROLE_OPTIONS = [
   {
@@ -443,21 +444,32 @@ export default function MembersManagementPage() {
     }
   };
 
+  // const handleRemoveMember = async (userId: string, userName: string) => {
+  //   if (!entityType || !entityId) return;
+  //   if (!confirm(`Remove ${userName} from this ${entityType}?`)) return;
+
+  //   try {
+  //     await removeMember.mutateAsync({ entityType, entityId, userId });
+  //   } catch (error: any) {
+  //     console.error('❌ Failed to remove member:', error);
+  //     alert(`Failed to remove member: ${error?.message || 'Unknown error'}`);
+  //   }
+  // };
+
   const handleRemoveMember = async (userId: string, userName: string) => {
-    if (!entityType || !entityId) return;
     if (!confirm(`Remove ${userName} from this ${entityType}?`)) return;
 
     try {
       await removeMember.mutateAsync({ entityType, entityId, userId });
+      toast.success(`${userName} removed successfully`);
     } catch (error: any) {
-      console.error('❌ Failed to remove member:', error);
-      alert(`Failed to remove member: ${error?.message || 'Unknown error'}`);
+      const message = error?.response?.data?.error || 'Failed to remove member';
+      toast.error(message);
+      console.error('Failed to remove member:', error);
     }
   };
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
-    if (!entityType || !entityId) return;
-
     try {
       await updateRole.mutateAsync({
         entityType,
@@ -465,11 +477,29 @@ export default function MembersManagementPage() {
         userId,
         data: { role: newRole },
       });
+      toast.success('Role updated successfully');
     } catch (error: any) {
-      console.error('❌ Failed to update role:', error);
-      alert(`Failed to update role: ${error?.message || 'Unknown error'}`);
+      const message = error?.response?.data?.error || 'Failed to update role';
+      toast.error(message);
+      console.error('Failed to update role:', error);
     }
   };
+
+  // const handleUpdateRole = async (userId: string, newRole: string) => {
+  //   if (!entityType || !entityId) return;
+
+  //   try {
+  //     await updateRole.mutateAsync({
+  //       entityType,
+  //       entityId,
+  //       userId,
+  //       data: { role: newRole },
+  //     });
+  //   } catch (error: any) {
+  //     console.error('❌ Failed to update role:', error);
+  //     alert(`Failed to update role: ${error?.message || 'Unknown error'}`);
+  //   }
+  // };
 
   const toggleUserSelection = (userId: string) => {
     setSelectedUsers((prev) => {
