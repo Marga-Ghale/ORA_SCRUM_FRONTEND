@@ -22,10 +22,6 @@ const GlobalModals: React.FC = () => {
     currentSpace,
   } = useProjectContext();
 
-  // ✅ Debug logging
-  console.log('🔍 GlobalModals - creationContext:', creationContext);
-  console.log('🔍 GlobalModals - currentSpace:', currentSpace?.id);
-
   return (
     <>
       <CreateSpaceModal

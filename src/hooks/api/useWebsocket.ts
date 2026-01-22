@@ -18,6 +18,8 @@ export type WebSocketEventType =
   | 'task_deleted'
   | 'task_assigned'
   | 'task_status_changed'
+  | 'task_position_changed'
+
   // Sprint events
   | 'sprint_started'
   | 'sprint_completed'
@@ -26,6 +28,7 @@ export type WebSocketEventType =
   // Member events
   | 'member_added'
   | 'member_removed'
+  | 'member_role_updated'
   // User presence
   | 'user_online'
   | 'user_offline'
@@ -209,47 +212,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     (message: WebSocketMessage) => {
       // ✅ Check if we should process this message (deduplication)
       if (!shouldProcessMessage(message)) {
-        console.log('[WebSocket] 🚫 DUPLICATE MESSAGE BLOCKED:', message.type);
         return;
       }
 
       const messageData = message.payload || message.data || {};
 
-      // ✅ LOG ALL CHAT EVENTS
-      if (message.type.startsWith('chat_')) {
-        console.group(`[WebSocket] 🔔 ${message.type}`);
-        console.log('Raw message:', message);
-        console.log('Message data:', messageData);
-        console.log('Timestamp:', new Date().toISOString());
-        console.groupEnd();
-      }
-
-      // ✅ LOG ENTITY CRUD EVENTS
-      if (
-        message.type.includes('workspace_') ||
-        message.type.includes('space_') ||
-        message.type.includes('folder_') ||
-        message.type.includes('project_')
-      ) {
-        console.group(`[WebSocket] 📦 ${message.type}`);
-        console.log('Entity data:', messageData);
-        console.log('Timestamp:', new Date().toISOString());
-        console.groupEnd();
-      }
-
-      if (
-        message.type !== 'ping' &&
-        message.type !== 'pong' &&
-        message.type !== 'user_online' &&
-        message.type !== 'user_offline'
-      ) {
-        console.log('[WebSocket] Processing:', message.type, messageData);
-      }
-
       // Track successful room joins
       if (message.type === 'ack' && messageData.action === 'joined' && messageData.room) {
         joinedRoomsRef.current.add(messageData.room as string);
-        console.log('[WebSocket] ✅ Confirmed joined room:', messageData.room);
       }
 
       if (message.type === 'notification') {
@@ -264,13 +234,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             const notificationType = messageData.type as string;
 
             if (notificationType === 'CHAT_MESSAGE') {
-              console.group('[WebSocket] 💬 CHAT MESSAGE VIA NOTIFICATION');
-
               const channelId = (messageData as any).data?.channelId;
 
               if (channelId) {
-                console.log('📍 Invalidating messages for channel:', channelId);
-
                 queryClient.invalidateQueries({
                   queryKey: queryKeys.chat.messages(channelId, 50, 0),
                   refetchType: 'active',
@@ -280,8 +246,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
                   queryKey: queryKeys.chat.channels(),
                   refetchType: 'active',
                 });
-
-                console.log('✅ Chat queries invalidated');
               }
 
               console.groupEnd();
@@ -306,8 +270,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         case 'workspace_created':
         case 'workspace_updated':
         case 'workspace_deleted':
-          console.log('[WebSocket] 🏢 Workspace change:', message.type, messageData);
-
           // Invalidate all workspace-related queries
           queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
           queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() });
@@ -327,8 +289,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         case 'space_created':
         case 'space_updated':
         case 'space_deleted':
-          console.log('[WebSocket] 📁 Space change:', message.type, messageData);
-
           // Invalidate all space-related queries
           queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
           queryClient.invalidateQueries({ queryKey: queryKeys.spaces.list() });
@@ -355,8 +315,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         case 'folder_created':
         case 'folder_updated':
         case 'folder_deleted':
-          console.log('[WebSocket] 📂 Folder change:', message.type, messageData);
-
           // Invalidate all folder-related queries
           queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
           queryClient.invalidateQueries({ queryKey: queryKeys.folders.list() });
@@ -432,6 +390,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             queryClient.invalidateQueries({
               queryKey: ['tasks', 'project', messageData.projectId],
             });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.notifications.all,
+              refetchType: 'active', // ✅ Forces immediate refetch
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.tasks.detail(messageData.projectId as string),
+            });
           }
           if (messageData.sprintId) {
             queryClient.invalidateQueries({
@@ -439,6 +404,24 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             });
           }
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+          break;
+
+        case 'task_position_changed':
+          if (messageData.projectId) {
+            const projectId = messageData.projectId as string;
+
+            console.log('[WebSocket] 🔄 Task position changed:', messageData);
+
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.tasks.byProject(projectId),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.tasks.myTasks(),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.tasks.all,
+            });
+          }
           break;
 
         case 'sprint_started':
@@ -461,13 +444,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           break;
 
         // ============================================
-        // ✅ MEMBER EVENTS - Also refresh entity lists
+        // ✅ MEMBER EVENTS - Real-time membership changes
         // ============================================
         case 'member_added':
         case 'member_removed':
-          console.log('[WebSocket] 👥 Member change:', message.type, messageData);
+        case 'member_role_updated':
+          console.log('[WebSocket] 👥 Member event:', message.type, messageData);
 
-          // Invalidate member queries
+          // ✅ Invalidate member queries for the specific entity
           if (messageData.entityType && messageData.entityId) {
             queryClient.invalidateQueries({
               queryKey: queryKeys.members.effective(
@@ -483,12 +467,46 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             });
           }
 
-          // ✅ Also invalidate accessible entities since membership changed
+          // ✅ Invalidate accessible entities (user's access may have changed)
           queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
           queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
           queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
           queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
           queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
+
+          // ✅ If it's a workspace member change, refresh workspace list
+          if (messageData.entityType === 'workspace') {
+            queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() });
+          }
+
+          // ✅ If it's a space member change, refresh space lists
+          if (messageData.entityType === 'space' && messageData.workspaceId) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.spaces.byWorkspace(messageData.workspaceId as string),
+            });
+          }
+
+          // ✅ If it's a folder member change, refresh folder lists
+          if (messageData.entityType === 'folder' && messageData.spaceId) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.folders.bySpace(messageData.spaceId as string),
+            });
+          }
+
+          // ✅ If it's a project member change, refresh project lists
+          if (messageData.entityType === 'project') {
+            if (messageData.spaceId) {
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.projects.bySpace(messageData.spaceId as string),
+              });
+            }
+            if (messageData.folderId) {
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.projects.byFolder(messageData.folderId as string),
+              });
+            }
+          }
           break;
 
         case 'user_online':
