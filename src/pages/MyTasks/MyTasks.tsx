@@ -1,4 +1,4 @@
-// MyTasks.tsx - Professional & Polished Version
+// MyTasks.tsx - Fixed Version
 import React, { useState, useMemo } from 'react';
 import {
   Plus,
@@ -64,7 +64,6 @@ const StatCard: React.FC<StatCardProps> = ({
       bg-white dark:bg-gray-800/80 backdrop-blur-sm
     `}
   >
-    {/* Background decoration */}
     <div
       className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 blur-xl"
       style={{ backgroundColor: color }}
@@ -113,7 +112,7 @@ const MyTasks: React.FC = () => {
   // View & filter state
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [groupBy, setGroupBy] = useState<GroupByOption>('status');
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -126,7 +125,6 @@ const MyTasks: React.FC = () => {
   const filteredTasks = useMemo(() => {
     let tasks = showCompleted ? myTasks : myTasks.filter((t) => t.status !== 'done');
 
-    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       tasks = tasks.filter(
@@ -134,7 +132,6 @@ const MyTasks: React.FC = () => {
       );
     }
 
-    // Priority filter
     if (priorityFilter) {
       tasks = tasks.filter((t) => t.priority === priorityFilter);
     }
@@ -192,7 +189,6 @@ const MyTasks: React.FC = () => {
         .filter((g) => g.tasks.length > 0);
     }
 
-    // Group by due date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -272,7 +268,7 @@ const MyTasks: React.FC = () => {
   const clearAllFilters = () => {
     setSearchQuery('');
     setPriorityFilter(null);
-    setShowCompleted(false);
+    setShowCompleted(true);
   };
 
   if (isLoading) {
@@ -366,7 +362,6 @@ const MyTasks: React.FC = () => {
 
         {/* Toolbar */}
         <div className="flex flex-col gap-4 mb-6">
-          {/* Main toolbar row */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             {/* Search */}
             <div className="relative flex-1 max-w-md">
@@ -646,10 +641,7 @@ const MyTasks: React.FC = () => {
                     className="animate-in fade-in slide-in-from-bottom-2 duration-300"
                     style={{ animationDelay: `${groupIndex * 100 + taskIndex * 50}ms` }}
                   >
-                    <TaskCard
-                      task={task as any}
-                      variant={viewMode === 'list' ? 'compact' : 'default'}
-                    />
+                    <TaskCard task={task} />
                   </div>
                 ))}
               </div>

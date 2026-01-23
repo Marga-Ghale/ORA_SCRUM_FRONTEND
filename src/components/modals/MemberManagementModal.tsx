@@ -19,6 +19,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { EntityType } from '../../hooks/api/useMembers';
+import { MemberActionModal, useMemberActionModal } from './MemberActionModal';
 
 const ROLE_OPTIONS = [
   {
@@ -234,6 +235,9 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
   const [selectedUsers, setSelectedUsers] = useState<Map<string, any>>(new Map());
   const [showAccessInfo, setShowAccessInfo] = useState<string | null>(null);
 
+  // ✅ ADD THIS - Modal management
+  const { modalState, openModal, closeModal } = useMemberActionModal();
+
   // Fetch effective members
   const { data: members = [], isLoading: membersLoading } = useEffectiveMembers(
     entityType,
@@ -283,49 +287,58 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
   }, [searchResults, existingMemberIds]);
 
   // Handle adding multiple members
-  const handleAddMembers = async () => {
+  const handleAddMembers = () => {
     if (selectedUsers.size === 0) return;
 
-    try {
-      const userIds = Array.from(selectedUsers.keys());
-      for (const userId of userIds) {
-        await addMember.mutateAsync({
-          entityType,
-          entityId,
-          data: { userId, role: selectedRole },
-        });
-      }
-      setSelectedUsers(new Map());
-      setSearchQuery('');
-      setActiveTab('members');
-    } catch (error) {
-      console.error('Failed to add members:', error);
-    }
+    openModal('add', {
+      memberCount: selectedUsers.size,
+      newRole: selectedRole,
+      onConfirm: async () => {
+        const userIds = Array.from(selectedUsers.keys());
+        for (const userId of userIds) {
+          await addMember.mutateAsync({
+            entityType,
+            entityId,
+            data: { userId, role: selectedRole },
+          });
+        }
+        setSelectedUsers(new Map());
+        setSearchQuery('');
+        setActiveTab('members');
+      },
+    });
   };
 
   // Handle removing a member
-  const handleRemoveMember = async (userId: string, userName: string) => {
-    if (!confirm(`Remove ${userName} from this ${entityType}?`)) return;
-
-    try {
-      await removeMember.mutateAsync({ entityType, entityId, userId });
-    } catch (error) {
-      console.error('Failed to remove member:', error);
-    }
+  const handleRemoveMember = (userId: string, userName: string) => {
+    openModal('remove', {
+      memberName: userName,
+      onConfirm: async () => {
+        await removeMember.mutateAsync({ entityType, entityId, userId });
+      },
+    });
   };
 
   // Handle updating a member's role
-  const handleUpdateRole = async (userId: string, newRole: string) => {
-    try {
-      await updateRole.mutateAsync({
-        entityType,
-        entityId,
-        userId,
-        data: { role: newRole },
-      });
-    } catch (error) {
-      console.error('Failed to update role:', error);
-    }
+  const handleUpdateRole = (
+    userId: string,
+    newRole: string,
+    userName: string,
+    currentRole: string
+  ) => {
+    openModal('updateRole', {
+      memberName: userName,
+      currentRole: currentRole,
+      newRole: newRole,
+      onConfirm: async () => {
+        await updateRole.mutateAsync({
+          entityType,
+          entityId,
+          userId,
+          data: { role: newRole },
+        });
+      },
+    });
   };
 
   // Toggle user selection for bulk add
@@ -821,6 +834,17 @@ const MemberManagementModal: React.FC<MemberManagementModalProps> = ({
             </div>
           )}
         </div>
+        <MemberActionModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          actionType={modalState.actionType}
+          entityType={entityType}
+          memberName={modalState.memberName}
+          currentRole={modalState.currentRole}
+          newRole={modalState.newRole}
+          memberCount={modalState.memberCount}
+          onConfirm={modalState.onConfirm || (async () => {})}
+        />
       </div>
     </div>
   );

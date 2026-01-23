@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// src/components/TaskDetailModal/TaskDetailModal.tsx
+// src/components/tasks/TaskDetailModal.tsx - FIXED VERSION
 import React, { useState, useRef, useEffect } from 'react';
 import { TaskStatus, Priority, TaskType, TASK_TYPE_CONFIG } from '../../types/project';
 import {
@@ -36,7 +36,10 @@ import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/api';
 
 const TaskDetailModal: React.FC = () => {
-  const { selectedTask, isTaskModalOpen, closeTaskModal, currentProject } = useProjectContext();
+  const { selectedTask, isTaskModalOpen, closeTaskModal } = useProjectContext();
+
+  // Use task's projectId instead of currentProject
+  const projectId = selectedTask?.projectId || '';
 
   const { data: commentsData, refetch: refetchComments } = useTaskComments(selectedTask?.id || '', {
     enabled: !!selectedTask?.id,
@@ -46,8 +49,9 @@ const TaskDetailModal: React.FC = () => {
     enabled: !!selectedTask?.id,
   });
 
-  const { data: membersData } = useEffectiveMembers('project', currentProject?.id || '', {
-    enabled: !!currentProject?.id,
+  // Use task's projectId for fetching members
+  const { data: membersData } = useEffectiveMembers('project', projectId, {
+    enabled: !!projectId,
   });
 
   const updateTaskMutation = useUpdateTask();
@@ -68,7 +72,7 @@ const TaskDetailModal: React.FC = () => {
   });
 
   const [hasChanges, setHasChanges] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'activity' | 'comments'>('details');
+  const [activeTab, setActiveTab] = useState<'comments' | 'activity'>('comments');
   const [newComment, setNewComment] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -107,7 +111,6 @@ const TaskDetailModal: React.FC = () => {
     }
   }, [selectedTask]);
 
-  // Update the ESC key handler
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -152,7 +155,8 @@ const TaskDetailModal: React.FC = () => {
     };
   }, [showCalendar]);
 
-  if (!isTaskModalOpen || !selectedTask || !currentProject) return null;
+  // FIXED: Remove currentProject check - use task's projectId instead
+  if (!isTaskModalOpen || !selectedTask) return null;
 
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -187,7 +191,6 @@ const TaskDetailModal: React.FC = () => {
     }
   };
 
-  // Update handleDelete
   const handleDelete = async () => {
     if (!selectedTask) return;
     setShowDeleteTaskModal(true);
@@ -212,7 +215,6 @@ const TaskDetailModal: React.FC = () => {
     }
   };
 
-  // Update handleDeleteComment
   const handleDeleteComment = async (commentId: string) => {
     if (!selectedTask) return;
     setCommentToDelete(commentId);
@@ -233,6 +235,7 @@ const TaskDetailModal: React.FC = () => {
       toast.error(getErrorMessage(error));
     }
   };
+
   const handleAddComment = async () => {
     if (!newComment.trim() || !selectedTask) return;
 
@@ -332,7 +335,7 @@ const TaskDetailModal: React.FC = () => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
         onClick={() => {
           if (hasChanges) {
             setShowConfirmModal(true);
@@ -342,53 +345,48 @@ const TaskDetailModal: React.FC = () => {
         }}
       />
 
-      {/* Modal - Full screen on mobile, centered on desktop */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 animate-in zoom-in-95 duration-200">
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
         <div
           ref={modalRef}
-          className="bg-white dark:bg-gray-900 rounded-none sm:rounded-3xl shadow-2xl w-full h-full sm:max-w-6xl sm:max-h-[92vh] overflow-hidden flex flex-col border-0 sm:border border-gray-200/50 dark:border-gray-700/50"
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header - Compact on mobile */}
-          <div className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/30">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <div
-                className="flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-xl shadow-sm ring-1 ring-black/5 dark:ring-white/10 flex-shrink-0"
-                style={{
-                  backgroundColor: `${typeConfig.color}12`,
-                }}
+                className="flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0"
+                style={{ backgroundColor: `${typeConfig.color}15` }}
               >
-                <span className="text-xl sm:text-2xl" style={{ color: typeConfig.color }}>
+                <span className="text-lg" style={{ color: typeConfig.color }}>
                   {typeConfig.icon}
                 </span>
               </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-3 min-w-0">
-                <span className="text-xs sm:text-sm font-mono font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg">
-                  {selectedTask.id.slice(0, 8).toUpperCase()}
+              <span className="text-xs font-mono font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                {selectedTask.id.slice(0, 8).toUpperCase()}
+              </span>
+              {hasChanges && (
+                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-medium rounded-full border border-amber-200 dark:border-amber-800">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Unsaved
                 </span>
-                {hasChanges && (
-                  <span className="flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200 dark:border-amber-900/50">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                    Unsaved
-                  </span>
-                )}
-              </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1">
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="p-2 sm:p-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50 group"
+                className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50"
                 title="Delete task"
               >
                 {isDeleting ? (
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+                  <Trash2 className="w-4 h-4" />
                 )}
               </button>
-
               <button
                 onClick={() => {
                   if (hasChanges) {
@@ -397,28 +395,28 @@ const TaskDetailModal: React.FC = () => {
                     closeTaskModal();
                   }
                 }}
-                className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all group"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Content - Stacks vertically on mobile */}
+          {/* Content */}
           <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
               {/* Title */}
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => updateField('title', e.target.value)}
-                className="w-full text-xl sm:text-3xl font-bold text-gray-900 dark:text-white bg-transparent border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:border-brand-500 dark:focus:border-brand-500 outline-none rounded-xl px-3 sm:px-4 py-2 sm:py-3 -mx-3 sm:-mx-4 mb-4 sm:mb-5 transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className="w-full text-xl font-semibold text-gray-900 dark:text-white bg-transparent border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:border-brand-500 dark:focus:border-brand-500 outline-none rounded-lg px-3 py-2 -mx-3 mb-4 transition-colors placeholder:text-gray-300 dark:placeholder:text-gray-600"
                 placeholder="Task title"
               />
 
-              {/* Professional Metadata Pills - Horizontal scroll on mobile */}
-              <div className="flex flex-wrap gap-2 mb-6 sm:mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 hide-scrollbar">
+              {/* Status Pills */}
+              <div className="flex flex-wrap gap-2 mb-5">
                 <StatusDropdown
                   value={formData.status}
                   onChange={(value) => updateField('status', value)}
@@ -434,58 +432,46 @@ const TaskDetailModal: React.FC = () => {
               </div>
 
               {/* Description */}
-              <div className="mb-6 sm:mb-8">
-                <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                  <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-500" />
-                  <h3 className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    Description
-                  </h3>
-                </div>
+              <div className="mb-5">
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Description
+                </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => updateField('description', e.target.value)}
-                  placeholder="Add a detailed description of this task..."
-                  className="w-full min-h-[120px] sm:min-h-[160px] p-4 sm:p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-relaxed text-sm sm:text-base"
+                  placeholder="Add a description..."
+                  className="w-full min-h-[100px] p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
               </div>
 
-              {/* Mobile-only Task Details Section */}
-              <div className="lg:hidden mb-6 space-y-6 p-4 bg-gray-50 dark:bg-gray-800/30 rounded-xl border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 pb-3 border-b border-gray-200 dark:border-gray-800">
-                  <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Task Details
-                  </h3>
-                </div>
-
+              {/* Mobile Details */}
+              <div className="lg:hidden mb-5 p-4 bg-gray-50 dark:bg-gray-800/30 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
                 {/* Assignees */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <label className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    <User className="w-3.5 h-3.5" />
                     Assignees
                   </label>
-                  <div className="space-y-2 mt-3">
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
                     {users.length === 0 ? (
-                      <div className="text-center py-6 bg-white dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                        <User className="w-6 h-6 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
-                          No members available
-                        </p>
-                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 py-2">
+                        No members available
+                      </p>
                     ) : (
                       users.map((user) => (
                         <label
                           key={user.id}
-                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-all border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 group"
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors"
                         >
                           <input
                             type="checkbox"
                             checked={formData.assigneeIds.includes(user.id)}
                             onChange={() => toggleAssignee(user.id)}
-                            className="w-4 h-4 rounded-md border-2 border-gray-300 dark:border-gray-600 text-brand-500 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all"
+                            className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-brand-500 focus:ring-brand-500"
                           />
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow ring-2 ring-white dark:ring-gray-900">
-                            <span className="text-xs font-bold text-white">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-[10px] font-bold text-white">
                               {user.name
                                 .split(' ')
                                 .map((n) => n[0])
@@ -493,14 +479,9 @@ const TaskDetailModal: React.FC = () => {
                                 .toUpperCase()}
                             </span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
-                              {user.name}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">
-                              {user.email}
-                            </span>
-                          </div>
+                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {user.name}
+                          </span>
                         </label>
                       ))
                     )}
@@ -509,70 +490,31 @@ const TaskDetailModal: React.FC = () => {
 
                 {/* Due Date */}
                 <div ref={calendarRef} className="relative">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <label className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    <Calendar className="w-3.5 h-3.5" />
                     Due Date
                   </label>
                   <button
                     onClick={() => setShowCalendar(!showCalendar)}
-                    className={`w-full mt-3 px-4 py-3 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${
-                      formData.dueDate
-                        ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                        : 'bg-gray-50 dark:bg-gray-800/50 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-400 dark:hover:border-brand-600 hover:bg-white dark:hover:bg-gray-800'
-                    }`}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-left text-sm flex items-center justify-between hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                          formData.dueDate
-                            ? 'bg-brand-50 dark:bg-brand-950/30'
-                            : 'bg-gray-100 dark:bg-gray-700'
-                        }`}
-                      >
-                        <Calendar
-                          className={`w-4 h-4 ${
-                            formData.dueDate
-                              ? 'text-brand-600 dark:text-brand-400'
-                              : 'text-gray-400 dark:text-gray-500'
-                          }`}
-                        />
-                      </div>
-                      <div>
-                        {formData.dueDate && dueDateInfo ? (
-                          <>
-                            <div
-                              className={`text-xs sm:text-sm font-semibold ${dueDateInfo.color}`}
-                            >
-                              {dueDateInfo.text}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {new Date(formData.dueDate).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Set due date
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    {formData.dueDate && dueDateInfo ? (
+                      <span className={dueDateInfo.color}>{dueDateInfo.text}</span>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500">Set due date</span>
+                    )}
                     {formData.dueDate && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           updateField('dueDate', '');
                         }}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all opacity-0 group-hover:opacity-100"
+                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-3 h-3 text-gray-400" />
                       </button>
                     )}
                   </button>
-
                   {showCalendar && (
                     <CustomCalendar
                       selectedDate={formData.dueDate}
@@ -584,8 +526,8 @@ const TaskDetailModal: React.FC = () => {
 
                 {/* Story Points */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <label className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    <Target className="w-3.5 h-3.5" />
                     Story Points
                   </label>
                   <input
@@ -594,73 +536,49 @@ const TaskDetailModal: React.FC = () => {
                     onChange={(e) =>
                       updateField('storyPoints', parseInt(e.target.value) || undefined)
                     }
-                    className="w-full mt-3 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                    placeholder="Enter points"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    placeholder="0"
                     min="0"
                   />
                 </div>
-
-                {/* Metadata */}
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5" />
-                      Created
-                    </span>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">
-                      {formatRelativeTime(selectedTask.createdAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5" />
-                      Updated
-                    </span>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">
-                      {formatRelativeTime(selectedTask.updatedAt)}
-                    </span>
-                  </div>
-                </div>
               </div>
 
-              {/* Tabs - Horizontal scroll on mobile */}
-              <div className="border-t-2 border-gray-100 dark:border-gray-800 pt-6 sm:pt-8">
-                <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800/50 p-1.5 rounded-xl overflow-x-auto hide-scrollbar">
-                  {(
-                    [
-                      {
-                        id: 'comments',
-                        label: 'Comments',
-                        icon: MessageSquare,
-                        count: comments.length,
-                      },
-                      {
-                        id: 'activity',
-                        label: 'Activity',
-                        icon: Activity,
-                        count: activities.length,
-                      },
-                    ] as const
-                  ).map((tab) => {
+              {/* Tabs */}
+              <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+                <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                  {[
+                    {
+                      id: 'comments' as const,
+                      label: 'Comments',
+                      icon: MessageSquare,
+                      count: comments.length,
+                    },
+                    {
+                      id: 'activity' as const,
+                      label: 'Activity',
+                      icon: Activity,
+                      count: activities.length,
+                    },
+                  ].map((tab) => {
                     const Icon = tab.icon;
                     return (
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 sm:gap-2.5 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                           activeTab === tab.id
-                            ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                       >
-                        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span className="hidden sm:inline">{tab.label}</span>
+                        <Icon className="w-3.5 h-3.5" />
+                        {tab.label}
                         {tab.count > 0 && (
                           <span
-                            className={`px-1.5 sm:px-2 py-0.5 text-xs font-bold rounded-full ${
+                            className={`px-1.5 py-0.5 text-[10px] font-bold rounded-full ${
                               activeTab === tab.id
-                                ? 'bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300'
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                                ? 'bg-brand-100 dark:bg-brand-900 text-brand-600 dark:text-brand-400'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                             }`}
                           >
                             {tab.count}
@@ -671,12 +589,13 @@ const TaskDetailModal: React.FC = () => {
                   })}
                 </div>
 
-                <div className="mt-4 sm:mt-6 pb-20 lg:pb-0">
+                <div className="pb-16 lg:pb-0">
                   {activeTab === 'comments' && (
                     <div>
-                      <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white dark:ring-gray-900">
-                          <span className="text-xs sm:text-sm font-bold text-white">
+                      {/* Add Comment */}
+                      <div className="flex gap-3 mb-4">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-bold text-white">
                             {users[0]?.name?.charAt(0) || 'U'}
                           </span>
                         </div>
@@ -690,63 +609,59 @@ const TaskDetailModal: React.FC = () => {
                               }
                             }}
                             placeholder="Write a comment... (⌘+Enter to send)"
-                            className="w-full p-3 sm:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                            rows={3}
+                            className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent placeholder:text-gray-400"
+                            rows={2}
                           />
                           {newComment.trim() && (
                             <button
                               onClick={handleAddComment}
                               disabled={addCommentMutation.isPending}
-                              className="mt-2 sm:mt-3 flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl text-sm font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 transition-all shadow-sm hover:shadow-md w-full sm:w-auto justify-center"
+                              className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
                             >
-                              <Send className="w-4 h-4" />
-                              {addCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
+                              <Send className="w-3.5 h-3.5" />
+                              {addCommentMutation.isPending ? 'Posting...' : 'Post'}
                             </button>
                           )}
                         </div>
                       </div>
 
+                      {/* Comments List */}
                       {comments.length === 0 ? (
-                        <div className="text-center py-12 sm:py-16">
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
-                            <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500" />
-                          </div>
-                          <p className="text-gray-900 dark:text-gray-100 font-semibold text-base sm:text-lg mb-1">
+                        <div className="text-center py-8">
+                          <MessageSquare className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             No comments yet
-                          </p>
-                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                            Start the conversation and share your thoughts
                           </p>
                         </div>
                       ) : (
-                        <div className="space-y-3 sm:space-y-4">
+                        <div className="space-y-3">
                           {comments.map((comment) => {
                             const user = users.find((u) => u.id === comment.userId);
                             return (
-                              <div key={comment.id} className="flex gap-2 sm:gap-3 group">
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-white dark:ring-gray-900">
-                                  <span className="text-xs sm:text-sm font-bold text-white">
+                              <div key={comment.id} className="flex gap-2.5 group">
+                                <div className="w-7 h-7 rounded-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-[10px] font-bold text-white">
                                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                                   </span>
                                 </div>
-                                <div className="flex-1 bg-gray-50 dark:bg-gray-800/70 rounded-2xl p-3 sm:p-4 border border-gray-200/50 dark:border-gray-700/50 group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all">
-                                  <div className="flex items-center justify-between mb-1 sm:mb-2">
+                                <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                                  <div className="flex items-center justify-between mb-1">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
-                                        {user?.name || 'Unknown User'}
+                                      <span className="text-xs font-medium text-gray-900 dark:text-white">
+                                        {user?.name || 'Unknown'}
                                       </span>
-                                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                                      <span className="text-[10px] text-gray-400">
                                         {formatRelativeTime(comment.createdAt)}
                                       </span>
                                     </div>
                                     <button
                                       onClick={() => handleDeleteComment(comment.id)}
-                                      className="opacity-0 group-hover:opacity-100 text-xs text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium transition-all"
+                                      className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-red-500 transition-all"
                                     >
                                       Delete
                                     </button>
                                   </div>
-                                  <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                  <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                                     {comment.content}
                                   </p>
                                 </div>
@@ -759,17 +674,12 @@ const TaskDetailModal: React.FC = () => {
                   )}
 
                   {activeTab === 'activity' && (
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       {activities.length === 0 ? (
-                        <div className="text-center py-12 sm:py-16">
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
-                            <Activity className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500" />
-                          </div>
-                          <p className="text-gray-900 dark:text-gray-100 font-semibold text-base sm:text-lg mb-1">
+                        <div className="text-center py-8">
+                          <Activity className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             No activity yet
-                          </p>
-                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                            Activity will appear here as changes are made
                           </p>
                         </div>
                       ) : (
@@ -778,26 +688,26 @@ const TaskDetailModal: React.FC = () => {
                           return (
                             <div
                               key={activity.id}
-                              className="flex items-start gap-2 sm:gap-3 py-2 sm:py-3 px-3 sm:px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
+                              className="flex items-start gap-2.5 py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                             >
-                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm ring-2 ring-white dark:ring-gray-900">
-                                <span className="text-xs font-bold text-white">
+                              <div className="w-6 h-6 rounded-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+                                <span className="text-[9px] font-bold text-white">
                                   {user?.name?.charAt(0)?.toUpperCase() || 'S'}
                                 </span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="text-xs sm:text-sm">
-                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                <p className="text-xs">
+                                  <span className="font-medium text-gray-900 dark:text-white">
                                     {user?.name || 'System'}
                                   </span>{' '}
-                                  <span className="text-gray-600 dark:text-gray-400">
+                                  <span className="text-gray-500 dark:text-gray-400">
                                     {formatActivityAction(activity)}
                                   </span>
-                                </div>
-                                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
+                                </p>
+                                <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5" />
                                   {formatRelativeTime(activity.createdAt)}
-                                </div>
+                                </p>
                               </div>
                             </div>
                           );
@@ -809,44 +719,39 @@ const TaskDetailModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Sidebar - Hidden on mobile, shown on desktop */}
-            <div className="hidden lg:block w-96 border-l border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 overflow-y-auto custom-scrollbar">
-              <div className="p-6 space-y-6">
-                <div className="flex items-center gap-2 pb-4 border-b border-gray-200 dark:border-gray-800">
-                  <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Task Details
-                  </h3>
-                </div>
+            {/* Right Sidebar - Desktop Only */}
+            <div className="hidden lg:block w-72 border-l border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 overflow-y-auto custom-scrollbar">
+              <div className="p-4 space-y-5">
+                <h3 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  Details
+                </h3>
 
                 {/* Assignees */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <label className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    <User className="w-3.5 h-3.5" />
                     Assignees
                   </label>
-                  <div className="space-y-2 mt-3">
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {users.length === 0 ? (
-                      <div className="text-center py-8 bg-white dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                        <User className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                        <p className="text-sm text-gray-400 dark:text-gray-500">
-                          No members available
-                        </p>
+                      <div className="text-center py-4 bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+                        <User className="w-5 h-5 text-gray-300 dark:text-gray-600 mx-auto mb-1" />
+                        <p className="text-[10px] text-gray-400">No members</p>
                       </div>
                     ) : (
                       users.map((user) => (
                         <label
                           key={user.id}
-                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-all border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700 group"
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors"
                         >
                           <input
                             type="checkbox"
                             checked={formData.assigneeIds.includes(user.id)}
                             onChange={() => toggleAssignee(user.id)}
-                            className="w-4 h-4 rounded-md border-2 border-gray-300 dark:border-gray-600 text-brand-500 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all"
+                            className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-brand-500 focus:ring-brand-500"
                           />
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow ring-2 ring-white dark:ring-gray-900">
-                            <span className="text-xs font-bold text-white">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-[9px] font-bold text-white">
                               {user.name
                                 .split(' ')
                                 .map((n) => n[0])
@@ -855,11 +760,8 @@ const TaskDetailModal: React.FC = () => {
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+                            <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block truncate">
                               {user.name}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">
-                              {user.email}
                             </span>
                           </div>
                         </label>
@@ -868,57 +770,46 @@ const TaskDetailModal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Due Date with Custom Calendar */}
+                {/* Due Date */}
                 <div ref={calendarRef} className="relative">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <label className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    <Calendar className="w-3.5 h-3.5" />
                     Due Date
                   </label>
                   <button
                     onClick={() => setShowCalendar(!showCalendar)}
-                    className={`w-full mt-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${
-                      formData.dueDate
-                        ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                        : 'bg-gray-50 dark:bg-gray-800/50 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-400 dark:hover:border-brand-600 hover:bg-white dark:hover:bg-gray-800'
-                    }`}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-left text-sm flex items-center justify-between group hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div
-                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        className={`w-7 h-7 rounded-md flex items-center justify-center ${
                           formData.dueDate
-                            ? 'bg-brand-50 dark:bg-brand-950/30'
+                            ? 'bg-brand-50 dark:bg-brand-900/30'
                             : 'bg-gray-100 dark:bg-gray-700'
                         }`}
                       >
                         <Calendar
-                          className={`w-5 h-5 ${
-                            formData.dueDate
-                              ? 'text-brand-600 dark:text-brand-400'
-                              : 'text-gray-400 dark:text-gray-500'
+                          className={`w-3.5 h-3.5 ${
+                            formData.dueDate ? 'text-brand-500' : 'text-gray-400'
                           }`}
                         />
                       </div>
-                      <div>
-                        {formData.dueDate && dueDateInfo ? (
-                          <>
-                            <div className={`text-sm font-semibold ${dueDateInfo.color}`}>
-                              {dueDateInfo.text}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {new Date(formData.dueDate).toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                month: 'long',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Set due date
-                          </div>
-                        )}
-                      </div>
+                      {formData.dueDate && dueDateInfo ? (
+                        <div>
+                          <p className={`text-xs font-medium ${dueDateInfo.color}`}>
+                            {dueDateInfo.text}
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            {new Date(formData.dueDate).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">Set date</span>
+                      )}
                     </div>
                     {formData.dueDate && (
                       <button
@@ -926,13 +817,12 @@ const TaskDetailModal: React.FC = () => {
                           e.stopPropagation();
                           updateField('dueDate', '');
                         }}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all opacity-0 group-hover:opacity-100"
+                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded opacity-0 group-hover:opacity-100 transition-all"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-3 h-3 text-gray-400" />
                       </button>
                     )}
                   </button>
-
                   {showCalendar && (
                     <CustomCalendar
                       selectedDate={formData.dueDate}
@@ -944,8 +834,8 @@ const TaskDetailModal: React.FC = () => {
 
                 {/* Story Points */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <label className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    <Target className="w-3.5 h-3.5" />
                     Story Points
                   </label>
                   <input
@@ -954,29 +844,29 @@ const TaskDetailModal: React.FC = () => {
                     onChange={(e) =>
                       updateField('storyPoints', parseInt(e.target.value) || undefined)
                     }
-                    className="w-full mt-3 px-4 py-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                    placeholder="Enter points"
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    placeholder="0"
                     min="0"
                   />
                 </div>
 
                 {/* Metadata */}
-                <div className="pt-6 border-t border-gray-200 dark:border-gray-800 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5" />
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-gray-400 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
                       Created
                     </span>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                    <span className="font-medium text-gray-600 dark:text-gray-400">
                       {formatRelativeTime(selectedTask.createdAt)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5" />
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-gray-400 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
                       Updated
                     </span>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                    <span className="font-medium text-gray-600 dark:text-gray-400">
                       {formatRelativeTime(selectedTask.updatedAt)}
                     </span>
                   </div>
@@ -985,43 +875,45 @@ const TaskDetailModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Footer - Fixed at bottom on mobile */}
-          <div className="border-t border-gray-200 dark:border-gray-800 px-4 sm:px-8 py-3 sm:py-5 bg-gradient-to-b from-transparent to-gray-50/50 dark:to-gray-800/30 flex flex-col-reverse sm:flex-row items-center justify-between gap-2 sm:gap-0">
-            <div className="text-xs sm:text-sm font-medium w-full sm:w-auto text-center sm:text-left">
+          {/* Footer */}
+          <div className="border-t border-gray-200 dark:border-gray-800 px-5 py-3 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between">
+            <div className="text-xs">
               {hasChanges && (
-                <span className="flex items-center justify-center sm:justify-start gap-2 text-amber-600 dark:text-amber-400">
-                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   Unsaved changes
                 </span>
               )}
             </div>
-            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="flex gap-2">
               <button
                 onClick={handleCancel}
                 disabled={!hasChanges || isSaving}
-                className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-sm"
+                className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-gray-200 dark:border-gray-700"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={!hasChanges || isSaving || !formData.title.trim()}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl disabled:shadow-none text-sm"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isSaving ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
-                    Save Changes
+                    <Save className="w-3.5 h-3.5" />
+                    Save
                   </>
                 )}
               </button>
             </div>
           </div>
+
+          {/* Confirm Modals */}
           <ConfirmModal
             isOpen={showConfirmModal}
             onConfirm={() => {
@@ -1059,17 +951,6 @@ const TaskDetailModal: React.FC = () => {
           />
         </div>
       </div>
-
-      {/* Add custom styles for hiding scrollbar */}
-      <style jsx>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </>
   );
 };

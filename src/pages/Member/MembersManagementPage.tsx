@@ -29,6 +29,7 @@ import { useSpace } from '../../hooks/api/useSpaces';
 import { useFolder } from '../../hooks/api/useFolder';
 import { useProject } from '../../hooks/api/useProjects';
 import toast from 'react-hot-toast';
+import { MemberActionModal, useMemberActionModal } from '../../components/modals/MemberActionModal';
 
 const ROLE_OPTIONS = [
   {
@@ -343,6 +344,8 @@ export default function MembersManagementPage() {
   const [showAccessInfo, setShowAccessInfo] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'direct' | 'inherited'>('all');
 
+  const { modalState, openModal, closeModal } = useMemberActionModal();
+
   // ✅ DEBUG: Log params
   useEffect(() => {
     console.log('🔍 MembersManagementPage - Params:', { entityType, entityId });
@@ -423,83 +426,57 @@ export default function MembersManagementPage() {
   const memberUserIds = new Set(members.map((m: any) => m.userId));
   const availableUsers = searchResults.filter((user: any) => !memberUserIds.has(user.id));
 
-  const handleAddMembers = async () => {
+  const handleAddMembers = () => {
     if (selectedUsers.size === 0 || !entityType || !entityId) return;
 
-    try {
-      const promises = Array.from(selectedUsers).map((userId) =>
-        addMember.mutateAsync({
+    openModal('add', {
+      memberCount: selectedUsers.size,
+      newRole: selectedRole,
+      onConfirm: async () => {
+        const promises = Array.from(selectedUsers).map((userId) =>
+          addMember.mutateAsync({
+            entityType,
+            entityId,
+            data: { userId, role: selectedRole },
+          })
+        );
+
+        await Promise.all(promises);
+        setSelectedUsers(new Set());
+        setSearchQuery('');
+      },
+    });
+  };
+
+  const handleRemoveMember = (userId: string, userName: string) => {
+    openModal('remove', {
+      memberName: userName,
+      onConfirm: async () => {
+        await removeMember.mutateAsync({ entityType, entityId, userId });
+      },
+    });
+  };
+
+  const handleUpdateRole = (
+    userId: string,
+    userName: string,
+    currentRole: string,
+    newRole: string
+  ) => {
+    openModal('updateRole', {
+      memberName: userName,
+      currentRole,
+      newRole,
+      onConfirm: async () => {
+        await updateRole.mutateAsync({
           entityType,
           entityId,
-          data: { userId, role: selectedRole },
-        })
-      );
-
-      await Promise.all(promises);
-      setSelectedUsers(new Set());
-      setSearchQuery('');
-    } catch (error: any) {
-      console.error('❌ Failed to add members:', error);
-      alert(`Failed to add members: ${error?.message || 'Unknown error'}`);
-    }
+          userId,
+          data: { role: newRole },
+        });
+      },
+    });
   };
-
-  // const handleRemoveMember = async (userId: string, userName: string) => {
-  //   if (!entityType || !entityId) return;
-  //   if (!confirm(`Remove ${userName} from this ${entityType}?`)) return;
-
-  //   try {
-  //     await removeMember.mutateAsync({ entityType, entityId, userId });
-  //   } catch (error: any) {
-  //     console.error('❌ Failed to remove member:', error);
-  //     alert(`Failed to remove member: ${error?.message || 'Unknown error'}`);
-  //   }
-  // };
-
-  const handleRemoveMember = async (userId: string, userName: string) => {
-    if (!confirm(`Remove ${userName} from this ${entityType}?`)) return;
-
-    try {
-      await removeMember.mutateAsync({ entityType, entityId, userId });
-      toast.success(`${userName} removed successfully`);
-    } catch (error: any) {
-      const message = error?.response?.data?.error || 'Failed to remove member';
-      toast.error(message);
-      console.error('Failed to remove member:', error);
-    }
-  };
-
-  const handleUpdateRole = async (userId: string, newRole: string) => {
-    try {
-      await updateRole.mutateAsync({
-        entityType,
-        entityId,
-        userId,
-        data: { role: newRole },
-      });
-      toast.success('Role updated successfully');
-    } catch (error: any) {
-      const message = error?.response?.data?.error || 'Failed to update role';
-      toast.error(message);
-      console.error('Failed to update role:', error);
-    }
-  };
-
-  // const handleUpdateRole = async (userId: string, newRole: string) => {
-  //   if (!entityType || !entityId) return;
-
-  //   try {
-  //     await updateRole.mutateAsync({
-  //       entityType,
-  //       entityId,
-  //       userId,
-  //       data: { role: newRole },
-  //     });
-  //   } catch (error: any) {
-  //     console.error('❌ Failed to update role:', error);
-  //     alert(`Failed to update role: ${error?.message || 'Unknown error'}`);
-  //   }
-  // };
 
   const toggleUserSelection = (userId: string) => {
     setSelectedUsers((prev) => {
@@ -763,6 +740,18 @@ export default function MembersManagementPage() {
               addMemberLoading={false}
             />
           </div>
+
+          <MemberActionModal
+            isOpen={modalState.isOpen}
+            onClose={closeModal}
+            actionType={modalState.actionType}
+            entityType={entityType}
+            memberName={modalState.memberName}
+            currentRole={modalState.currentRole}
+            newRole={modalState.newRole}
+            memberCount={modalState.memberCount}
+            onConfirm={modalState.onConfirm || (async () => {})}
+          />
         </div>
       </div>
     </div>
