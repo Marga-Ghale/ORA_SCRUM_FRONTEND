@@ -259,6 +259,7 @@ export function getNotificationConfig(type: NotificationType | string): Notifica
 /**
  * ✅ ENHANCED: Format notification message with user names
  */
+// ✅ UPDATED: Format notification message - Show detailed changes
 export function formatNotificationMessage(notification: Notification): {
   title: string;
   message: string;
@@ -266,6 +267,46 @@ export function formatNotificationMessage(notification: Notification): {
   const data = notification.data || {};
 
   switch (notification.type) {
+    case 'TASK_UPDATED':
+      // ✅ Use changeDetails if available (detailed breakdown)
+      if (
+        data.changeDetails &&
+        Array.isArray(data.changeDetails) &&
+        data.changeDetails.length > 0
+      ) {
+        const details = data.changeDetails as string[];
+        let detailMessage = '';
+
+        if (details.length === 1) {
+          detailMessage = details[0];
+        } else if (details.length === 2) {
+          detailMessage = `${details[0]} and ${details[1]}`;
+        } else if (details.length === 3) {
+          detailMessage = `${details[0]}, ${details[1]}, and ${details[2]}`;
+        } else {
+          // Show all changes for 4+ items
+          const allButLast = details.slice(0, -1).join(', ');
+          detailMessage = `${allButLast}, and ${details[details.length - 1]}`;
+        }
+
+        return {
+          title: 'Task Updated',
+          message: data.updatedByName
+            ? `${data.updatedByName} updated "${data.taskTitle || 'task'}": ${detailMessage}`
+            : `"${data.taskTitle || 'Task'}" updated: ${detailMessage}`,
+        };
+      }
+
+      // Fallback to old format if changeDetails not available
+      const changes = Array.isArray(data.changes) ? data.changes : [];
+      const changeText = changes.length > 0 ? changes.join(', ') : 'updated';
+      return {
+        title: 'Task Updated',
+        message: data.updatedByName
+          ? `${data.updatedByName} updated "${data.taskTitle || 'a task'}": ${changeText}`
+          : `"${data.taskTitle || 'Task'}" was updated: ${changeText}`,
+      };
+
     case 'TASK_CREATED':
       return {
         title: 'New Task Created',
@@ -296,22 +337,20 @@ export function formatNotificationMessage(notification: Notification): {
           : `"${data.taskTitle || 'Task'}" moved from ${oldStatus} to ${newStatus}`,
       };
 
-    case 'TASK_UPDATED':
-      const changes = Array.isArray(data.changes) ? data.changes : [];
-      const changeText = changes.length > 0 ? changes.join(', ') : 'updated';
-      return {
-        title: 'Task Updated',
-        message: data.updatedByName
-          ? `${data.updatedByName} updated "${data.taskTitle || 'a task'}": ${changeText}`
-          : `"${data.taskTitle || 'Task'}" was updated: ${changeText}`,
-      };
-
     case 'TASK_COMMENTED':
       return {
         title: 'New Comment',
         message: data.commentedBy
           ? `${data.commentedBy} commented on: ${data.taskTitle || 'a task'}`
           : `New comment on: ${data.taskTitle || 'your task'}`,
+      };
+
+    case 'MENTION':
+      return {
+        title: 'You Were Mentioned',
+        message: data.mentionedBy
+          ? `${data.mentionedBy} mentioned you in: ${data.taskTitle || 'a discussion'}`
+          : `You were mentioned in: ${data.taskTitle || 'a task'}`,
       };
 
     case 'TASK_DUE_SOON':
@@ -363,14 +402,6 @@ export function formatNotificationMessage(notification: Notification): {
         message: data.sprintName
           ? `"${data.sprintName}" ends in ${remaining} day${remaining !== 1 ? 's' : ''}`
           : `Sprint ending in ${remaining} day${remaining !== 1 ? 's' : ''}`,
-      };
-
-    case 'MENTION':
-      return {
-        title: 'You Were Mentioned',
-        message: data.mentionedBy
-          ? `${data.mentionedBy} mentioned you in: ${data.taskTitle || 'a discussion'}`
-          : `You were mentioned in: ${data.taskTitle || 'a task'}`,
       };
 
     case 'PROJECT_INVITATION':

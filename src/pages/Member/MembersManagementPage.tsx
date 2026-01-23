@@ -28,7 +28,6 @@ import { useWorkspace } from '../../hooks/api/useWorkspaces';
 import { useSpace } from '../../hooks/api/useSpaces';
 import { useFolder } from '../../hooks/api/useFolder';
 import { useProject } from '../../hooks/api/useProjects';
-import toast from 'react-hot-toast';
 import { MemberActionModal, useMemberActionModal } from '../../components/modals/MemberActionModal';
 
 const ROLE_OPTIONS = [
@@ -459,14 +458,14 @@ export default function MembersManagementPage() {
 
   const handleUpdateRole = (
     userId: string,
+    newRole: string,
     userName: string,
-    currentRole: string,
-    newRole: string
+    currentRole: string
   ) => {
     openModal('updateRole', {
       memberName: userName,
-      currentRole,
-      newRole,
+      currentRole: currentRole,
+      newRole: newRole,
       onConfirm: async () => {
         await updateRole.mutateAsync({
           entityType,
