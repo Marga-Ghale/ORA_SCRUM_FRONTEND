@@ -64,6 +64,11 @@ import { EditProjectModal } from '../components/modals/EditProjectModal';
 import { useWebSocket } from '../hooks/api/useWebsocket';
 import { ChatIcon } from '../icons';
 import toast from 'react-hot-toast';
+import {
+  DeleteFolderModal,
+  DeleteProjectModal,
+  DeleteSpaceModal,
+} from '../components/modals/DeleteModals';
 
 const STORAGE_KEYS = {
   WORKSPACE: 'selectedWorkspaceId',
@@ -406,6 +411,19 @@ const ProjectSidebar: React.FC = () => {
     project: null,
   });
 
+  const [deleteSpaceModal, setDeleteSpaceModal] = useState<{ isOpen: boolean; space: any }>({
+    isOpen: false,
+    space: null,
+  });
+  const [deleteFolderModal, setDeleteFolderModal] = useState<{ isOpen: boolean; folder: any }>({
+    isOpen: false,
+    folder: null,
+  });
+  const [deleteProjectModal, setDeleteProjectModal] = useState<{ isOpen: boolean; project: any }>({
+    isOpen: false,
+    project: null,
+  });
+
   const [memberModal, setMemberModal] = useState<{
     isOpen: boolean;
     entityType: 'workspace' | 'space' | 'folder' | 'project';
@@ -705,11 +723,11 @@ const ProjectSidebar: React.FC = () => {
   const handleContextMenuDelete = () => {
     if (!contextMenu) return;
     if (contextMenu.entityType === 'space') {
-      setEditSpaceModal({ isOpen: true, space: contextMenu.entity });
+      setDeleteSpaceModal({ isOpen: true, space: contextMenu.entity });
     } else if (contextMenu.entityType === 'folder') {
-      setEditFolderModal({ isOpen: true, folder: contextMenu.entity });
+      setDeleteFolderModal({ isOpen: true, folder: contextMenu.entity });
     } else if (contextMenu.entityType === 'project') {
-      setEditProjectModal({ isOpen: true, project: contextMenu.entity });
+      setDeleteProjectModal({ isOpen: true, project: contextMenu.entity });
     }
   };
 
@@ -1855,6 +1873,27 @@ const ProjectSidebar: React.FC = () => {
           useRemoveMember={useRemoveMember}
         />
       )}
+
+      <DeleteSpaceModal
+        isOpen={deleteSpaceModal.isOpen}
+        onClose={() => setDeleteSpaceModal({ isOpen: false, space: null })}
+        space={deleteSpaceModal.space}
+        onDelete={deleteSpace}
+      />
+
+      <DeleteFolderModal
+        isOpen={deleteFolderModal.isOpen}
+        onClose={() => setDeleteFolderModal({ isOpen: false, folder: null })}
+        folder={deleteFolderModal.folder}
+        onDelete={deleteFolder}
+      />
+
+      <DeleteProjectModal
+        isOpen={deleteProjectModal.isOpen}
+        onClose={() => setDeleteProjectModal({ isOpen: false, project: null })}
+        project={deleteProjectModal.project}
+        onDelete={deleteProject}
+      />
     </>
   );
 };
