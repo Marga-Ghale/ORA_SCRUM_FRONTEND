@@ -572,7 +572,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (!workspacesData || workspacesData.length === 0) {
           // Only create if truly no workspaces exist
           const newWorkspace = await createWorkspaceMutation.mutateAsync({
-            name: 'My Workspace',
+            name: 'General Workspace',
           });
           const mappedWorkspace = mapWorkspace(newWorkspace);
           setCurrentWorkspaceState(mappedWorkspace);
