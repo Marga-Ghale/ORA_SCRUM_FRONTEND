@@ -26,18 +26,18 @@ interface CreateFolderModalProps {
   onClose: () => void;
 }
 
-const FOLDER_ICONS: LucideIcon[] = [
-  Folder,
-  FolderOpen,
-  FolderClosed,
-  FolderKanban,
-  FolderTree,
-  FolderArchive,
-  FolderCog,
-  FolderEdit,
-  FolderHeart,
-  FolderLock,
-  FolderSearch,
+const FOLDER_ICON_OPTIONS = [
+  { value: 'folder', Icon: Folder },
+  { value: 'folder-open', Icon: FolderOpen },
+  { value: 'folder-closed', Icon: FolderClosed },
+  { value: 'folder-kanban', Icon: FolderKanban },
+  { value: 'folder-tree', Icon: FolderTree },
+  { value: 'folder-archive', Icon: FolderArchive },
+  { value: 'folder-cog', Icon: FolderCog },
+  { value: 'folder-edit', Icon: FolderEdit },
+  { value: 'folder-heart', Icon: FolderHeart },
+  { value: 'folder-lock', Icon: FolderLock },
+  { value: 'folder-search', Icon: FolderSearch },
 ];
 
 const FOLDER_COLORS = [
@@ -59,7 +59,7 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ isOpen, onClose }
   const { createFolder, currentSpace } = useProjectContext();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [icon, setIcon] = useState<LucideIcon>(FOLDER_ICONS[0]);
+  const [icon, setIcon] = useState('folder');
   const [color, setColor] = useState(FOLDER_COLORS[0]);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,14 +105,14 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ isOpen, onClose }
     try {
       await createFolder({
         name: name.trim(),
-        icon: FOLDER_ICONS.indexOf(icon).toString(),
+        icon,
         color,
       });
 
       // Reset form
       setName('');
       setDescription('');
-      setIcon(FOLDER_ICONS[0]);
+      setIcon('folder');
       setColor(FOLDER_COLORS[0]);
       setShowIconPicker(false);
       onClose();
@@ -127,7 +127,7 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ isOpen, onClose }
   const resetForm = () => {
     setName('');
     setDescription('');
-    setIcon(FOLDER_ICONS[0]);
+    setIcon(icon);
     setColor(FOLDER_COLORS[0]);
     setShowIconPicker(false);
     setError(null);
@@ -142,7 +142,7 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ isOpen, onClose }
 
   if (!isOpen) return null;
 
-  const IconComponent = icon;
+  const IconComponent = FOLDER_ICON_OPTIONS.find((opt) => opt.value === icon)?.Icon || Folder;
 
   return (
     <>
@@ -240,22 +240,21 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ isOpen, onClose }
                   Choose an icon
                 </p>
                 <div className="grid grid-cols-6 gap-2">
-                  {FOLDER_ICONS.map((Icon, idx) => (
+                  {FOLDER_ICON_OPTIONS.map(({ value, Icon }) => (
                     <button
-                      key={idx}
+                      key={value}
                       type="button"
                       onClick={() => {
-                        setIcon(Icon);
+                        setIcon(value);
                         setShowIconPicker(false);
                       }}
                       disabled={isSubmitting}
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all
-                        ${
-                          icon === Icon
-                            ? 'bg-amber-100 dark:bg-amber-900/50 ring-2 ring-amber-500'
-                            : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }
-                      `}
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                        icon === value
+                          ? 'text-white shadow-md'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                      style={{ backgroundColor: icon === value ? color : undefined }}
                     >
                       <Icon className="w-5 h-5" />
                     </button>
