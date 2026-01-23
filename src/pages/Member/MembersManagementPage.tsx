@@ -29,6 +29,7 @@ import { useSpace } from '../../hooks/api/useSpaces';
 import { useFolder } from '../../hooks/api/useFolder';
 import { useProject } from '../../hooks/api/useProjects';
 import { MemberActionModal, useMemberActionModal } from '../../components/modals/MemberActionModal';
+import { useProjectContext } from '../../context/ProjectContext';
 
 const ROLE_OPTIONS = [
   {
@@ -136,7 +137,13 @@ const MemberRow = ({
           <select
             value={member.role}
             onChange={(e) => {
-              onUpdateRole(member.userId, e.target.value);
+              // ✅ FIX: Pass all 4 required parameters
+              onUpdateRole(
+                member.userId,
+                e.target.value,
+                member.user?.name || 'Unknown',
+                member.role
+              );
               setIsEditing(false);
             }}
             onBlur={() => setIsEditing(false)}
@@ -345,10 +352,45 @@ export default function MembersManagementPage() {
 
   const { modalState, openModal, closeModal } = useMemberActionModal();
 
-  // ✅ DEBUG: Log params
+  // ✅ ADD: Get current selections from sidebar
+  const { currentWorkspace, currentSpace, currentFolder, currentProject } = useProjectContext();
+
+  // ✅ ADD: Sync when workspace changes
   useEffect(() => {
-    console.log('🔍 MembersManagementPage - Params:', { entityType, entityId });
-  }, [entityType, entityId]);
+    if (!currentWorkspace) return;
+
+    // If viewing workspace members but different workspace selected
+    if (entityType === 'workspace' && entityId !== currentWorkspace.id) {
+      navigate(`/member-management/workspace/${currentWorkspace.id}`, { replace: true });
+    }
+  }, [currentWorkspace?.id, entityType, entityId, navigate]);
+
+  // Same for spaces
+  useEffect(() => {
+    if (!currentSpace) return;
+
+    if (entityType === 'space' && entityId !== currentSpace.id) {
+      navigate(`/member-management/space/${currentSpace.id}`, { replace: true });
+    }
+  }, [currentSpace?.id, entityType, entityId, navigate]);
+
+  // Same for folders
+  useEffect(() => {
+    if (!currentFolder) return;
+
+    if (entityType === 'folder' && entityId !== currentFolder.id) {
+      navigate(`/member-management/folder/${currentFolder.id}`, { replace: true });
+    }
+  }, [currentFolder?.id, entityType, entityId, navigate]);
+
+  // Same for projects
+  useEffect(() => {
+    if (!currentProject) return;
+
+    if (entityType === 'project' && entityId !== currentProject.id) {
+      navigate(`/member-management/project/${currentProject.id}`, { replace: true });
+    }
+  }, [currentProject?.id, entityType, entityId, navigate]);
 
   // ✅ FIX: Proper enabled condition with debug logging
   const {

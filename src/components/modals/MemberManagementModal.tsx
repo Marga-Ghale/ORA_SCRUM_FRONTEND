@@ -77,9 +77,10 @@ interface MemberManagementModalProps {
   useRemoveMember: any;
 }
 
+// ✅ CORRECT
 interface MemberRowProps {
   member: any;
-  onUpdateRole: (userId: string, role: string) => void;
+  onUpdateRole: (userId: string, newRole: string, userName: string, currentRole: string) => void; // ← 4 parameters
   onRemove: (userId: string, userName: string) => void;
   canEdit: boolean;
   accessBadge: { text: string; color: string; icon?: any };
@@ -144,7 +145,12 @@ const MemberRow: React.FC<MemberRowProps> = ({
           <select
             value={member.role}
             onChange={(e) => {
-              onUpdateRole(member.userId, e.target.value);
+              onUpdateRole(
+                member.userId,
+                e.target.value,
+                member.user?.name || 'Unknown',
+                member.role
+              );
               setIsEditing(false);
             }}
             onBlur={() => setIsEditing(false)}
