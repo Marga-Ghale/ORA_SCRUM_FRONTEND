@@ -600,10 +600,10 @@ export const ChannelList: React.FC<ChannelListProps> = ({
             <button
               onClick={() => handleDeleteChannel(contextMenu.channelId)}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={
-                channels.find((c) => c.id === contextMenu.channelId)?.createdBy !== currentUserId ||
-                channels.find((c) => c.id === contextMenu.channelId)?.type === 'direct'
-              }
+              disabled={(() => {
+                const channel = channels.find((c) => c.id === contextMenu.channelId);
+                return !channel || channel.createdBy !== currentUserId || channel.type === 'direct';
+              })()}
             >
               <Trash2 className="w-4 h-4" />
               <span>Delete</span>

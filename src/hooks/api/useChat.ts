@@ -700,7 +700,10 @@ export function useToggleReaction() {
 /**
  * Get channel members
  */
-export function useChannelMembers(channelId: string | undefined) {
+export function useChannelMembers(
+  channelId: string | undefined,
+  p0?: { refetchOnMount: boolean; refetchOnWindowFocus: boolean }
+) {
   return useQuery({
     queryKey: queryKeys.chat.members(channelId!),
     queryFn: async () => {
