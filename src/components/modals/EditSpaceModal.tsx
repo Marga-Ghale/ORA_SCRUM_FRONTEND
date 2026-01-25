@@ -29,7 +29,6 @@ import {
   Star,
   Zap,
   Check,
-  type LucideIcon,
 } from 'lucide-react';
 
 interface EditSpaceModalProps {

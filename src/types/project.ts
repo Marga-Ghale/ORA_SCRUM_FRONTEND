@@ -97,6 +97,7 @@ export interface Space {
   color: string;
   projects: Project[];
   canaccess: boolean;
+  description?: string;
 }
 
 export interface Workspace {

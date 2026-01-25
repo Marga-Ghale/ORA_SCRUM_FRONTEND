@@ -1,7 +1,7 @@
 // ✅ UPDATED: src/components/header/NotificationDropdown.tsx
 // Added real-time toast notifications when WebSocket messages arrive
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -120,6 +120,21 @@ const NOTIFICATION_ICONS: Record<NotificationType, { icon: any; color: string; b
       icon: MessageSquare,
       color: 'text-green-600',
       bgColor: 'bg-green-50 dark:bg-green-900/20',
+    },
+    CHAT_ADDED_TO_CHANNEL: {
+      icon: undefined,
+      color: '',
+      bgColor: '',
+    },
+    CHAT_REMOVED_FROM_CHANNEL: {
+      icon: undefined,
+      color: '',
+      bgColor: '',
+    },
+    CHAT_MENTION: {
+      icon: undefined,
+      color: '',
+      bgColor: '',
     },
   };
 
@@ -389,6 +404,9 @@ const FilterTabs: React.FC<FilterTabsProps> = ({ activeFilter, onChange, counts 
 // ============================================
 // Main Component
 // ============================================
+// ============================================
+// Main Component
+// ============================================
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -397,7 +415,7 @@ export default function NotificationDropdown() {
   const previousUnreadCount = useRef<number>(0);
 
   const { data: notifications = [], isLoading, refetch } = useNotifications();
-  const { data: countData, refetch: refetchCount } = useNotificationCount();
+  const { data: countData, refetch: refetchCount } = useNotificationCount({ enabled: true }); // ✅ FIX 1: Add required argument
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
   const clearAll = useDeleteAllNotifications();
@@ -405,6 +423,14 @@ export default function NotificationDropdown() {
   const { playSound } = useNotificationSound();
   const { showNotification: showBrowserNotification, hasPermission } = useBrowserNotifications();
   const [showClearAllModal, setShowClearAllModal] = useState(false);
+
+  // ✅ FIX 2: Rename to avoid duplicate variable name
+  const nonChatNotifications = useMemo(() => {
+    return notifications.filter((n) => n.type !== 'CHAT_MESSAGE');
+  }, [notifications]);
+
+  // Use nonChatNotifications for unread count display
+  const unreadCount = nonChatNotifications.filter((n) => !n.read).length;
 
   // ✅ UPDATED: WebSocket handler with toast notifications
   const { isConnected } = useWebSocket({
@@ -416,10 +442,10 @@ export default function NotificationDropdown() {
 
         // ✅ Show toast notification with full details
         const data = (message.payload || message.data || {}) as Record<string, unknown>;
-        const notificationType = (data.notificationType as NotificationType) || 'TASK_UPDATED';
+        const notificationType = (data.type as NotificationType) || 'TASK_UPDATED'; // ✅ FIX: Use 'type' not 'notificationType'
 
-        // Show in-app toast notification
-        showWebSocketNotificationToast(notificationType, data, navigate);
+        // ✅ FIX 3: showWebSocketNotificationToast only takes 2 arguments
+        showWebSocketNotificationToast(notificationType, data);
 
         // Also show browser notification if permitted
         if (hasPermission()) {
@@ -431,7 +457,6 @@ export default function NotificationDropdown() {
     },
   });
 
-  const unreadCount = countData?.unread || 0;
   const hasUnread = unreadCount > 0;
 
   useEffect(() => {
@@ -441,31 +466,36 @@ export default function NotificationDropdown() {
     previousUnreadCount.current = unreadCount;
   }, [unreadCount, playSound]);
 
+  // ✅ FIX 4: Use nonChatNotifications in filter function
   const getFilteredNotifications = (): Notification[] => {
+    const base = nonChatNotifications; // Start with non-chat notifications
     switch (activeFilter) {
       case 'unread':
-        return notifications.filter((n) => !n.read);
+        return base.filter((n) => !n.read);
       case 'tasks':
-        return notifications.filter((n) => TASK_NOTIFICATION_TYPES.includes(n.type));
+        return base.filter((n) => TASK_NOTIFICATION_TYPES.includes(n.type));
       case 'sprints':
-        return notifications.filter((n) => SPRINT_NOTIFICATION_TYPES.includes(n.type));
+        return base.filter((n) => SPRINT_NOTIFICATION_TYPES.includes(n.type));
       case 'invitations':
-        return notifications.filter((n) => INVITATION_NOTIFICATION_TYPES.includes(n.type));
+        return base.filter((n) => INVITATION_NOTIFICATION_TYPES.includes(n.type));
       default:
-        return notifications;
+        return base;
     }
   };
 
+  // ✅ FIX 5: Use nonChatNotifications for counts
   const filterCounts: Record<FilterType, number> = {
-    all: notifications.length,
-    unread: notifications.filter((n) => !n.read).length,
-    tasks: notifications.filter((n) => TASK_NOTIFICATION_TYPES.includes(n.type)).length,
-    sprints: notifications.filter((n) => SPRINT_NOTIFICATION_TYPES.includes(n.type)).length,
-    invitations: notifications.filter((n) => INVITATION_NOTIFICATION_TYPES.includes(n.type)).length,
+    all: nonChatNotifications.length,
+    unread: nonChatNotifications.filter((n) => !n.read).length,
+    tasks: nonChatNotifications.filter((n) => TASK_NOTIFICATION_TYPES.includes(n.type)).length,
+    sprints: nonChatNotifications.filter((n) => SPRINT_NOTIFICATION_TYPES.includes(n.type)).length,
+    invitations: nonChatNotifications.filter((n) => INVITATION_NOTIFICATION_TYPES.includes(n.type))
+      .length,
   };
 
-  const filteredNotifications = getFilteredNotifications();
-  const groupedNotifications = groupNotificationsByDate(filteredNotifications);
+  // ✅ FIX 6: Rename to avoid conflict with useMemo variable
+  const filteredByActiveFilter = getFilteredNotifications();
+  const groupedNotifications = groupNotificationsByDate(filteredByActiveFilter);
 
   const toggleDropdown = () => setIsOpen(!isOpen);
   const closeDropdown = () => setIsOpen(false);
@@ -603,7 +633,7 @@ export default function NotificationDropdown() {
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <LoadingSkeleton />
-          ) : filteredNotifications.length === 0 ? (
+          ) : getFilteredNotifications.length === 0 ? (
             <EmptyState />
           ) : (
             <div className="p-3">

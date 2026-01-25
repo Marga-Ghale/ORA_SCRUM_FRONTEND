@@ -33,6 +33,7 @@ import {
   Star,
   Zap,
   type LucideIcon,
+  FolderKanban,
 } from 'lucide-react';
 
 interface CreateSpaceModalProps {
@@ -127,9 +128,7 @@ const CreateSpaceModal: React.FC<CreateSpaceModalProps> = ({ isOpen, onClose }) 
     try {
       await createSpace({
         name: name.trim(),
-        icon: SPACE_ICON_OPTIONS.indexOf(
-          SPACE_ICON_OPTIONS.find((opt) => opt.value === icon) || SPACE_ICON_OPTIONS[0]
-        ).toString(),
+        icon: icon,
         color,
       });
 

@@ -163,15 +163,20 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
         </div>
 
         {/* Actions */}
-        {showRemove && !isOwner && !isCurrentUser && (
-          <button
-            onClick={() => handleRemoveMember(member.userId)}
-            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-[#6b7280] hover:text-red-400 transition-all"
-            title="Remove from channel"
-          >
-            <UserMinus className="w-4 h-4" />
-          </button>
-        )}
+        {/* Actions */}
+        {showRemove &&
+          !isOwner &&
+          !isCurrentUser &&
+          channel.type !== 'direct' &&
+          channel.createdBy === currentUserId && (
+            <button
+              onClick={() => handleRemoveMember(member.userId)}
+              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-[#6b7280] hover:text-red-400 transition-all"
+              title="Remove from channel"
+            >
+              <UserMinus className="w-4 h-4" />
+            </button>
+          )}
       </div>
     );
   };

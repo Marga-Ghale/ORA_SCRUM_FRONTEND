@@ -18,7 +18,6 @@ import {
   FolderLock,
   FolderSearch,
   FolderTree,
-  type LucideIcon,
 } from 'lucide-react';
 
 interface CreateFolderModalProps {

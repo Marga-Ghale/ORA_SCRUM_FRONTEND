@@ -6,7 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../components/UserProfile/AuthContext';
 import { queryKeys } from '../../lib/query-client';
 import { NotificationType } from './useNotifications';
-import { ChatMessage, ChatReaction } from './useChat';
+import { ChatChannel, ChatMessage, ChatReaction } from './useChat';
+import { isViewingChannel } from '../../lib/activeChannelTracker';
 
 // ✅ UPDATED: Added entity CRUD event types
 export type WebSocketEventType =
@@ -227,39 +228,60 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       }
 
       switch (message.type) {
+        // case 'notification':
+        //   queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+
+        //   if (messageData && typeof messageData === 'object') {
+        //     const notificationType = messageData.type as string;
+
+        //     if (notificationType === 'CHAT_MESSAGE') {
+        //       const channelId = (messageData as any).data?.channelId;
+
+        //       if (channelId) {
+        //         queryClient.invalidateQueries({
+        //           queryKey: queryKeys.chat.messages(channelId, 50, 0),
+        //           refetchType: 'active',
+        //         });
+
+        //         queryClient.invalidateQueries({
+        //           queryKey: queryKeys.chat.channels(),
+        //           refetchType: 'active',
+        //         });
+        //       }
+
+        //       console.groupEnd();
+        //     }
+
+        //     import('../../lib/NotificationToast').then(({ showWebSocketNotificationToast }) => {
+        //       showWebSocketNotificationToast(
+        //         message.type.toUpperCase() as NotificationType,
+        //         messageData
+        //       );
+        //     });
+        //   }
+        //   break;
+
         case 'notification':
+          // ✅ Chat messages no longer come through notification system
+          // Only handle task/sprint/invitation notifications
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
 
           if (messageData && typeof messageData === 'object') {
             const notificationType = messageData.type as string;
 
+            // ✅ Skip CHAT_MESSAGE type (shouldn't happen anymore, but safety check)
             if (notificationType === 'CHAT_MESSAGE') {
-              const channelId = (messageData as any).data?.channelId;
-
-              if (channelId) {
-                queryClient.invalidateQueries({
-                  queryKey: queryKeys.chat.messages(channelId, 50, 0),
-                  refetchType: 'active',
-                });
-
-                queryClient.invalidateQueries({
-                  queryKey: queryKeys.chat.channels(),
-                  refetchType: 'active',
-                });
-              }
-
-              console.groupEnd();
+              break;
             }
 
             import('../../lib/NotificationToast').then(({ showWebSocketNotificationToast }) => {
               showWebSocketNotificationToast(
-                message.type.toUpperCase() as NotificationType,
+                notificationType.toUpperCase() as NotificationType,
                 messageData
               );
             });
           }
           break;
-
         case 'notification_count':
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
           break;
@@ -522,16 +544,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         // ============================================
         // CHAT EVENTS
         // ============================================
-        case 'chat_message':
-          console.group('[WebSocket] 📨 PROCESSING CHAT MESSAGE');
 
+        case 'chat_message':
           if (messageData.channelId) {
             const channelId = messageData.channelId as string;
+            const isCurrentlyViewing = isViewingChannel(channelId);
 
-            // ✅ FIX: Extract the actual message from nested structure
+            // Extract and normalize message
             const rawMessage = (messageData as any).message || messageData;
-
-            // ✅ FIX: Normalize user data (backend sends capitalized fields)
             const normalizedMessage: ChatMessage = {
               id: rawMessage.id || rawMessage.ID,
               channelId: rawMessage.channelId || rawMessage.ChannelID,
@@ -558,46 +578,33 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
                   : undefined,
             };
 
-            console.log('📍 Normalized message:', {
-              id: normalizedMessage.id,
-              userId: normalizedMessage.userId,
-              userName: normalizedMessage.user?.name,
-              createdAt: normalizedMessage.createdAt,
-            });
-
             const messagesQueryKey = queryKeys.chat.messages(channelId, 50, 0);
 
+            // Add message to cache
             queryClient.setQueryData<ChatMessage[]>(messagesQueryKey, (old) => {
               if (!old) return [normalizedMessage];
-
               const exists = old.some((msg) => msg.id === normalizedMessage.id);
-              if (exists) {
-                console.log('⚠️ Message already exists');
-                return old;
-              }
-
-              console.log('✅ Adding normalized message to cache');
+              if (exists) return old;
               return [normalizedMessage, ...old];
             });
 
-            queryClient.setQueryData<Record<string, number>>(
-              queryKeys.chat.unreadCounts(),
-              (old) => {
-                const current = old || {};
-                return {
-                  ...current,
-                  [channelId]: (current[channelId] || 0) + 1,
-                };
-              }
-            );
+            // ✅ SMART: Only increment unread if NOT viewing this channel
+            if (!isCurrentlyViewing) {
+              queryClient.setQueryData<Record<string, number>>(
+                queryKeys.chat.unreadCounts(),
+                (old) => ({
+                  ...(old || {}),
+                  [channelId]: ((old || {})[channelId] || 0) + 1,
+                })
+              );
+            }
 
+            // Refresh channel list for last message preview
             queryClient.invalidateQueries({
               queryKey: queryKeys.chat.channels(),
               refetchType: 'active',
             });
           }
-
-          console.groupEnd();
           break;
 
         case 'chat_message_updated':
@@ -654,10 +661,20 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             const channelId = messageData.channelId as string;
             console.log('[WebSocket] 👥 Member update:', { channelId, type: message.type });
 
+            // ✅ Invalidate members list
             queryClient.invalidateQueries({
               queryKey: queryKeys.chat.members(channelId),
             });
+
+            // ✅ Refresh channel list
             queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
+
+            const currentUserId = messageData.userId as string;
+            if (currentUserId) {
+              queryClient.setQueryData<ChatChannel[]>(queryKeys.chat.channels(), (old) => {
+                return old?.filter((c) => c.id !== channelId) || [];
+              });
+            }
           }
           break;
 
