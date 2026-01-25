@@ -28,8 +28,17 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
 
   // Get channel members
-  const { data: members = [], isLoading, refetch: refetchMembers } = useChannelMembers(channel?.id);
-
+  const {
+    data: members = [],
+    isLoading,
+    refetch: refetchMembers,
+  } = useChannelMembers(channel?.id, {
+    enabled: !!channel?.id,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Refetch every 5 seconds
+  });
   // Get workspace members for adding - with proper parameters
   const { data: workspaceMembers = [] } = useEffectiveMembers(
     'workspace',
@@ -106,11 +115,12 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
 
   // Handle removing a member
   const handleRemoveMember = async (userId: string) => {
-    if (!window.confirm('Remove this member from the channel?')) return;
-
     try {
       await leaveChannel.mutateAsync({ channelId: channel.id, userId });
-      refetchMembers();
+      // Force immediate refetch
+      await refetchMembers();
+      // Refetch again after 500ms to ensure backend update
+      setTimeout(() => refetchMembers(), 500);
     } catch (error) {
       console.error('Failed to remove member:', error);
     }
@@ -162,7 +172,6 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
           <p className="text-xs text-[#6b7280] truncate">{userEmail}</p>
         </div>
 
-        {/* Actions */}
         {/* Actions */}
         {showRemove &&
           !isOwner &&

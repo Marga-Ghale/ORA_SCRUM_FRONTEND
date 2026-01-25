@@ -292,6 +292,8 @@ export function formatNotificationMessage(notification: Notification): {
 } {
   const data = notification.data || {};
 
+  console.log(data);
+
   switch (notification.type) {
     case 'TASK_UPDATED':
       // ✅ Use changeDetails if available (detailed breakdown)
@@ -449,14 +451,13 @@ export function formatNotificationMessage(notification: Notification): {
       return {
         title: data.isDirect ? 'New Conversation' : 'Added to Channel',
         message: data.isDirect
-          ? `${data.assignedByName || 'Someone'} started a conversation with you`
-          : `${data.assignedByName || 'Someone'} added you to #${data.channelName || 'a channel'}`,
+          ? `${data.addedBy || 'Someone'} started a conversation with you`
+          : `${data.addedBy || 'Someone'} added you to #${data.channelName || 'a channel'}`,
       };
-
     case 'CHAT_REMOVED_FROM_CHANNEL':
       return {
         title: 'Removed from Channel',
-        message: `${data.removedBy || 'Someone'} removed you from #${data.channelName || 'a channel'}`,
+        message: `${data.removerName || 'Someone'} removed you from #${data.channelName || 'a channel'}`,
       };
 
     case 'CHAT_MENTION':

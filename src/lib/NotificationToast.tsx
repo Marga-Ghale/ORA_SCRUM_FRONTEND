@@ -174,7 +174,9 @@ function extractTaskData(notification: Notification): { taskId?: string; project
 export const NotificationToast: React.FC<NotificationToastProps> = ({ t, notification }) => {
   const config = NOTIFICATION_CONFIG[notification.type] ?? NOTIFICATION_CONFIG.TASK_UPDATED;
   const Icon = config.icon;
-  const { title, message } = formatNotificationMessage(notification);
+  // ✅ Use backend's already-formatted message for toasts
+  const title = notification.title;
+  const message = notification.message;
   const markAsRead = useMarkNotificationRead();
   const { navigateToTask } = useNotificationNavigation();
 
