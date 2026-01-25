@@ -255,6 +255,7 @@ const mapSpace = (space: any): Space => ({
   icon: space.icon || '📁',
   color: space.color || '#6366f1',
   projects: [],
+  canaccess: false,
 });
 
 const mapFolder = (folder: any): Folder => ({

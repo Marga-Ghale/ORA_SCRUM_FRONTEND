@@ -5,7 +5,6 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Home,
   CheckSquare,
-  Search,
   Plus,
   ChevronRight,
   ChevronDown,
@@ -17,7 +16,6 @@ import {
   UserPlus,
   Bell,
   Folder,
-  FolderOpen,
   Hash,
   MoreHorizontal,
   Edit2,
@@ -30,12 +28,26 @@ import {
   Wrench,
   Lightbulb,
   Palette,
-  Smartphone,
   Star,
   FolderKanban,
   ChevronUp,
   DotIcon,
   Lock,
+  Laptop,
+  Megaphone,
+  BookOpen,
+  TrendingUp,
+  Globe,
+  Package,
+  FolderEdit,
+  FolderArchive,
+  FolderClosed,
+  FolderTree,
+  FolderCog,
+  FolderHeart,
+  FolderLock,
+  FolderSearch,
+  FolderOpen,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuth } from '../components/UserProfile/AuthContext';
@@ -79,15 +91,38 @@ const STORAGE_KEYS = {
 
 const SPACE_ICONS: Record<string, React.FC<{ className?: string; style?: React.CSSProperties }>> = {
   folder: FolderKanban,
-  rocket: Rocket,
   briefcase: Briefcase,
+  laptop: Laptop,
+  rocket: Rocket,
   target: Target,
   chart: BarChart3,
-  wrench: Wrench,
+  trending: TrendingUp,
   lightbulb: Lightbulb,
   palette: Palette,
-  smartphone: Smartphone,
+  megaphone: Megaphone,
+  wrench: Wrench,
+  globe: Globe,
+  book: BookOpen,
+  package: Package,
   star: Star,
+  zap: Zap,
+};
+
+const FOLDER_ICONS: Record<
+  string,
+  React.FC<{ className?: string; style?: React.CSSProperties }>
+> = {
+  folder: Folder,
+  'folder-open': FolderOpen,
+  'folder-closed': FolderClosed,
+  'folder-kanban': FolderKanban,
+  'folder-tree': FolderTree,
+  'folder-archive': FolderArchive,
+  'folder-cog': FolderCog,
+  'folder-edit': FolderEdit,
+  'folder-heart': FolderHeart,
+  'folder-lock': FolderLock,
+  'folder-search': FolderSearch,
 };
 
 interface SpaceAddMenuProps {
@@ -287,6 +322,13 @@ const getSpaceIcon = (
 ): React.FC<{ className?: string; style?: React.CSSProperties }> => {
   if (!iconKey) return FolderKanban;
   return SPACE_ICONS[iconKey] || FolderKanban;
+};
+
+const getFolderIcon = (
+  iconKey?: string
+): React.FC<{ className?: string; style?: React.CSSProperties }> => {
+  if (!iconKey) return FolderKanban;
+  return FOLDER_ICONS[iconKey] || FolderKanban;
 };
 
 const ProjectSidebar: React.FC = () => {
@@ -1396,6 +1438,7 @@ const ProjectSidebar: React.FC = () => {
                             >
                               <div className="ml-4 pl-2.5 border-l-2 border-gray-200/70 dark:border-gray-700/50 mt-0.5 space-y-0.5">
                                 {spaceFolders.map((folder, folderIndex) => {
+                                  const FolderIcon = getFolderIcon(folder.icon);
                                   const isFolderExpanded = expandedFolders.has(folder.id);
                                   const isFolderActive = currentFolder?.id === folder.id;
                                   const folderProjects = projectsByFolderId[folder.id] || [];
@@ -1430,16 +1473,19 @@ const ProjectSidebar: React.FC = () => {
                                           />
                                         </button>
 
-                                        <div className="relative">
-                                          <Folder
-                                            className={`w-3.5 h-3.5 text-amber-500 flex-shrink-0 
-                                        transition-all duration-200
-                                        ${isFolderExpanded ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}`}
+                                        <div className="relative w-4 h-4 flex items-center justify-center flex-shrink-0">
+                                          <FolderIcon
+                                            className={`w-3.5 h-3.5 transition-all duration-200
+      ${isFolderExpanded ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}
+    `}
+                                            style={{ color: folder.color || '#6366f1' }}
                                           />
+
                                           <FolderOpen
-                                            className={`w-3.5 h-3.5 text-amber-500 flex-shrink-0 absolute inset-0
-                                        transition-all duration-200
-                                        ${isFolderExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+                                            className={`w-3.5 h-3.5 absolute inset-0 transition-all duration-200
+      ${isFolderExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}
+    `}
+                                            style={{ color: folder.color || '#6366f1' }}
                                           />
                                         </div>
 

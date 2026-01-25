@@ -16,7 +16,6 @@ import {
   FolderSearch,
   FolderTree,
   Check,
-  type LucideIcon,
 } from 'lucide-react';
 
 interface EditFolderModalProps {

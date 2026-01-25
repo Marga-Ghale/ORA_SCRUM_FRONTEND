@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
 import { queryKeys } from '../../lib/query-client';
+import { color } from 'framer-motion';
 
 export interface WorkspaceResponse {
   id: string;
@@ -71,7 +72,7 @@ export const useAccessibleSpaces = (options?: { enabled?: boolean }) => {
         description: s.Description,
         workspaceId: s.WorkspaceID,
         color: s.Color,
-        icon: s.Icon,
+        icon: s.icon,
         createdAt: s.CreatedAt,
       }));
     },
@@ -87,6 +88,8 @@ export const useAccessibleFolders = (options?: { enabled?: boolean }) => {
       return response.map((f: any) => ({
         id: f.ID,
         name: f.Name,
+        icon: f.Icon,
+        color: f.Color,
         description: f.Description,
         spaceId: f.SpaceID,
         createdAt: f.CreatedAt,
