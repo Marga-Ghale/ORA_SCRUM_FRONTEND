@@ -490,11 +490,26 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           }
 
           // ✅ Invalidate accessible entities (user's access may have changed)
-          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.members.accessibleWorkspaces(),
+            refetchType: 'all',
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.members.accessibleSpaces(),
+            refetchType: 'all',
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.members.accessibleFolders(),
+            refetchType: 'all',
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.members.accessibleProjects(),
+            refetchType: 'all',
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.members.visibleSpaces(),
+            refetchType: 'all',
+          });
 
           // ✅ If it's a workspace member change, refresh workspace list
           if (messageData.entityType === 'workspace') {
@@ -545,71 +560,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         // CHAT EVENTS
         // ============================================
 
-        // case 'chat_message':
-        //   if (messageData.channelId) {
-        //     const channelId = messageData.channelId as string;
-        //     const isCurrentlyViewing = isViewingChannel(channelId);
-
-        //     // Extract and normalize message
-        //     const rawMessage = (messageData as any).message || messageData;
-        //     const normalizedMessage: ChatMessage = {
-        //       id: rawMessage.id || rawMessage.ID,
-        //       channelId: rawMessage.channelId || rawMessage.ChannelID,
-        //       userId: rawMessage.userId || rawMessage.UserID,
-        //       content: rawMessage.content || rawMessage.Content,
-        //       messageType: rawMessage.messageType || rawMessage.MessageType || 'text',
-        //       parentId: rawMessage.parentId || rawMessage.ParentID,
-        //       isEdited: rawMessage.isEdited || rawMessage.IsEdited || false,
-        //       createdAt: rawMessage.createdAt || rawMessage.CreatedAt || new Date().toISOString(),
-        //       updatedAt: rawMessage.updatedAt || rawMessage.UpdatedAt || new Date().toISOString(),
-        //       reactions: rawMessage.reactions || rawMessage.Reactions || [],
-        //       user:
-        //         rawMessage.user || rawMessage.User
-        //           ? {
-        //               id: rawMessage.user?.id || rawMessage.user?.ID || rawMessage.User?.ID,
-        //               name: rawMessage.user?.name || rawMessage.user?.Name || rawMessage.User?.Name,
-        //               email:
-        //                 rawMessage.user?.email || rawMessage.user?.Email || rawMessage.User?.Email,
-        //               avatar:
-        //                 rawMessage.user?.avatar ||
-        //                 rawMessage.user?.Avatar ||
-        //                 rawMessage.User?.Avatar,
-        //             }
-        //           : undefined,
-        //     };
-
-        //     const messagesQueryKey = queryKeys.chat.messages(channelId, 50, 0);
-
-        //     // Add message to cache
-        //     queryClient.setQueryData<ChatMessage[]>(messagesQueryKey, (old) => {
-        //       if (!old) return [normalizedMessage];
-        //       const exists = old.some((msg) => msg.id === normalizedMessage.id);
-        //       if (exists) return old;
-        //       return [normalizedMessage, ...old];
-        //     });
-
-        //     // ✅ SMART: Only increment unread if NOT viewing this channel
-        //     if (!isCurrentlyViewing) {
-        //       queryClient.setQueryData<Record<string, number>>(
-        //         queryKeys.chat.unreadCounts(),
-        //         (old) => ({
-        //           ...(old || {}),
-        //           [channelId]: ((old || {})[channelId] || 0) + 1,
-        //         })
-        //       );
-        //     }
-
-        //     // Refresh channel list for last message preview
-        //     queryClient.invalidateQueries({
-        //       queryKey: queryKeys.chat.channels(),
-        //       refetchType: 'active',
-        //     });
-        //   }
-        //   break;
-
         case 'chat_message':
           if (messageData.channelId) {
             const channelId = messageData.channelId as string;
+
+            // ✅ CHECK: Are we actively viewing this channel?
+            const isCurrentlyViewing = isViewingChannel(channelId);
 
             // Extract and normalize message
             const rawMessage = (messageData as any).message || messageData;
@@ -650,68 +606,33 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             });
 
             // ✅ SMART UNREAD LOGIC:
-            // 1. Check if viewing this channel
-            // 2. If NOT viewing → increment unread count
-            const isCurrentlyViewing = isViewingChannel(channelId);
+            // 1. If viewing this channel → mark as read immediately (reset counter to 0)
+            // 2. If NOT viewing → invalidate to refetch from backend (backend will calculate +1)
 
-            if (!isCurrentlyViewing) {
+            if (isCurrentlyViewing) {
+              // ✅ User is viewing this channel - mark as read immediately
               queryClient.setQueryData<Record<string, number>>(
                 queryKeys.chat.unreadCounts(),
                 (old) => ({
                   ...(old || {}),
-                  [channelId]: ((old || {})[channelId] || 0) + 1,
+                  [channelId]: 0, // ✅ Reset to 0 since they're viewing
                 })
               );
+            } else {
+              // ✅ User is NOT viewing - let backend calculate unread count
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.chat.unreadCounts(),
+                refetchType: 'active',
+              });
             }
 
-            // Refresh channel list for last message preview (but NOT unread counts)
+            // Refresh channel list for last message preview
             queryClient.invalidateQueries({
               queryKey: queryKeys.chat.channels(),
               refetchType: 'active',
             });
           }
           break;
-        case 'chat_message_updated':
-        case 'chat_message_deleted':
-          console.group(`[WebSocket] 🔄 ${message.type}`);
-
-          if (messageData.channelId) {
-            const channelId = messageData.channelId as string;
-            const messageId = messageData.messageId as string;
-            const messagesQueryKey = queryKeys.chat.messages(channelId, 50, 0);
-
-            console.log('Processing message update/delete', {
-              channelId,
-              messageId,
-              type: message.type,
-            });
-
-            const beforeUpdate = queryClient.getQueryData<ChatMessage[]>(messagesQueryKey);
-            console.log('Messages before update:', beforeUpdate?.length);
-
-            queryClient.setQueryData<ChatMessage[]>(messagesQueryKey, (old) => {
-              if (!old) return old;
-
-              if (message.type === 'chat_message_deleted') {
-                const filtered = old.filter((msg) => msg.id !== messageId);
-                console.log('After delete:', { before: old.length, after: filtered.length });
-                return filtered;
-              } else {
-                const updated = old.map((msg) =>
-                  msg.id === messageId ? { ...msg, ...(messageData as Partial<ChatMessage>) } : msg
-                );
-                console.log('After update: same count but message modified');
-                return updated;
-              }
-            });
-
-            const afterUpdate = queryClient.getQueryData<ChatMessage[]>(messagesQueryKey);
-            console.log('Messages after update:', afterUpdate?.length);
-          }
-
-          console.groupEnd();
-          break;
-
         case 'chat_channel_created':
         case 'chat_channel_updated':
         case 'chat_channel_deleted':
