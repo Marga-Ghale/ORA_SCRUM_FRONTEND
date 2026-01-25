@@ -32,6 +32,15 @@ const ChatPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Track active channel for smart notifications
+  useEffect(() => {
+    setActiveChannel(channelId || null);
+
+    return () => {
+      setActiveChannel(null);
+    };
+  }, [channelId]);
+
   // ✅ ADD: WebSocket integration
   const { isConnected, joinRoom, leaveRoom } = useWebSocket({
     onMessage: (message) => {
@@ -92,16 +101,17 @@ const ChatPage: React.FC = () => {
   // Inside component:
   const { mutate: markAsRead } = useMarkChannelRead();
 
+  // ✅ CORRECT - Fixed code
+
   useEffect(() => {
     if (channelId) {
-      // Track active channel for WebSocket logic
       setActiveChannel(channelId);
-
-      // Mark channel as read in backend (updates last_read timestamp)
       markAsRead(channelId);
     }
 
-    return () => setActiveChannel(null);
+    return () => {
+      setActiveChannel(null);
+    };
   }, [channelId, markAsRead]);
 
   // Close panels when channel changes
@@ -111,15 +121,6 @@ const ChatPage: React.FC = () => {
     setShowMembers(false);
   }, [channelId]);
 
-  // Track active channel for smart notifications
-  useEffect(() => {
-    setActiveChannel(channelId || null);
-
-    return () => {
-      setActiveChannel(null);
-    };
-  }, [channelId]);
-
   const handleSelectChannel = (channel: ChatChannel) => {
     navigate(`/chat/${channel.id}`);
   };
@@ -127,17 +128,6 @@ const ChatPage: React.FC = () => {
   const handleChannelCreated = (newChannelId: string) => {
     navigate(`/chat/${newChannelId}`);
   };
-
-  // const handleSendMessage = (content: string, parentId?: string) => {
-  //   if (!channelId) return;
-  //   sendMessage.mutate({
-  //     channelId,
-  //     content,
-  //     parentId,
-  //     currentUserId: '',
-  //     currentUser: undefined,
-  //   });
-  // };
 
   const handleSendMessage = (content: string, parentId?: string) => {
     if (!channelId || !user) return; // ✅ Add user check
