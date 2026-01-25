@@ -6,13 +6,11 @@ import toast from 'react-hot-toast';
 import { queryKeys } from '../../lib/query-client';
 import apiClient from '../../lib/api';
 import {
-  User,
   Pencil,
   MessageSquare,
   RefreshCw,
   Clock,
   AlertTriangle,
-  Sparkles,
   Trash2,
   Rocket,
   PartyPopper,
@@ -24,6 +22,7 @@ import {
   LucideIcon,
   UserPlus,
   Plus,
+  UserMinus,
 } from 'lucide-react';
 
 // ============================================
@@ -45,7 +44,10 @@ export type NotificationType =
   | 'MENTION'
   | 'PROJECT_INVITATION'
   | 'WORKSPACE_INVITATION'
-  | 'CHAT_MESSAGE';
+  | 'CHAT_MESSAGE'
+  | 'CHAT_ADDED_TO_CHANNEL'
+  | 'CHAT_REMOVED_FROM_CHANNEL'
+  | 'CHAT_MENTION';
 
 export interface NotificationData {
   taskId?: string;
@@ -237,6 +239,30 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, NotificationConfig> =
     hexBgColor: '#16a34a20',
     priority: 2,
   },
+  CHAT_ADDED_TO_CHANNEL: {
+    icon: UserPlus,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    hexColor: '#2563eb',
+    hexBgColor: '#2563eb20',
+    priority: 2,
+  },
+  CHAT_REMOVED_FROM_CHANNEL: {
+    icon: UserMinus,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    hexColor: '#ea580c',
+    hexBgColor: '#ea580c20',
+    priority: 3,
+  },
+  CHAT_MENTION: {
+    icon: AtSign,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    hexColor: '#9333ea',
+    hexBgColor: '#9333ea20',
+    priority: 1,
+  },
 };
 
 // ============================================
@@ -418,6 +444,25 @@ export function formatNotificationMessage(notification: Notification): {
         message: data.workspaceName
           ? `You've been invited to: ${data.workspaceName}`
           : 'You have a new workspace invitation',
+      };
+    case 'CHAT_ADDED_TO_CHANNEL':
+      return {
+        title: data.isDirect ? 'New Conversation' : 'Added to Channel',
+        message: data.isDirect
+          ? `${data.addedBy || 'Someone'} started a conversation with you`
+          : `${data.addedBy || 'Someone'} added you to #${data.channelName || 'a channel'}`,
+      };
+
+    case 'CHAT_REMOVED_FROM_CHANNEL':
+      return {
+        title: 'Removed from Channel',
+        message: `${data.removedBy || 'Someone'} removed you from #${data.channelName || 'a channel'}`,
+      };
+
+    case 'CHAT_MENTION':
+      return {
+        title: data.isDirect ? 'Mentioned in DM' : `Mentioned in #${data.channelName || 'chat'}`,
+        message: notification.message,
       };
 
     default:

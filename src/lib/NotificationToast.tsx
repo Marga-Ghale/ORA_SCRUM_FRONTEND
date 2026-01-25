@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/lib/NotificationToast.tsx - SMART DEDUPLICATION FIX
 import React from 'react';
 import { X } from 'lucide-react';
@@ -10,6 +11,7 @@ import {
   Notification,
 } from '../hooks/api/useNotifications';
 import { useNotificationNavigation } from '../hooks/api/useNotificationNavigation';
+import { isViewingChannel } from './activeChannelTracker';
 
 interface NotificationToastProps {
   t: Toast;
@@ -319,6 +321,14 @@ export function showWebSocketNotificationToast(
   type: NotificationType,
   data: Record<string, unknown>
 ) {
+  // ✅ SMART: Skip CHAT_MESSAGE toast if user is viewing that channel
+  if (type === 'CHAT_MESSAGE') {
+    const channelId = (data.channelId || (data.data as any)?.channelId) as string | undefined;
+    if (channelId && isViewingChannel(channelId)) {
+      console.log('⏭️ Skipping CHAT_MESSAGE toast - user is viewing channel:', channelId);
+      return;
+    }
+  }
   const notification: Notification = {
     id: (data.id as string) ?? `ws-${Date.now()}`,
     userId: (data.userId as string) ?? '',

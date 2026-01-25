@@ -337,26 +337,20 @@ const ProjectSidebar: React.FC = () => {
     currentWorkspace,
     currentSpace,
     currentFolder,
-    currentProject,
     setCurrentWorkspace,
     setCurrentSpace,
     setCurrentProject,
     setCurrentFolder,
     isInitializing,
     setManagementEntity,
-    createSpace,
     updateSpace,
     deleteSpace,
-    createFolder,
     updateFolder,
     deleteFolder,
     updateProject,
     deleteProject,
-    isCreateSpaceModalOpen,
     setIsCreateSpaceModalOpen,
-    isCreateFolderModalOpen,
     setIsCreateFolderModalOpen,
-    isCreateProjectModalOpen,
     setIsCreateProjectModalOpen,
     setCreationContext,
   } = useProjectContext();
@@ -918,7 +912,7 @@ const ProjectSidebar: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {isNavMinimized && totalChatUnread + unreadNotifications > 0 && (
+                  {/* {isNavMinimized && totalChatUnread + unreadNotifications > 0 && (
                     <span
                       className="min-w-[18px] h-4 px-1 flex items-center justify-center rounded-full 
               bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 
@@ -929,7 +923,7 @@ const ProjectSidebar: React.FC = () => {
                         ? '99+'
                         : totalChatUnread + unreadNotifications}
                     </span>
-                  )}
+                  )} */}
                   <div className="p-0.5 rounded-md bg-white/50 dark:bg-gray-900/50">
                     {isNavMinimized ? (
                       <ChevronDown
@@ -1067,7 +1061,7 @@ const ProjectSidebar: React.FC = () => {
         </div>
 
         {/* CHAT SECTION */}
-        <div className="flex-shrink-0 px-2.5 py-2 border-b border-gray-100 dark:border-gray-800/60">
+        {/* <div className="flex-shrink-0 px-2.5 py-2 border-b border-gray-100 dark:border-gray-800/60">
           <button
             onClick={() => setIsChatMinimized(!isChatMinimized)}
             className="w-full flex items-center justify-between px-2.5 py-2 mb-1.5 rounded-lg
@@ -1225,6 +1219,246 @@ const ProjectSidebar: React.FC = () => {
                     text-white text-[8px] font-bold 
                     border-2 border-white dark:border-gray-900
                     shadow-lg"
+                        >
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="px-2 py-4 text-center">
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500">No channels yet</p>
+                </div>
+              )}
+              {channels.length > 8 && (
+                <Link
+                  to="/chat"
+                  onClick={closeMobileSidebar}
+                  className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 mt-1 rounded-lg text-[10px] font-medium
+            text-blue-600 dark:text-blue-400 
+            hover:bg-blue-50 dark:hover:bg-blue-900/20
+            transition-all duration-200"
+                >
+                  <span>View all ({channels.length})</span>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div> */}
+
+        <div className="flex-shrink-0 px-2.5 py-2 border-b border-gray-100 dark:border-gray-800/60">
+          <button
+            onClick={() => setIsChatMinimized(!isChatMinimized)}
+            className={`w-full flex items-center justify-between px-2.5 py-2 mb-1.5 rounded-lg
+      bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-800/30
+      hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-800 dark:hover:to-gray-800/60
+      border border-gray-200/60 dark:border-gray-700/40
+      transition-all duration-300 group
+      hover:shadow-md hover:shadow-gray-200/50 dark:hover:shadow-black/20
+      ${totalChatUnread > 0 ? 'ring-1 ring-blue-400/30 dark:ring-blue-500/20' : ''}`}
+          >
+            {showFull ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-5 h-5 rounded-md flex items-center justify-center
+              transition-all duration-300
+              ${
+                totalChatUnread > 0
+                  ? 'bg-blue-500 dark:bg-blue-600 shadow-lg shadow-blue-500/40'
+                  : 'bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50'
+              }`}
+                  >
+                    <MessageSquare
+                      className={`w-3 h-3 ${totalChatUnread > 0 ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`}
+                    />
+                  </div>
+                  <span
+                    className={`text-[11px] font-semibold transition-colors duration-200
+            ${totalChatUnread > 0 ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}
+                  >
+                    Messages
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {totalChatUnread > 0 && (
+                    <span
+                      className={`min-w-[18px] h-4 px-1.5 flex items-center justify-center rounded-full 
+                bg-gradient-to-r from-red-600 to-red-600 dark:from-blue-500 dark:to-cyan-500 
+                text-white text-[9px] font-bold
+                shadow-lg shadow-blue-500/40
+                ${isChatMinimized ? 'animate-pulse' : 'animate-in zoom-in duration-200'}`}
+                    >
+                      {totalChatUnread > 99 ? '99+' : totalChatUnread}
+                    </span>
+                  )}
+                  <div className="p-0.5 rounded-md bg-white/50 dark:bg-gray-900/50">
+                    {isChatMinimized ? (
+                      <ChevronDown
+                        className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 
+                  transition-transform duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                      />
+                    ) : (
+                      <ChevronUp
+                        className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400
+                  transition-transform duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                      />
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="w-full flex justify-center relative">
+                <div
+                  className={`w-5 h-5 rounded-md flex items-center justify-center transition-all duration-300
+            ${
+              totalChatUnread > 0
+                ? 'bg-blue-500 dark:bg-blue-600 shadow-lg shadow-blue-500/40'
+                : 'bg-blue-100 dark:bg-blue-900/30'
+            }`}
+                >
+                  <MessageSquare
+                    className={`w-3 h-3 ${totalChatUnread > 0 ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`}
+                  />
+                </div>
+                {totalChatUnread > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 flex items-center justify-center rounded-full 
+              bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 
+              text-white text-[8px] font-bold 
+              border-2 border-white dark:border-gray-900
+              shadow-lg shadow-blue-500/40
+              animate-pulse"
+                  >
+                    {totalChatUnread > 9 ? '9+' : totalChatUnread}
+                  </span>
+                )}
+              </div>
+            )}
+          </button>
+
+          <div
+            className="overflow-hidden transition-all duration-500 ease-in-out"
+            style={{
+              maxHeight: isChatMinimized ? '0px' : '400px',
+              opacity: isChatMinimized ? 0 : 1,
+              transform: isChatMinimized ? 'translateY(-8px)' : 'translateY(0)',
+            }}
+          >
+            <div className="space-y-0.5">
+              {channels.length > 0 ? (
+                channels.slice(0, 8).map((channel, index) => {
+                  const isChatActive = location.pathname === `/chat/${channel.id}`;
+                  const unreadCount = chatUnreadData[channel.id] || 0;
+                  const hasUnread = unreadCount > 0;
+
+                  return (
+                    <Link
+                      key={channel.id}
+                      to={`/chat/${channel.id}`}
+                      onClick={closeMobileSidebar}
+                      style={{
+                        animationDelay: `${index * 30}ms`,
+                      }}
+                      className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium 
+                transition-all duration-200 ease-out group relative
+                ${
+                  isChatActive
+                    ? 'bg-gradient-to-r from-blue-100 to-cyan-50 dark:from-blue-500/20 dark:to-cyan-500/10 text-blue-700 dark:text-blue-300 shadow-sm'
+                    : hasUnread
+                      ? 'bg-gradient-to-r from-blue-50/80 to-cyan-50/40 dark:from-blue-500/10 dark:to-cyan-500/5 text-gray-900 dark:text-white font-semibold'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50/50 dark:hover:from-blue-500/10 dark:hover:to-cyan-500/5 hover:text-blue-700 dark:hover:text-blue-300'
+                }
+                hover:shadow-sm hover:shadow-blue-100 dark:hover:shadow-blue-900/20
+                hover:translate-x-0.5
+                ${!showFull ? 'justify-center' : ''}`}
+                      title={!showFull ? channel.name : undefined}
+                    >
+                      {/* Active indicator */}
+                      {isChatActive && (
+                        <span
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 
+                    bg-gradient-to-b from-blue-500 to-cyan-600 
+                    dark:from-blue-400 dark:to-cyan-500 
+                    rounded-r-full shadow-lg shadow-blue-500/30"
+                        />
+                      )}
+
+                      {/* Unread indicator bar (when not active but has unread) */}
+                      {!isChatActive && hasUnread && (
+                        <span
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 
+                    bg-gradient-to-b from-blue-400 to-cyan-500 
+                    dark:from-blue-500 dark:to-cyan-400 
+                    rounded-r-full
+                    animate-pulse"
+                        />
+                      )}
+
+                      {/* Channel icon */}
+                      <div
+                        className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0
+                  transition-all duration-200
+                  ${
+                    isChatActive
+                      ? 'bg-blue-100 dark:bg-blue-900/30'
+                      : hasUnread
+                        ? 'bg-blue-100 dark:bg-blue-900/40 ring-1 ring-blue-300/50 dark:ring-blue-500/30'
+                        : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30'
+                  }`}
+                      >
+                        {channel.type === 'direct' ? (
+                          <div
+                            className={`w-3.5 h-3.5 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white text-[8px] font-bold
+                    ${hasUnread ? 'ring-2 ring-blue-300/50 dark:ring-blue-400/30' : ''}`}
+                          >
+                            {channel.name?.charAt(0).toUpperCase() || 'D'}
+                          </div>
+                        ) : channel.isPrivate ? (
+                          <Lock
+                            className={`w-3 h-3 ${hasUnread ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+                          />
+                        ) : (
+                          <Hash
+                            className={`w-3 h-3 ${hasUnread ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+                          />
+                        )}
+                      </div>
+
+                      {/* Channel name and unread badge - expanded view */}
+                      {showFull && (
+                        <span className="flex-1 flex items-center justify-between min-w-0">
+                          <span
+                            className={`truncate text-[11px] ${hasUnread ? 'font-semibold text-gray-900 dark:text-white' : ''}`}
+                          >
+                            {channel.name}
+                          </span>
+                          {hasUnread && (
+                            <span
+                              className="min-w-[18px] h-4 px-1 flex items-center justify-center rounded-full 
+                        bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 
+                        text-white text-[9px] font-bold 
+                        shadow-md shadow-blue-500/30
+                        group-hover:scale-110 group-hover:shadow-lg
+                        transition-all duration-200
+                        animate-in zoom-in-50 duration-300"
+                            >
+                              {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                          )}
+                        </span>
+                      )}
+
+                      {/* Unread badge - collapsed view */}
+                      {!showFull && hasUnread && (
+                        <span
+                          className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 flex items-center justify-center rounded-full 
+                    bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 
+                    text-white text-[8px] font-bold 
+                    border-2 border-white dark:border-gray-900
+                    shadow-lg shadow-blue-500/40
+                    animate-pulse"
                         >
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
@@ -1613,7 +1847,7 @@ const ProjectSidebar: React.FC = () => {
             }`}
                                       >
                                         <DotIcon
-                                          className={`w-3.5 h-3.5 flex-shrink-0 transition-colors duration-200
+                                          className={`w-5 h-5 flex-shrink-0 transition-colors duration-200
               ${isProjectItemActive ? 'text-violet-500' : ''}`}
                                         />
                                         <span className="flex-1 text-[11px] truncate">

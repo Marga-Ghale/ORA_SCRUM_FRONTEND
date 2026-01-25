@@ -25,6 +25,7 @@ import { CreateDMModal } from './CreateDMModal';
 import { ThreadPanel } from './ThreadPanel';
 import { ChannelMembersPanel } from './ChannelMembersPanel';
 import { useWebSocket } from '../../hooks/api/useWebsocket';
+import { setActiveChannel } from '../../lib/activeChannelTracker';
 
 const ChatPage: React.FC = () => {
   const { channelId } = useParams<{ channelId?: string }>();
@@ -89,6 +90,15 @@ const ChatPage: React.FC = () => {
     setShowThread(false);
     setThreadMessage(null);
     setShowMembers(false);
+  }, [channelId]);
+
+  // Track active channel for smart notifications
+  useEffect(() => {
+    setActiveChannel(channelId || null);
+
+    return () => {
+      setActiveChannel(null);
+    };
   }, [channelId]);
 
   const handleSelectChannel = (channel: ChatChannel) => {
