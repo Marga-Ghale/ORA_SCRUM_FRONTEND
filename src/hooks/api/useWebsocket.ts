@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../components/UserProfile/AuthContext';
 import { queryKeys } from '../../lib/query-client';
 import { NotificationType } from './useNotifications';
-import { ChatMessage, ChatReaction } from './useChat';
+import { ChatChannel, ChatMessage, ChatReaction } from './useChat';
 import { isViewingChannel } from '../../lib/activeChannelTracker';
 
 // ✅ UPDATED: Added entity CRUD event types
@@ -661,10 +661,20 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             const channelId = messageData.channelId as string;
             console.log('[WebSocket] 👥 Member update:', { channelId, type: message.type });
 
+            // ✅ Invalidate members list
             queryClient.invalidateQueries({
               queryKey: queryKeys.chat.members(channelId),
             });
+
+            // ✅ Refresh channel list
             queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
+
+            const currentUserId = messageData.userId as string;
+            if (currentUserId) {
+              queryClient.setQueryData<ChatChannel[]>(queryKeys.chat.channels(), (old) => {
+                return old?.filter((c) => c.id !== channelId) || [];
+              });
+            }
           }
           break;
 

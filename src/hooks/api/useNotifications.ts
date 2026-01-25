@@ -449,8 +449,8 @@ export function formatNotificationMessage(notification: Notification): {
       return {
         title: data.isDirect ? 'New Conversation' : 'Added to Channel',
         message: data.isDirect
-          ? `${data.addedBy || 'Someone'} started a conversation with you`
-          : `${data.addedBy || 'Someone'} added you to #${data.channelName || 'a channel'}`,
+          ? `${data.assignedByName || 'Someone'} started a conversation with you`
+          : `${data.assignedByName || 'Someone'} added you to #${data.channelName || 'a channel'}`,
       };
 
     case 'CHAT_REMOVED_FROM_CHANNEL':

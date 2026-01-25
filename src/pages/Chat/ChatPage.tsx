@@ -35,9 +35,21 @@ const ChatPage: React.FC = () => {
   // ✅ ADD: WebSocket integration
   const { isConnected, joinRoom, leaveRoom } = useWebSocket({
     onMessage: (message) => {
-      // Additional message handling if needed
-      if (message.type === 'chat_message') {
-        console.log('[ChatPage] Received chat message via WebSocket');
+      if (message.type === 'chat_member_removed') {
+        const data = message.payload || message.data || {};
+        const removedUserId = data.userId as string;
+        const affectedChannelId = data.channelId as string;
+
+        // ✅ If current user was removed from active channel, navigate away
+        if (removedUserId === user?.id && affectedChannelId === channelId) {
+          handleChannelDeleted(affectedChannelId);
+        }
+      }
+
+      if (message.type === 'chat_channel_deleted') {
+        const data = message.payload || message.data || {};
+        const deletedChannelId = data.channelId as string;
+        handleChannelDeleted(deletedChannelId);
       }
     },
   });
@@ -137,6 +149,16 @@ const ChatPage: React.FC = () => {
     });
   };
 
+  const handleChannelDeleted = (deletedChannelId: string) => {
+    if (deletedChannelId === channelId) {
+      const remainingChannels = channels.filter((c) => c.id !== deletedChannelId);
+      if (remainingChannels.length > 0) {
+        navigate(`/chat/${remainingChannels[0].id}`);
+      } else {
+        navigate('/chat');
+      }
+    }
+  };
   const handleEditMessage = (messageId: string, content: string) => {
     if (!channelId) return;
     editMessage.mutate({ messageId, content, channelId });

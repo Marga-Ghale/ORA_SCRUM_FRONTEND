@@ -16,7 +16,14 @@ import {
   X,
   MessageSquare,
 } from 'lucide-react';
-import { ChatChannel, getChannelDisplayName } from '../../hooks/api/useChat';
+import {
+  ChatChannel,
+  getChannelDisplayName,
+  useDeleteChannel,
+  useLeaveChannel,
+} from '../../hooks/api/useChat';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router';
 
 interface ChannelListProps {
   channels: ChatChannel[];
@@ -51,6 +58,77 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   } | null>(null);
   const [starredChannels, setStarredChannels] = useState<Set<string>>(new Set());
 
+  const navigate = useNavigate();
+
+  // Add state for confirmation modal (after line 42)
+  const [confirmModal, setConfirmModal] = useState<{
+    type: 'leave' | 'delete';
+    channelId: string;
+    channelName: string;
+  } | null>(null);
+
+  // Add mutations (after line 56)
+  const deleteChannel = useDeleteChannel();
+  const leaveChannelMutation = useLeaveChannel();
+
+  // Add handler functions (after line 127)
+  const handleLeaveChannel = (channelId: string) => {
+    const channel = channels.find((c) => c.id === channelId);
+    if (!channel) return;
+
+    setConfirmModal({
+      type: 'leave',
+      channelId,
+      channelName: getChannelDisplayName(channel, currentUserId),
+    });
+    setContextMenu(null);
+  };
+
+  const handleDeleteChannel = (channelId: string) => {
+    const channel = channels.find((c) => c.id === channelId);
+    if (!channel) return;
+
+    setConfirmModal({
+      type: 'delete',
+      channelId,
+      channelName: getChannelDisplayName(channel, currentUserId),
+    });
+    setContextMenu(null);
+  };
+
+  // ChatPage.tsx - Update confirmAction in ChannelList
+  const confirmAction = async () => {
+    if (!confirmModal) return;
+
+    try {
+      if (confirmModal.type === 'leave') {
+        await leaveChannelMutation.mutateAsync({
+          channelId: confirmModal.channelId,
+        });
+        // ✅ FIX: Navigate away if leaving active channel
+        if (confirmModal.channelId === activeChannelId) {
+          const remainingChannels = channels.filter((c) => c.id !== confirmModal.channelId);
+          if (remainingChannels.length > 0) {
+            navigate(`/chat/${remainingChannels[0].id}`);
+          } else {
+            navigate('/chat');
+          }
+        }
+      } else {
+        await deleteChannel.mutateAsync(confirmModal.channelId);
+        if (confirmModal.channelId === activeChannelId) {
+          const remainingChannels = channels.filter((c) => c.id !== confirmModal.channelId);
+          if (remainingChannels.length > 0) {
+            navigate(`/chat/${remainingChannels[0].id}`);
+          } else {
+            navigate('/chat');
+          }
+        }
+      }
+    } finally {
+      setConfirmModal(null);
+    }
+  };
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -336,7 +414,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           )}
         </div>
       </div>
-
       {/* Channel List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {isLoading ? (
@@ -451,7 +528,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           </>
         )}
       </div>
-
       {/* Context Menu */}
       {contextMenu && (
         <>
@@ -463,6 +539,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               left: Math.min(contextMenu.x, window.innerWidth - 200),
             }}
           >
+            {/* Star/Unstar */}
             <button
               onClick={() => toggleStar(contextMenu.channelId)}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors"
@@ -481,31 +558,92 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               </span>
             </button>
 
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors">
+            {/* Mute */}
+            <button
+              onClick={() => {
+                setContextMenu(null);
+                toast.success('Mute feature coming soon');
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors"
+            >
               <BellOff className="w-4 h-4" />
               <span>Mute conversation</span>
             </button>
 
             <div className="h-px bg-gray-200 dark:bg-[#3a3e43] my-1" />
 
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors">
+            {/* Settings */}
+            <button
+              onClick={() => {
+                setContextMenu(null);
+                toast.success('Channel settings coming soon');
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors"
+            >
               <Settings className="w-4 h-4" />
               <span>Settings</span>
             </button>
 
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors">
+            {/* Leave Channel */}
+            <button
+              onClick={() => handleLeaveChannel(contextMenu.channelId)}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={channels.find((c) => c.id === contextMenu.channelId)?.type === 'direct'}
+            >
               <LogOut className="w-4 h-4" />
               <span>Leave channel</span>
             </button>
 
             <div className="h-px bg-gray-200 dark:bg-[#3a3e43] my-1" />
 
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+            {/* Delete Channel */}
+            <button
+              onClick={() => handleDeleteChannel(contextMenu.channelId)}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={
+                channels.find((c) => c.id === contextMenu.channelId)?.createdBy !== currentUserId ||
+                channels.find((c) => c.id === contextMenu.channelId)?.type === 'direct'
+              }
+            >
               <Trash2 className="w-4 h-4" />
               <span>Delete</span>
             </button>
           </div>
         </>
+      )}
+      {/* Add modal before closing div */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-[#25282c] rounded-xl p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-[#3a3e43]">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              {confirmModal.type === 'leave' ? 'Leave Channel' : 'Delete Channel'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-[#9ca3af] mb-6">
+              {confirmModal.type === 'leave'
+                ? `Are you sure you want to leave "${confirmModal.channelName}"? You'll need to be re-added to access it again.`
+                : `Are you sure you want to delete "${confirmModal.channelName}"? This action cannot be undone and all messages will be lost.`}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                disabled={deleteChannel.isPending || leaveChannelMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-red-400 rounded-lg transition-colors"
+              >
+                {deleteChannel.isPending || leaveChannelMutation.isPending
+                  ? 'Processing...'
+                  : confirmModal.type === 'leave'
+                    ? 'Leave'
+                    : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

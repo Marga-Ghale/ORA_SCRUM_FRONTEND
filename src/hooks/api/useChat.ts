@@ -740,25 +740,53 @@ export function useJoinChannel() {
 /**
  * Leave a channel or remove a member
  */
+// export function useLeaveChannel() {
+//   const queryClient = useQueryClient();
+
+//   return useMutation({
+//     mutationFn: async ({ channelId, userId }: { channelId: string; userId?: string }) => {
+//       if (userId) {
+//         // Remove specific user from channel
+//         return apiClient.post(`/chat/channels/${channelId}/members/remove`, { userId });
+//       }
+//       // Current user leaving
+//       return apiClient.post(`/chat/channels/${channelId}/leave`);
+//     },
+//     onSuccess: (_, { channelId }) => {
+//       toast.success('Member removed');
+//       queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
+//       queryClient.invalidateQueries({ queryKey: queryKeys.chat.members(channelId) });
+//     },
+//     onError: () => {
+//       toast.error('Failed to remove member');
+//     },
+//   });
+// }
+
+// Update useLeaveChannel (line 625)
 export function useLeaveChannel() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ channelId, userId }: { channelId: string; userId?: string }) => {
       if (userId) {
-        // Remove specific user from channel
         return apiClient.post(`/chat/channels/${channelId}/members/remove`, { userId });
       }
-      // Current user leaving
       return apiClient.post(`/chat/channels/${channelId}/leave`);
     },
-    onSuccess: (_, { channelId }) => {
-      toast.success('Member removed');
+    onSuccess: (_, { channelId, userId }) => {
+      if (!userId) {
+        toast.success('Left channel');
+      } else {
+        toast.success('Member removed');
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
       queryClient.invalidateQueries({ queryKey: queryKeys.chat.members(channelId) });
+      queryClient.removeQueries({ queryKey: queryKeys.chat.channel(channelId) });
     },
-    onError: () => {
-      toast.error('Failed to remove member');
+    onError: (error: any) => {
+      const msg = error?.response?.data?.error || 'Failed to leave channel';
+      toast.error(msg);
     },
   });
 }
