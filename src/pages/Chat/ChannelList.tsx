@@ -584,30 +584,56 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               <span>Settings</span>
             </button>
 
-            {/* Leave Channel */}
-            <button
-              onClick={() => handleLeaveChannel(contextMenu.channelId)}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={channels.find((c) => c.id === contextMenu.channelId)?.type === 'direct'}
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Leave channel</span>
-            </button>
-
             <div className="h-px bg-gray-200 dark:bg-[#3a3e43] my-1" />
 
-            {/* Delete Channel */}
-            <button
-              onClick={() => handleDeleteChannel(contextMenu.channelId)}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={(() => {
-                const channel = channels.find((c) => c.id === contextMenu.channelId);
-                return !channel || channel.createdBy !== currentUserId || channel.type === 'direct';
-              })()}
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Delete</span>
-            </button>
+            {/* Close Conversation - For DMs only (hides from sidebar) */}
+            {/* Delete Channel - For non-DM channels, creator only */}
+            {(() => {
+              const channel = channels.find((c) => c.id === contextMenu.channelId);
+
+              // Cannot delete DMs or group DMs
+              if (!channel || channel.type === 'direct' || channel.type === 'group') {
+                return null;
+              }
+
+              // Check if current user is the creator
+              const isCreator = channel.createdBy === currentUserId;
+
+              if (!isCreator) return null;
+
+              return (
+                <>
+                  <div className="h-px bg-gray-200 dark:bg-[#3a3e43] my-1" />
+                  <button
+                    onClick={() => handleDeleteChannel(contextMenu.channelId)}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete channel</span>
+                  </button>
+                </>
+              );
+            })()}
+
+            {/* Leave Channel/Conversation - For channels and group DMs only */}
+            {(() => {
+              const channel = channels.find((c) => c.id === contextMenu.channelId);
+
+              // Hide leave option for 1:1 DMs (use Close instead)
+              if (channel?.type === 'direct') return null;
+
+              const isGroupDM = channel?.type === 'group';
+
+              return (
+                <button
+                  onClick={() => handleLeaveChannel(contextMenu.channelId)}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>{isGroupDM ? 'Leave conversation' : 'Leave channel'}</span>
+                </button>
+              );
+            })()}
           </div>
         </>
       )}

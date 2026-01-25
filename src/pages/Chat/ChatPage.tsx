@@ -88,14 +88,21 @@ const ChatPage: React.FC = () => {
   const deleteMessage = useDeleteMessage();
   const addReaction = useAddReaction();
   const removeReaction = useRemoveReaction();
-  const markRead = useMarkChannelRead();
 
-  // Mark channel as read when opened
+  // Inside component:
+  const { mutate: markAsRead } = useMarkChannelRead();
+
   useEffect(() => {
-    if (channelId && unreadCounts[channelId]) {
-      markRead.mutate(channelId);
+    if (channelId) {
+      // Track active channel for WebSocket logic
+      setActiveChannel(channelId);
+
+      // Mark channel as read in backend (updates last_read timestamp)
+      markAsRead(channelId);
     }
-  }, [channelId]);
+
+    return () => setActiveChannel(null);
+  }, [channelId, markAsRead]);
 
   // Close panels when channel changes
   useEffect(() => {
@@ -212,7 +219,7 @@ const ChatPage: React.FC = () => {
           onCreateChannel={() => setShowCreateChannel(true)}
           onCreateDM={() => setShowCreateDM(true)}
           isLoading={channelsLoading}
-          currentUserId={''}
+          currentUserId={user?.id || ''} // ✅ FIX: Pass actual user ID
         />
         {/* Main Chat Area */}
         {channelId && currentChannel ? (

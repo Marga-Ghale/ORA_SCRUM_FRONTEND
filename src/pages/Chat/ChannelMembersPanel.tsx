@@ -9,6 +9,7 @@ import {
   ChatChannelMember,
 } from '../../hooks/api/useChat';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
+import { queryClient, queryKeys } from '../../lib/query-client';
 
 interface ChannelMembersPanelProps {
   isOpen: boolean;
@@ -114,13 +115,13 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
   };
 
   // Handle removing a member
+  // Around line 75 - Update handleRemoveMember
   const handleRemoveMember = async (userId: string) => {
     try {
       await leaveChannel.mutateAsync({ channelId: channel.id, userId });
-      // Force immediate refetch
-      await refetchMembers();
-      // Refetch again after 500ms to ensure backend update
-      setTimeout(() => refetchMembers(), 500);
+      // ✅ Force cache invalidation
+      queryClient.invalidateQueries({ queryKey: queryKeys.chat.members(channel.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
     } catch (error) {
       console.error('Failed to remove member:', error);
     }
@@ -173,19 +174,36 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
         </div>
 
         {/* Actions */}
+        {/* Actions - Show remove button based on Slack-like rules */}
         {showRemove &&
-          !isOwner &&
-          !isCurrentUser &&
-          channel.type !== 'direct' &&
-          channel.createdBy === currentUserId && (
-            <button
-              onClick={() => handleRemoveMember(member.userId)}
-              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-[#6b7280] hover:text-red-400 transition-all"
-              title="Remove from channel"
-            >
-              <UserMinus className="w-4 h-4" />
-            </button>
-          )}
+          (() => {
+            const isOwner =
+              member.userId === channel.createdBy || member.userId === (channel as any).CreatedBy;
+            const isCurrentUser = member.userId === currentUserId;
+            const creatorId = (channel as any).createdBy || (channel as any).CreatedBy;
+            const isCreator = currentUserId === creatorId;
+
+            // Rules:
+            // - Cannot remove channel owner
+            // - Cannot remove yourself via this button (use Leave instead)
+            // - In regular channels: only creator can remove others
+            // - In group DMs: cannot remove others (they must leave themselves)
+
+            if (isOwner || isCurrentUser) return null;
+            if (channel.type === 'direct') return null; // 1:1 DM - no removal
+            if (channel.type === 'group') return null; // Group DM - cannot remove others
+            if (!isCreator) return null; // Only channel creator can remove
+
+            return (
+              <button
+                onClick={() => handleRemoveMember(member.userId)}
+                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-[#6b7280] hover:text-red-400 transition-all"
+                title="Remove from channel"
+              >
+                <UserMinus className="w-4 h-4" />
+              </button>
+            );
+          })()}
       </div>
     );
   };

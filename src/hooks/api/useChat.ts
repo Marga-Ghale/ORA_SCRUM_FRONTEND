@@ -20,14 +20,15 @@ export interface ChatUser {
 export interface ChatChannel {
   id: string;
   name: string;
-  type: 'project' | 'space' | 'team' | 'direct';
+  type: 'project' | 'space' | 'team' | 'direct' | 'group'; // ✅ Added 'group'
   targetId: string;
   workspaceId: string;
-  createdBy: string;
+  createdBy: string; // Will be normalized
   isPrivate: boolean;
   createdAt: string;
   updatedAt: string;
   lastMessage?: string;
+  memberCount?: number; // ✅ Add this
   // Computed fields
   unreadCount?: number;
   otherUser?: ChatUser;
@@ -81,6 +82,23 @@ export interface TypingUser {
   channelId: string;
 }
 
+export function normalizeChannel(channel: any): ChatChannel {
+  return {
+    id: channel.id || channel.ID,
+    name: channel.name || channel.Name,
+    type: channel.type || channel.Type,
+    targetId: channel.targetId || channel.TargetID,
+    workspaceId: channel.workspaceId || channel.WorkspaceID,
+    createdBy: channel.createdBy || channel.CreatedBy, // ✅ Normalize
+    isPrivate: channel.isPrivate ?? channel.IsPrivate ?? false,
+    createdAt: channel.createdAt || channel.CreatedAt,
+    updatedAt: channel.updatedAt || channel.UpdatedAt,
+    lastMessage: channel.lastMessage || channel.LastMessage,
+    memberCount: channel.memberCount || channel.MemberCount,
+    otherUser: channel.otherUser || channel.OtherUser,
+  };
+}
+
 // ============================================
 // Channel Hooks
 // ============================================
@@ -88,12 +106,14 @@ export interface TypingUser {
 /**
  * Get all channels for the current user
  */
+// Around line 85 - Update useChannels
 export function useChannels() {
   return useQuery({
     queryKey: queryKeys.chat.channels(),
     queryFn: async () => {
-      const data = await apiClient.get<ChatChannel[]>('/chat/channels');
-      return data || [];
+      const data = await apiClient.get<any[]>('/chat/channels');
+      // ✅ Normalize all channels
+      return (data || []).map(normalizeChannel);
     },
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
@@ -475,7 +495,6 @@ export function useSendMessage() {
     },
     onSettled: (_, __, { channelId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.chat.messages(channelId, 50, 0) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCounts() });
       queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
     },
   });
