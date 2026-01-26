@@ -19,6 +19,10 @@ import {
 import {
   ChatChannel,
   getChannelDisplayName,
+  isDMChannel,
+  isGroupDMChannel,
+  canDeleteChannel,
+  canLeaveChannel,
   useDeleteChannel,
   useLeaveChannel,
 } from '../../hooks/api/useChat';
@@ -60,18 +64,15 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 
   const navigate = useNavigate();
 
-  // Add state for confirmation modal (after line 42)
   const [confirmModal, setConfirmModal] = useState<{
     type: 'leave' | 'delete';
     channelId: string;
     channelName: string;
   } | null>(null);
 
-  // Add mutations (after line 56)
   const deleteChannel = useDeleteChannel();
   const leaveChannelMutation = useLeaveChannel();
 
-  // Add handler functions (after line 127)
   const handleLeaveChannel = (channelId: string) => {
     const channel = channels.find((c) => c.id === channelId);
     if (!channel) return;
@@ -96,7 +97,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     setContextMenu(null);
   };
 
-  // ChatPage.tsx - Update confirmAction in ChannelList
   const confirmAction = async () => {
     if (!confirmModal) return;
 
@@ -105,7 +105,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         await leaveChannelMutation.mutateAsync({
           channelId: confirmModal.channelId,
         });
-        // ✅ FIX: Navigate away if leaving active channel
         if (confirmModal.channelId === activeChannelId) {
           const remainingChannels = channels.filter((c) => c.id !== confirmModal.channelId);
           if (remainingChannels.length > 0) {
@@ -129,6 +128,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
       setConfirmModal(null);
     }
   };
+
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -141,7 +141,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     });
   };
 
-  // Categorize channels
   const categorizedChannels = useMemo(() => {
     const starred: ChatChannel[] = [];
     const projectChannels: ChatChannel[] = [];
@@ -151,7 +150,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
       if (starredChannels.has(channel.id)) {
         starred.push(channel);
       }
-      if (channel.type === 'direct') {
+      if (isDMChannel(channel) || isGroupDMChannel(channel)) {
         directMessages.push(channel);
       } else {
         projectChannels.push(channel);
@@ -161,7 +160,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     return { starred, projectChannels, directMessages };
   }, [channels, starredChannels]);
 
-  // Filter by search
   const filteredChannels = useMemo(() => {
     if (!searchQuery) return categorizedChannels;
 
@@ -178,7 +176,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     };
   }, [categorizedChannels, searchQuery, currentUserId]);
 
-  // Calculate total unread counts
   const totalUnread = useMemo(() => {
     const channelUnread = filteredChannels.projectChannels.reduce(
       (sum, c) => sum + (unreadCounts[c.id] || 0),
@@ -219,9 +216,8 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     const isHovered = hoveredChannel === channel.id;
 
     const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown';
-    console.log(displayName);
     const isStarred = starredChannels.has(channel.id);
-    const isDM = channel.type === 'direct';
+    const isDM = isDMChannel(channel) || isGroupDMChannel(channel); // ✅ FIXED
 
     return (
       <button
@@ -238,7 +234,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                 : 'text-gray-600 dark:text-[#9ca3af] hover:bg-gray-100 dark:hover:bg-[#25282c] hover:text-gray-900 dark:hover:text-white'
           }`}
       >
-        {/* Channel Icon / Avatar */}
         {isDM ? (
           <div className="relative flex-shrink-0">
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-medium text-white">
@@ -252,7 +247,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                 (displayName?.[0] || '?').toUpperCase()
               )}
             </div>
-            {/* Online status */}
             <Circle
               className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 stroke-white dark:stroke-[#1a1d21] stroke-2 ${
                 channel.otherUser?.status === 'online'
@@ -273,36 +267,30 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           </div>
         )}
 
-        {/* Channel Name */}
         <span className={`flex-1 truncate text-left ${unread > 0 ? 'font-semibold' : ''}`}>
           {displayName}
         </span>
 
-        {/* Type Badge (for starred section) */}
         {showType && (
           <span className="text-[10px] text-gray-500 dark:text-[#6b7280] uppercase">
             {isDM ? 'DM' : channel.type}
           </span>
         )}
 
-        {/* Private Lock */}
         {channel.isPrivate && !isDM && (
           <Lock className="w-3 h-3 text-gray-500 dark:text-[#6b7280] flex-shrink-0" />
         )}
 
-        {/* Starred Indicator */}
         {isStarred && !showType && (
           <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
         )}
 
-        {/* Unread Badge */}
         {unread > 0 && (
           <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full min-w-[18px] text-center flex-shrink-0">
             {unread > 99 ? '99+' : unread}
           </span>
         )}
 
-        {/* Hover Actions */}
         {isHovered && !unread && (
           <button
             onClick={(e) => {
@@ -318,7 +306,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     );
   };
 
-  // Section Header Component
   const SectionHeader: React.FC<{
     title: string;
     section: string;
@@ -361,7 +348,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     );
   };
 
-  // Loading Skeleton
   const LoadingSkeleton = () => (
     <div className="p-2 space-y-1">
       {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -378,7 +364,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 
   return (
     <div className="w-[260px] h-full flex flex-col bg-white dark:bg-[#1a1d21] border-r border-gray-200 dark:border-[#2a2e33]">
-      {/* Header */}
       <div className="p-3 border-b border-gray-200 dark:border-[#2a2e33]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -394,7 +379,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           </button>
         </div>
 
-        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-[#6b7280]" />
           <input
@@ -414,12 +398,11 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           )}
         </div>
       </div>
-      {/* Channel List */}
+
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {isLoading ? (
           <LoadingSkeleton />
         ) : channels.length === 0 ? (
-          // Empty State
           <div className="flex flex-col items-center justify-center h-full text-center p-6">
             <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-[#25282c] flex items-center justify-center mb-3">
               <MessageSquare className="w-7 h-7 text-gray-500 dark:text-[#6b7280]" />
@@ -438,7 +421,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           </div>
         ) : (
           <>
-            {/* Starred Section */}
             {filteredChannels.starred.length > 0 && (
               <div className="py-2">
                 <SectionHeader
@@ -456,7 +438,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               </div>
             )}
 
-            {/* Channels Section */}
             <div className="py-2">
               <SectionHeader
                 title="Channels"
@@ -477,7 +458,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                     </p>
                   )}
 
-                  {/* Add Channel Button */}
                   {!searchQuery && (
                     <button
                       onClick={onCreateChannel}
@@ -491,7 +471,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               )}
             </div>
 
-            {/* Direct Messages Section */}
             <div className="py-2">
               <SectionHeader
                 title="Direct Messages"
@@ -512,7 +491,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                     </p>
                   )}
 
-                  {/* New Message Button */}
                   {!searchQuery && (
                     <button
                       onClick={onCreateDM}
@@ -528,7 +506,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           </>
         )}
       </div>
-      {/* Context Menu */}
+
       {contextMenu && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
@@ -539,7 +517,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               left: Math.min(contextMenu.x, window.innerWidth - 200),
             }}
           >
-            {/* Star/Unstar */}
             <button
               onClick={() => toggleStar(contextMenu.channelId)}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors"
@@ -558,7 +535,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               </span>
             </button>
 
-            {/* Mute */}
             <button
               onClick={() => {
                 setContextMenu(null);
@@ -572,7 +548,6 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 
             <div className="h-px bg-gray-200 dark:bg-[#3a3e43] my-1" />
 
-            {/* Settings */}
             <button
               onClick={() => {
                 setContextMenu(null);
@@ -584,22 +559,10 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               <span>Settings</span>
             </button>
 
-            <div className="h-px bg-gray-200 dark:bg-[#3a3e43] my-1" />
-
-            {/* Close Conversation - For DMs only (hides from sidebar) */}
-            {/* Delete Channel - For non-DM channels, creator only */}
             {(() => {
               const channel = channels.find((c) => c.id === contextMenu.channelId);
-
-              // Cannot delete DMs or group DMs
-              if (!channel || channel.type === 'direct' || channel.type === 'group') {
-                return null;
-              }
-
-              // Check if current user is the creator
-              const isCreator = channel.createdBy === currentUserId;
-
-              if (!isCreator) return null;
+              if (!channel) return null;
+              if (!canDeleteChannel(channel, currentUserId)) return null;
 
               return (
                 <>
@@ -615,14 +578,12 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               );
             })()}
 
-            {/* Leave Channel/Conversation - For channels and group DMs only */}
             {(() => {
               const channel = channels.find((c) => c.id === contextMenu.channelId);
+              if (!channel) return null;
+              if (!canLeaveChannel(channel)) return null;
 
-              // Hide leave option for 1:1 DMs (use Close instead)
-              if (channel?.type === 'direct') return null;
-
-              const isGroupDM = channel?.type === 'group';
+              const isGroup = isGroupDMChannel(channel);
 
               return (
                 <button
@@ -630,14 +591,14 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-[#3a3e43] transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>{isGroupDM ? 'Leave conversation' : 'Leave channel'}</span>
+                  <span>{isGroup ? 'Leave conversation' : 'Leave channel'}</span>
                 </button>
               );
             })()}
           </div>
         </>
       )}
-      {/* Add modal before closing div */}
+
       {confirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-[#25282c] rounded-xl p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-[#3a3e43]">

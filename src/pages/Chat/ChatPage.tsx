@@ -103,10 +103,15 @@ const ChatPage: React.FC = () => {
 
   // ✅ CORRECT - Fixed code
 
+  // Update the useEffect that calls markAsRead (around line 95)
   useEffect(() => {
     if (channelId) {
       setActiveChannel(channelId);
-      markAsRead(channelId);
+      // ✅ FIX: Small delay to ensure WebSocket handlers have processed
+      const timer = setTimeout(() => {
+        markAsRead(channelId);
+      }, 100);
+      return () => clearTimeout(timer);
     }
 
     return () => {

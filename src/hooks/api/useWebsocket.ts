@@ -228,58 +228,72 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       }
 
       switch (message.type) {
-        // case 'notification':
-        //   queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
-
-        //   if (messageData && typeof messageData === 'object') {
-        //     const notificationType = messageData.type as string;
-
-        //     if (notificationType === 'CHAT_MESSAGE') {
-        //       const channelId = (messageData as any).data?.channelId;
-
-        //       if (channelId) {
-        //         queryClient.invalidateQueries({
-        //           queryKey: queryKeys.chat.messages(channelId, 50, 0),
-        //           refetchType: 'active',
-        //         });
-
-        //         queryClient.invalidateQueries({
-        //           queryKey: queryKeys.chat.channels(),
-        //           refetchType: 'active',
-        //         });
-        //       }
-
-        //       console.groupEnd();
-        //     }
-
-        //     import('../../lib/NotificationToast').then(({ showWebSocketNotificationToast }) => {
-        //       showWebSocketNotificationToast(
-        //         message.type.toUpperCase() as NotificationType,
-        //         messageData
-        //       );
-        //     });
-        //   }
-        //   break;
-
+        // Replace the notification case (around line 195)
         case 'notification':
-          // ✅ Chat messages no longer come through notification system
-          // Only handle task/sprint/invitation notifications
           queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
 
           if (messageData && typeof messageData === 'object') {
             const notificationType = messageData.type as string;
 
-            // ✅ Skip CHAT_MESSAGE type (shouldn't happen anymore, but safety check)
-            if (notificationType === 'CHAT_MESSAGE') {
-              break;
+            // ✅ FIX: Handle workspace/space/folder/project invitations
+            switch (notificationType) {
+              case 'WORKSPACE_INVITATION':
+              case 'WORKSPACE_REMOVAL':
+                console.log('[WebSocket] 🏢 Workspace membership changed via notification');
+                queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
+                queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() });
+                queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.my() });
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.members.accessibleWorkspaces(),
+                });
+                break;
+
+              case 'SPACE_INVITATION':
+              case 'SPACE_REMOVAL':
+                console.log('[WebSocket] 📁 Space membership changed via notification');
+                queryClient.invalidateQueries({ queryKey: queryKeys.spaces.all });
+                queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleSpaces() });
+                queryClient.invalidateQueries({ queryKey: queryKeys.members.visibleSpaces() });
+                if (messageData.data && (messageData.data as any).workspaceId) {
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.spaces.byWorkspace((messageData.data as any).workspaceId),
+                  });
+                }
+                break;
+
+              case 'FOLDER_INVITATION':
+              case 'FOLDER_REMOVAL':
+                console.log('[WebSocket] 📂 Folder membership changed via notification');
+                queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
+                queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleFolders() });
+                break;
+
+              case 'PROJECT_INVITATION':
+              case 'PROJECT_REMOVAL':
+                console.log('[WebSocket] 📋 Project membership changed via notification');
+                queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+                queryClient.invalidateQueries({ queryKey: queryKeys.members.accessibleProjects() });
+                break;
+
+              case 'CHAT_ADDED_TO_CHANNEL':
+                console.log('[WebSocket] 💬 Added to chat channel via notification');
+                queryClient.invalidateQueries({ queryKey: queryKeys.chat.channels() });
+                break;
+
+              case 'CHAT_MESSAGE':
+                // Skip - handled by chat_message event
+                break;
             }
 
-            import('../../lib/NotificationToast').then(({ showWebSocketNotificationToast }) => {
-              showWebSocketNotificationToast(
-                notificationType.toUpperCase() as NotificationType,
-                messageData
-              );
-            });
+            // Show toast for non-chat notifications
+            if (notificationType !== 'CHAT_MESSAGE') {
+              import('../../lib/NotificationToast').then(({ showWebSocketNotificationToast }) => {
+                showWebSocketNotificationToast(
+                  notificationType.toUpperCase() as NotificationType,
+                  messageData
+                );
+              });
+            }
           }
           break;
         case 'notification_count':
@@ -560,11 +574,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         // CHAT EVENTS
         // ============================================
 
+        // Replace the chat_message case (around line 285)
         case 'chat_message':
           if (messageData.channelId) {
             const channelId = messageData.channelId as string;
-
-            // ✅ CHECK: Are we actively viewing this channel?
             const isCurrentlyViewing = isViewingChannel(channelId);
 
             // Extract and normalize message
@@ -597,7 +610,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
             const messagesQueryKey = queryKeys.chat.messages(channelId, 50, 0);
 
-            // Add message to cache (deduplicated)
+            // Add message to cache
             queryClient.setQueryData<ChatMessage[]>(messagesQueryKey, (old) => {
               if (!old) return [normalizedMessage];
               const exists = old.some((msg) => msg.id === normalizedMessage.id);
@@ -605,25 +618,26 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               return [normalizedMessage, ...old];
             });
 
-            // ✅ SMART UNREAD LOGIC:
-            // 1. If viewing this channel → mark as read immediately (reset counter to 0)
-            // 2. If NOT viewing → invalidate to refetch from backend (backend will calculate +1)
-
+            // ✅ FIX: Optimistically update unread count instead of invalidating
             if (isCurrentlyViewing) {
-              // ✅ User is viewing this channel - mark as read immediately
+              // User is viewing - keep at 0
               queryClient.setQueryData<Record<string, number>>(
                 queryKeys.chat.unreadCounts(),
                 (old) => ({
                   ...(old || {}),
-                  [channelId]: 0, // ✅ Reset to 0 since they're viewing
+                  [channelId]: 0,
                 })
               );
             } else {
-              // ✅ User is NOT viewing - let backend calculate unread count
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.chat.unreadCounts(),
-                refetchType: 'active',
-              });
+              // ✅ FIX: Optimistically INCREMENT instead of invalidating
+              // This prevents race conditions with mark-as-read
+              queryClient.setQueryData<Record<string, number>>(
+                queryKeys.chat.unreadCounts(),
+                (old) => ({
+                  ...(old || {}),
+                  [channelId]: (old?.[channelId] || 0) + 1,
+                })
+              );
             }
 
             // Refresh channel list for last message preview
