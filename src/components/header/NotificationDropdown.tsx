@@ -24,6 +24,7 @@ import {
   Plus,
   Edit3,
   AlertTriangle,
+  UserMinus,
 } from 'lucide-react';
 import { Dropdown } from '../ui/dropdown/Dropdown';
 import {
@@ -122,14 +123,14 @@ const NOTIFICATION_ICONS: Record<NotificationType, { icon: any; color: string; b
       bgColor: 'bg-green-50 dark:bg-green-900/20',
     },
     CHAT_ADDED_TO_CHANNEL: {
-      icon: undefined,
-      color: '',
-      bgColor: '',
+      icon: UserPlus,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
     },
     CHAT_REMOVED_FROM_CHANNEL: {
-      icon: undefined,
-      color: '',
-      bgColor: '',
+      icon: UserMinus,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
     },
     CHAT_MENTION: {
       icon: undefined,
