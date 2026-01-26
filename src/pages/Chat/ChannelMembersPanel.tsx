@@ -213,10 +213,24 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
             return (
               <button
                 onClick={() => handleRemoveMember(member.userId)}
-                className="p-1.5 sm:p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all flex-shrink-0"
+                className="
+    p-2.5 sm:p-2
+    rounded-lg
+
+    opacity-100 sm:opacity-0 sm:group-hover:opacity-100
+
+    text-red-400 sm:text-gray-400
+    bg-red-500/10 sm:bg-transparent
+
+    sm:hover:bg-red-500/20
+    sm:hover:text-red-400
+
+    transition-all
+    flex-shrink-0
+  "
                 title="Remove from channel"
               >
-                <UserMinus className="w-4 h-4" />
+                <UserMinus className="w-5 h-5 sm:w-4 sm:h-4" />
               </button>
             );
           })()}
@@ -255,13 +269,26 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
         <button
           onClick={() => handleAddMember(member.userId)}
           disabled={isAdding}
-          className="p-1.5 sm:p-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors disabled:opacity-50 flex-shrink-0"
+          className="
+    p-2.5 sm:p-2
+    rounded-lg
+
+    bg-brand-500 sm:bg-brand-500
+    sm:hover:bg-brand-600
+
+    text-white
+    transition-all
+    disabled:opacity-50
+
+    flex-shrink-0
+    active:scale-95
+  "
           title="Add to channel"
         >
           {isAdding ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-5 h-5 sm:w-4 sm:h-4 animate-spin" />
           ) : (
-            <UserPlus className="w-4 h-4" />
+            <UserPlus className="w-5 h-5 sm:w-4 sm:h-4" />
           )}
         </button>
       </div>
