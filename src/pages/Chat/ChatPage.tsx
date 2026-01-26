@@ -1,4 +1,3 @@
-// src/pages/chat/ChatPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useAuth } from '../../components/UserProfile/AuthContext';
@@ -32,16 +31,42 @@ const ChatPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Sidebar state management
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarMinimized, setSidebarMinimized] = useState(false);
+
   // Track active channel for smart notifications
   useEffect(() => {
     setActiveChannel(channelId || null);
-
     return () => {
       setActiveChannel(null);
     };
   }, [channelId]);
 
-  // ✅ ADD: WebSocket integration
+  // Auto-close sidebar on mobile when channel is selected
+  useEffect(() => {
+    if (channelId && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, [channelId]);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(true);
+        setSidebarMinimized(false);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // WebSocket integration
   const { isConnected, joinRoom, leaveRoom } = useWebSocket({
     onMessage: (message) => {
       if (message.type === 'chat_member_removed') {
@@ -49,7 +74,6 @@ const ChatPage: React.FC = () => {
         const removedUserId = data.userId as string;
         const affectedChannelId = data.channelId as string;
 
-        // ✅ If current user was removed from active channel, navigate away
         if (removedUserId === user?.id && affectedChannelId === channelId) {
           handleChannelDeleted(affectedChannelId);
         }
@@ -62,6 +86,7 @@ const ChatPage: React.FC = () => {
       }
     },
   });
+
   const { data: currentChannel } = useChannel(channelId);
 
   useEffect(() => {
@@ -97,17 +122,25 @@ const ChatPage: React.FC = () => {
   const deleteMessage = useDeleteMessage();
   const addReaction = useAddReaction();
   const removeReaction = useRemoveReaction();
-
-  // Inside component:
   const { mutate: markAsRead } = useMarkChannelRead();
 
-  // ✅ CORRECT - Fixed code
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        // On mobile, ensure we don't have multiple panels open
+        if (showThread && showMembers) {
+          setShowThread(false);
+        }
+      }
+    };
 
-  // Update the useEffect that calls markAsRead (around line 95)
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showThread, showMembers]);
+
   useEffect(() => {
     if (channelId) {
       setActiveChannel(channelId);
-      // ✅ FIX: Small delay to ensure WebSocket handlers have processed
       const timer = setTimeout(() => {
         markAsRead(channelId);
       }, 100);
@@ -128,6 +161,9 @@ const ChatPage: React.FC = () => {
 
   const handleSelectChannel = (channel: ChatChannel) => {
     navigate(`/chat/${channel.id}`);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
   };
 
   const handleChannelCreated = (newChannelId: string) => {
@@ -135,13 +171,13 @@ const ChatPage: React.FC = () => {
   };
 
   const handleSendMessage = (content: string, parentId?: string) => {
-    if (!channelId || !user) return; // ✅ Add user check
+    if (!channelId || !user) return;
 
     sendMessage.mutate({
       channelId,
       content,
       parentId,
-      currentUserId: user.id, // ✅ Pass user data
+      currentUserId: user.id,
       currentUser: {
         id: user.id,
         name: user.name,
@@ -161,6 +197,7 @@ const ChatPage: React.FC = () => {
       }
     }
   };
+
   const handleEditMessage = (messageId: string, content: string) => {
     if (!channelId) return;
     editMessage.mutate({ messageId, content, channelId });
@@ -187,15 +224,30 @@ const ChatPage: React.FC = () => {
   };
 
   const handleOpenThread = (message: ChatMessage) => {
+    if (window.innerWidth < 768) {
+      // On mobile, close members when opening thread
+      setShowMembers(false);
+    }
     setThreadMessage(message);
     setShowThread(true);
-    setShowMembers(false);
   };
 
   const handleToggleMembers = () => {
+    if (window.innerWidth < 768) {
+      // On mobile, close thread when opening members
+      if (!showMembers) {
+        setShowThread(false);
+        setThreadMessage(null);
+      }
+    }
     setShowMembers(!showMembers);
-    if (!showMembers) {
-      setShowThread(false);
+  };
+
+  const handleToggleSidebar = () => {
+    if (window.innerWidth >= 768) {
+      setSidebarMinimized(!sidebarMinimized);
+    } else {
+      setSidebarOpen(!sidebarOpen);
     }
   };
 
@@ -203,59 +255,85 @@ const ChatPage: React.FC = () => {
     <>
       <PageMeta title="Chat | ORA SCRUM" description="Team chat and messaging" />
 
-      <div className="h-full flex bg-white dark:bg-[#0d0f11]">
-        {' '}
-        {/* Channel List Sidebar */}
-        <ChannelList
-          channels={channels}
-          activeChannelId={channelId}
-          unreadCounts={unreadCounts}
-          onSelectChannel={handleSelectChannel}
-          onCreateChannel={() => setShowCreateChannel(true)}
-          onCreateDM={() => setShowCreateDM(true)}
-          isLoading={channelsLoading}
-          currentUserId={user?.id || ''} // ✅ FIX: Pass actual user ID
-        />
+      <div className="h-full flex bg-white dark:bg-[#0d0f11] relative overflow-hidden">
+        {/* Mobile Overlay */}
+        {sidebarOpen && window.innerWidth < 768 && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Channel List Sidebar - Responsive Width */}
+        <div
+          className={`
+            fixed md:relative inset-y-0 left-0 z-40 
+            bg-white dark:bg-[#0d0f11] 
+            border-r border-gray-200 dark:border-[#2a2e33]
+            transition-all duration-300 ease-in-out
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            ${sidebarMinimized ? 'md:w-16' : 'w-full max-w-[280px] sm:max-w-[320px] md:w-64 lg:w-72'}
+          `}
+        >
+          <ChannelList
+            channels={channels}
+            activeChannelId={channelId}
+            unreadCounts={unreadCounts}
+            onSelectChannel={handleSelectChannel}
+            onCreateChannel={() => setShowCreateChannel(true)}
+            onCreateDM={() => setShowCreateDM(true)}
+            isLoading={channelsLoading}
+            currentUserId={user?.id || ''}
+            isMinimized={sidebarMinimized}
+            onToggleMinimize={handleToggleSidebar}
+          />
+        </div>
+
         {/* Main Chat Area */}
-        {channelId && currentChannel ? (
-          <ChatView
-            channel={currentChannel}
-            messages={messages}
-            isLoading={messagesLoading}
-            currentUserId={user?.id || ''}
-            onSendMessage={handleSendMessage}
-            onEditMessage={handleEditMessage}
-            onDeleteMessage={handleDeleteMessage}
-            onReact={handleReact}
-            onOpenThread={handleOpenThread}
-            onToggleMembers={handleToggleMembers}
-            showMembersActive={showMembers}
-          />
-        ) : (
-          <EmptyChatState onCreateChannel={() => setShowCreateChannel(true)} />
-        )}
-        {/* Thread Panel */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {channelId && currentChannel ? (
+            <ChatView
+              channel={currentChannel}
+              messages={messages}
+              isLoading={messagesLoading}
+              currentUserId={user?.id || ''}
+              onSendMessage={handleSendMessage}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onReact={handleReact}
+              onOpenThread={handleOpenThread}
+              onToggleMembers={handleToggleMembers}
+              showMembersActive={showMembers}
+              onBack={() => setSidebarOpen(true)}
+            />
+          ) : (
+            <EmptyChatState onCreateChannel={() => setShowCreateChannel(true)} />
+          )}
+        </div>
+
         {currentChannel && (
-          <ThreadPanel
-            isOpen={showThread}
-            onClose={() => {
-              setShowThread(false);
-              setThreadMessage(null);
-            }}
-            parentMessage={threadMessage}
-            channel={currentChannel}
-            currentUserId={user?.id || ''}
-            onReact={handleReact}
-          />
-        )}
-        {/* Members Panel */}
-        {currentChannel && (
-          <ChannelMembersPanel
-            isOpen={showMembers}
-            onClose={() => setShowMembers(false)}
-            channel={currentChannel}
-            currentUserId={user?.id || ''}
-          />
+          <>
+            {/* Thread Panel */}
+            <ThreadPanel
+              isOpen={showThread && !showMembers}
+              onClose={() => {
+                setShowThread(false);
+                setThreadMessage(null);
+              }}
+              parentMessage={threadMessage}
+              channel={currentChannel}
+              currentUserId={user?.id || ''}
+              onReact={handleReact}
+            />
+
+            {/* Members Panel */}
+            <ChannelMembersPanel
+              isOpen={showMembers}
+              onClose={() => setShowMembers(false)}
+              channel={currentChannel}
+              currentUserId={user?.id || ''}
+            />
+          </>
         )}
       </div>
 
