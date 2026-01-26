@@ -151,7 +151,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   }, [messages]);
 
   const displayName = getChannelDisplayName(channel, currentUserId) || 'Unknown User';
-  const memberCount = channel.type !== 'direct' ? '12 members' : undefined; // Replace with actual count
+  const memberCount = channel.memberCount
+    ? `${channel.memberCount} member${channel.memberCount !== 1 ? 's' : ''}`
+    : undefined;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0d0f11]">

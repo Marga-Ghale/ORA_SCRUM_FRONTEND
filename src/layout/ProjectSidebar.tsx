@@ -780,14 +780,17 @@ const ProjectSidebar: React.FC = () => {
   if (isInitializing || workspacesLoading) {
     return (
       <aside
-        className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 
+        className={`fixed top-0 left-0 z-50 
           bg-white dark:bg-gray-900 
           border-r border-gray-200 dark:border-gray-800 
           transition-all duration-300 ease-in-out
+          h-[calc(100vh-4rem)] mt-16
+          sm:h-[calc(100vh-4rem)] sm:mt-16
+          md:h-screen md:mt-0
           ${showFull ? 'w-[280px]' : 'w-[72px]'} 
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} 
-          lg:translate-x-0
-          shadow-lg lg:shadow-none`}
+          md:translate-x-0
+          shadow-lg md:shadow-none`}
       >
         <div className="p-4 animate-pulse">
           <div className="flex items-center gap-3 p-2.5">
@@ -808,21 +811,24 @@ const ProjectSidebar: React.FC = () => {
     <>
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
           onClick={toggleMobileSidebar}
         />
       )}
 
       <aside
-        className={`fixed mt-16 lg:mt-0 top-0 left-0 h-screen z-50 flex flex-col
+        className={`fixed top-0 left-0 z-50 flex flex-col
     bg-gradient-to-b from-white via-white to-gray-50/80 
     dark:from-gray-900 dark:via-gray-900 dark:to-gray-950/90
     border-r border-gray-200/80 dark:border-gray-800/60
     transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+    h-[calc(100vh-4rem)] mt-16
+    sm:h-[calc(100vh-4rem)] sm:mt-16
+    md:h-screen md:mt-0
     ${showFull ? 'w-[280px]' : 'w-[72px]'}
     ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-    lg:translate-x-0
-    shadow-2xl shadow-gray-200/50 dark:shadow-black/30 lg:shadow-xl lg:shadow-gray-200/30 dark:lg:shadow-black/20`}
+    md:translate-x-0
+    shadow-2xl shadow-gray-200/50 dark:shadow-black/30 md:shadow-xl md:shadow-gray-200/30 dark:md:shadow-black/20`}
         onMouseEnter={() => !isExpanded && setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -858,7 +864,7 @@ const ProjectSidebar: React.FC = () => {
             active:scale-[0.97] hover:shadow-sm"
               >
                 <UserPlus className="w-3 h-3" />
-                <span>Invite</span>
+                <span className="hidden sm:inline">Invite</span>
               </button>
               <button
                 onClick={() => {
@@ -880,7 +886,7 @@ const ProjectSidebar: React.FC = () => {
             active:scale-[0.97] hover:shadow-sm"
               >
                 <Users className="w-3 h-3" />
-                <span>Manage</span>
+                <span className="hidden sm:inline">Manage</span>
               </button>
             </div>
           </div>
@@ -907,23 +913,11 @@ const ProjectSidebar: React.FC = () => {
                   >
                     <Home className="w-3 h-3 text-violet-600 dark:text-violet-400" />
                   </div>
-                  <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
+                  <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200 hidden sm:inline">
                     Quick Navigation
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {/* {isNavMinimized && totalChatUnread + unreadNotifications > 0 && (
-                    <span
-                      className="min-w-[18px] h-4 px-1 flex items-center justify-center rounded-full 
-              bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 
-              text-white text-[9px] font-bold
-              animate-in zoom-in duration-200"
-                    >
-                      {totalChatUnread + unreadNotifications > 99
-                        ? '99+'
-                        : totalChatUnread + unreadNotifications}
-                    </span>
-                  )} */}
                   <div className="p-0.5 rounded-md bg-white/50 dark:bg-gray-900/50">
                     {isNavMinimized ? (
                       <ChevronDown
@@ -1025,7 +1019,7 @@ const ProjectSidebar: React.FC = () => {
                     </div>
                     {showFull && (
                       <span className="flex-1 flex items-center justify-between">
-                        <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                        <span className="transition-transform duration-200 group-hover:translate-x-0.5 truncate">
                           {item.label}
                         </span>
                         {badge && (
@@ -1061,192 +1055,6 @@ const ProjectSidebar: React.FC = () => {
         </div>
 
         {/* CHAT SECTION */}
-        {/* <div className="flex-shrink-0 px-2.5 py-2 border-b border-gray-100 dark:border-gray-800/60">
-          <button
-            onClick={() => setIsChatMinimized(!isChatMinimized)}
-            className="w-full flex items-center justify-between px-2.5 py-2 mb-1.5 rounded-lg
-      bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-800/30
-      hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-800 dark:hover:to-gray-800/60
-      border border-gray-200/60 dark:border-gray-700/40
-      transition-all duration-300 group
-      hover:shadow-md hover:shadow-gray-200/50 dark:hover:shadow-black/20"
-          >
-            {showFull ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-900/30 
-            flex items-center justify-center
-            group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50
-            transition-all duration-300"
-                  >
-                    <MessageSquare className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
-                    Messages
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {isChatMinimized && totalChatUnread > 0 && (
-                    <span
-                      className="min-w-[18px] h-4 px-1 flex items-center justify-center rounded-full 
-              bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 
-              text-white text-[9px] font-bold
-              animate-in zoom-in duration-200"
-                    >
-                      {totalChatUnread > 99 ? '99+' : totalChatUnread}
-                    </span>
-                  )}
-                  <div className="p-0.5 rounded-md bg-white/50 dark:bg-gray-900/50">
-                    {isChatMinimized ? (
-                      <ChevronDown
-                        className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 
-                transition-transform duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                      />
-                    ) : (
-                      <ChevronUp
-                        className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400
-                transition-transform duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                      />
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="w-full flex justify-center relative">
-                <div
-                  className="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-900/30 
-          flex items-center justify-center"
-                >
-                  <MessageSquare className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                </div>
-                {totalChatUnread > 0 && (
-                  <span
-                    className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 flex items-center justify-center rounded-full 
-            bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 
-            text-white text-[8px] font-bold 
-            border-2 border-white dark:border-gray-900
-            shadow-lg shadow-blue-500/40"
-                  >
-                    {totalChatUnread > 9 ? '9+' : totalChatUnread}
-                  </span>
-                )}
-              </div>
-            )}
-          </button>
-
-          <div
-            className="overflow-hidden transition-all duration-500 ease-in-out"
-            style={{
-              maxHeight: isChatMinimized ? '0px' : '400px',
-              opacity: isChatMinimized ? 0 : 1,
-              transform: isChatMinimized ? 'translateY(-8px)' : 'translateY(0)',
-            }}
-          >
-            <div className="space-y-0.5">
-              {channels.length > 0 ? (
-                channels.slice(0, 8).map((channel, index) => {
-                  const isChatActive = location.pathname === `/chat/${channel.id}`;
-                  const unreadCount = chatUnreadData[channel.id] || 0;
-
-                  return (
-                    <Link
-                      key={channel.id}
-                      to={`/chat/${channel.id}`}
-                      onClick={closeMobileSidebar}
-                      style={{
-                        animationDelay: `${index * 30}ms`,
-                      }}
-                      className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium 
-                transition-all duration-200 ease-out group relative
-                ${
-                  isChatActive
-                    ? 'bg-gradient-to-r from-blue-100 to-cyan-50 dark:from-blue-500/20 dark:to-cyan-500/10 text-blue-700 dark:text-blue-300 shadow-sm'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50/50 dark:hover:from-blue-500/10 dark:hover:to-cyan-500/5 hover:text-blue-700 dark:hover:text-blue-300'
-                }
-                hover:shadow-sm hover:shadow-blue-100 dark:hover:shadow-blue-900/20
-                hover:translate-x-0.5
-                ${!showFull ? 'justify-center' : ''}`}
-                      title={!showFull ? channel.name : undefined}
-                    >
-                      {isChatActive && (
-                        <span
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 
-                    bg-gradient-to-b from-blue-500 to-cyan-600 
-                    dark:from-blue-400 dark:to-cyan-500 
-                    rounded-r-full shadow-lg shadow-blue-500/30"
-                        />
-                      )}
-                      <div
-                        className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0
-                  ${
-                    isChatActive
-                      ? 'bg-blue-100 dark:bg-blue-900/30'
-                      : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30'
-                  }
-                  transition-all duration-200`}
-                      >
-                        {channel.type === 'direct' ? (
-                          <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white text-[8px] font-bold">
-                            {channel.name?.charAt(0).toUpperCase() || 'D'}
-                          </div>
-                        ) : channel.isPrivate ? (
-                          <Lock className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                        ) : (
-                          <Hash className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                        )}
-                      </div>
-                      {showFull && (
-                        <span className="flex-1 flex items-center justify-between">
-                          <span className="truncate text-[11px]">{channel.name}</span>
-                          {unreadCount > 0 && (
-                            <span
-                              className="min-w-[18px] h-4 px-1 flex items-center justify-center rounded-full 
-                        bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 
-                        text-white text-[9px] font-bold shadow-md
-                        group-hover:scale-110
-                        transition-all duration-200"
-                            >
-                              {unreadCount > 99 ? '99+' : unreadCount}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                      {!showFull && unreadCount > 0 && (
-                        <span
-                          className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 flex items-center justify-center rounded-full 
-                    bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 
-                    text-white text-[8px] font-bold 
-                    border-2 border-white dark:border-gray-900
-                    shadow-lg"
-                        >
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })
-              ) : (
-                <div className="px-2 py-4 text-center">
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500">No channels yet</p>
-                </div>
-              )}
-              {channels.length > 8 && (
-                <Link
-                  to="/chat"
-                  onClick={closeMobileSidebar}
-                  className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 mt-1 rounded-lg text-[10px] font-medium
-            text-blue-600 dark:text-blue-400 
-            hover:bg-blue-50 dark:hover:bg-blue-900/20
-            transition-all duration-200"
-                >
-                  <span>View all ({channels.length})</span>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div> */}
-
         <div className="flex-shrink-0 px-2.5 py-2 border-b border-gray-100 dark:border-gray-800/60">
           <button
             onClick={() => setIsChatMinimized(!isChatMinimized)}
@@ -1275,7 +1083,7 @@ const ProjectSidebar: React.FC = () => {
                     />
                   </div>
                   <span
-                    className={`text-[11px] font-semibold transition-colors duration-200
+                    className={`text-[11px] font-semibold transition-colors duration-200 hidden sm:inline
             ${totalChatUnread > 0 ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}
                   >
                     Messages
@@ -1487,7 +1295,7 @@ const ProjectSidebar: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pb-4">
           {currentWorkspace ? (
             <>
               <div
@@ -1503,7 +1311,7 @@ const ProjectSidebar: React.FC = () => {
                         className="w-1 h-4 rounded-full bg-gradient-to-b from-violet-500 to-purple-600 
           shadow-md shadow-violet-500/30"
                       />
-                      <span className="text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-widest">
+                      <span className="text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-widest truncate">
                         Spaces
                       </span>
                     </div>
@@ -1514,7 +1322,7 @@ const ProjectSidebar: React.FC = () => {
           text-gray-400 dark:text-gray-500 
           hover:text-violet-600 dark:hover:text-violet-400 
           transition-all duration-200 hover:scale-110 hover:rotate-90 active:scale-95
-          hover:shadow-md hover:shadow-violet-200/30"
+          hover:shadow-md hover:shadow-violet-200/30 flex-shrink-0"
                       title="Create Space"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -1555,8 +1363,7 @@ const ProjectSidebar: React.FC = () => {
                       const spaceFolders = foldersBySpaceId[space.id] || [];
                       const spaceDirectProjects = projectsBySpaceId[space.id] || [];
                       const SpaceIcon = getSpaceIcon(space.icon);
-                      // ✅ ADDED: Check if user can access content
-                      const canAccessSpace = space.hasAccess === true; // ✅ EXPLICIT CHECK
+                      const canAccessSpace = space.hasAccess === true;
 
                       return (
                         <div
@@ -1578,13 +1385,12 @@ const ProjectSidebar: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // ✅ UPDATED: Only allow expansion if user has access
                                 if (canAccessSpace) {
                                   toggleSpace(space.id);
                                 }
                               }}
                               className="p-0.5 rounded-md hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
-                          transition-all duration-200"
+                          transition-all duration-200 flex-shrink-0"
                               disabled={!canAccessSpace}
                             >
                               <ChevronRight
@@ -1594,7 +1400,6 @@ const ProjectSidebar: React.FC = () => {
                               />
                             </button>
 
-                            {/* ✅ UPDATED: Add lock overlay for visible-only spaces */}
                             <div
                               className="relative w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:scale-105 group-hover:shadow-md"
                               style={{
@@ -1618,7 +1423,7 @@ const ProjectSidebar: React.FC = () => {
                             {showFull && (
                               <>
                                 <span
-                                  className={`flex-1 text-[11px] font-medium truncate transition-all duration-200
+                                  className={`flex-1 text-[11px] font-medium truncate transition-all duration-200 min-w-0
                               ${
                                 isSpaceActive
                                   ? 'text-violet-700 dark:text-violet-300'
@@ -1626,17 +1431,15 @@ const ProjectSidebar: React.FC = () => {
                               }`}
                                 >
                                   {space.name}
-                                  {/* ✅ ADDED: View Only badge */}
                                   {!canAccessSpace && (
-                                    <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                                    <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 inline-block">
                                       View Only
                                     </span>
                                   )}
                                 </span>
 
-                                {/* ✅ UPDATED: Only show actions if user has access */}
                                 {canAccessSpace && (
-                                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
                                     <button
                                       onClick={(e) => openContextMenu(e, 'space', space)}
                                       className="p-1 rounded-md hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
@@ -1664,7 +1467,6 @@ const ProjectSidebar: React.FC = () => {
                             )}
                           </div>
 
-                          {/* ✅ UPDATED: Only show content if user has access */}
                           {canAccessSpace && (
                             <div
                               className={`overflow-hidden transition-all duration-300 ease-out
@@ -1698,7 +1500,7 @@ const ProjectSidebar: React.FC = () => {
                                             e.stopPropagation();
                                             toggleFolder(folder.id);
                                           }}
-                                          className="p-0.5 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors duration-150"
+                                          className="p-0.5 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors duration-150 flex-shrink-0"
                                         >
                                           <ChevronRight
                                             className={`w-3 h-3 text-gray-400 dark:text-gray-500 
@@ -1724,7 +1526,7 @@ const ProjectSidebar: React.FC = () => {
                                         </div>
 
                                         <span
-                                          className={`flex-1 text-[11px] truncate transition-colors duration-200
+                                          className={`flex-1 text-[11px] truncate transition-colors duration-200 min-w-0
                                       ${
                                         isFolderActive
                                           ? 'text-violet-700 dark:text-violet-300 font-medium'
@@ -1734,7 +1536,7 @@ const ProjectSidebar: React.FC = () => {
                                           {folder.name}
                                         </span>
 
-                                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex-shrink-0">
                                           <button
                                             onClick={(e) => openContextMenu(e, 'folder', folder)}
                                             className="p-0.5 rounded hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
@@ -1791,11 +1593,11 @@ const ProjectSidebar: React.FC = () => {
                                                     className={`w-3.5 h-3.5 flex-shrink-0 transition-colors duration-200
                   ${isProjectItemActive ? 'text-violet-500' : ''}`}
                                                   />
-                                                  <span className="flex-1 text-[11px] truncate">
+                                                  <span className="flex-1 text-[11px] truncate min-w-0">
                                                     {project.name}
                                                   </span>
                                                   <span
-                                                    className={`text-[9px] font-mono px-1 py-0.5 rounded transition-opacity duration-150
+                                                    className={`text-[9px] font-mono px-1 py-0.5 rounded transition-opacity duration-150 flex-shrink-0
                   ${
                     isProjectItemActive
                       ? 'bg-violet-200/50 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300'
@@ -1811,7 +1613,7 @@ const ProjectSidebar: React.FC = () => {
                                                     className="p-0.5 rounded opacity-0 group-hover:opacity-100 
                   hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
                   text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
-                  transition-all duration-150"
+                  transition-all duration-150 flex-shrink-0"
                                                   >
                                                     <MoreHorizontal className="w-3 h-3" />
                                                   </button>
@@ -1850,11 +1652,11 @@ const ProjectSidebar: React.FC = () => {
                                           className={`w-5 h-5 flex-shrink-0 transition-colors duration-200
               ${isProjectItemActive ? 'text-violet-500' : ''}`}
                                         />
-                                        <span className="flex-1 text-[11px] truncate">
+                                        <span className="flex-1 text-[11px] truncate min-w-0">
                                           {project.name}
                                         </span>
                                         <span
-                                          className={`text-[9px] font-mono px-1 py-0.5 rounded transition-opacity duration-150
+                                          className={`text-[9px] font-mono px-1 py-0.5 rounded transition-opacity duration-150 flex-shrink-0
               ${
                 isProjectItemActive
                   ? 'bg-violet-200/50 dark:bg-violet-800/30 text-violet-700 dark:text-violet-300'
@@ -1868,7 +1670,7 @@ const ProjectSidebar: React.FC = () => {
                                           className="p-0.5 rounded opacity-0 group-hover:opacity-100 
               hover:bg-gray-200/80 dark:hover:bg-gray-700/80 
               text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
-              transition-all duration-150"
+              transition-all duration-150 flex-shrink-0"
                                         >
                                           <MoreHorizontal className="w-3 h-3" />
                                         </button>
@@ -1999,7 +1801,7 @@ const ProjectSidebar: React.FC = () => {
             ${active ? '' : 'group-hover:scale-110 group-hover:text-violet-600 dark:group-hover:text-violet-400'}`}
                 />
                 {showFull && (
-                  <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                  <span className="transition-transform duration-200 group-hover:translate-x-0.5 truncate">
                     {item.label}
                   </span>
                 )}
@@ -2047,7 +1849,7 @@ const ProjectSidebar: React.FC = () => {
                   </p>
                 </div>
                 <ChevronRight
-                  className={`w-3.5 h-3.5 text-gray-400 transition-all duration-300 ease-out
+                  className={`w-3.5 h-3.5 text-gray-400 transition-all duration-300 ease-out flex-shrink-0
               ${showUserMenu ? 'rotate-90 text-violet-500' : 'group-hover:translate-x-0.5'}`}
                 />
               </>
