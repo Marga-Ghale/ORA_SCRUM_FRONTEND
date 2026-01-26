@@ -17,19 +17,28 @@ export interface ChatUser {
   status?: 'online' | 'offline' | 'away' | 'busy';
 }
 
+// Around line 30 - Update ChatChannel interface
 export interface ChatChannel {
   id: string;
   name: string;
-  type: 'project' | 'space' | 'team' | 'direct' | 'group'; // ✅ Added 'group'
+  type:
+    | 'public'
+    | 'private'
+    | 'dm'
+    | 'group_dm'
+    | 'project'
+    | 'space'
+    | 'team'
+    | 'direct'
+    | 'group'; // ✅ Added new types
   targetId: string;
   workspaceId: string;
-  createdBy: string; // Will be normalized
+  createdBy: string;
   isPrivate: boolean;
   createdAt: string;
   updatedAt: string;
   lastMessage?: string;
-  memberCount?: number; // ✅ Add this
-  // Computed fields
+  memberCount?: number;
   unreadCount?: number;
   otherUser?: ChatUser;
   lastMessagePreview?: string;
@@ -815,33 +824,37 @@ export function useLeaveChannel() {
 /**
  * Mark channel as read
  */
+// Replace useMarkChannelRead (around line 658)
 export function useMarkChannelRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (channelId: string) => apiClient.post(`/chat/channels/${channelId}/read`),
     onMutate: async (channelId) => {
-      // Optimistically update unread counts
+      // ✅ FIX: Cancel any in-flight unread count queries to prevent race
+      await queryClient.cancelQueries({ queryKey: queryKeys.chat.unreadCounts() });
+
       const previousCounts = queryClient.getQueryData<Record<string, number>>(
         queryKeys.chat.unreadCounts()
       );
 
-      if (previousCounts) {
-        queryClient.setQueryData<Record<string, number>>(queryKeys.chat.unreadCounts(), {
-          ...previousCounts,
-          [channelId]: 0,
-        });
-      }
+      // Optimistically set to 0
+      queryClient.setQueryData<Record<string, number>>(queryKeys.chat.unreadCounts(), (old) => ({
+        ...(old || {}),
+        [channelId]: 0,
+      }));
 
-      return { previousCounts };
+      return { previousCounts, channelId };
     },
-    onError: (_err, _channelId, context) => {
+    onError: (_err, channelId, context) => {
+      // Rollback on error
       if (context?.previousCounts) {
         queryClient.setQueryData(queryKeys.chat.unreadCounts(), context.previousCounts);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCounts() });
+    // ✅ FIX: Don't invalidate on success - we already have correct data
+    onSuccess: () => {
+      // Don't invalidate - our optimistic update is correct
     },
   });
 }
@@ -853,17 +866,6 @@ export function useMarkChannelRead() {
 /**
  * Get all unread counts
  */
-// export function useUnreadCounts(p0: { enabled: boolean }) {
-//   return useQuery({
-//     queryKey: queryKeys.chat.unreadCounts(),
-//     queryFn: async () => {
-//       const data = await apiClient.get<Record<string, number>>('/chat/unread');
-//       return data || {};
-//     },
-//     staleTime: 30 * 1000,
-//     refetchInterval: 30 * 1000,
-//   });
-// }
 
 export function useUnreadCounts(p0: { enabled: boolean }) {
   return useQuery({
@@ -919,39 +921,6 @@ export function useSearchMessages(channelId: string | undefined, query: string) 
 // Helper Functions
 // ============================================
 
-/**
- * Format message time
- */
-// export function formatMessageTime(dateString: string): string {
-//   const date = new Date(dateString);
-//   const now = new Date();
-//   const diffMs = now.getTime() - date.getTime();
-//   const diffMins = Math.floor(diffMs / 60000);
-//   const diffHours = Math.floor(diffMs / 3600000);
-//   const diffDays = Math.floor(diffMs / 86400000);
-
-//   if (diffMins < 1) return 'Just now';
-//   if (diffMins < 60) return `${diffMins}m ago`;
-//   if (diffHours < 24) {
-//     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-//   }
-
-//   const yesterday = new Date(now);
-//   yesterday.setDate(yesterday.getDate() - 1);
-//   if (date.toDateString() === yesterday.toDateString()) {
-//     return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-//   }
-
-//   if (diffDays < 7) {
-//     return (
-//       date.toLocaleDateString('en-US', { weekday: 'short' }) +
-//       ` at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-//     );
-//   }
-
-//   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-// }
-
 export function formatMessageTime(dateString: string): string {
   if (!dateString) return 'Just now';
 
@@ -991,17 +960,24 @@ export function formatMessageTime(dateString: string): string {
   }
 }
 
+// Replace getChannelDisplayName (around line 760)
 export function getChannelDisplayName(channel: ChatChannel, _currentUserId?: string): string {
   if (!channel) return 'Unknown Channel';
 
-  if (channel.type === 'direct' && channel.otherUser) {
+  // ✅ FIX: Check for both old and new DM types
+  if ((channel.type === 'direct' || channel.type === 'dm') && channel.otherUser) {
     const otherUser = channel.otherUser as any;
     const name = otherUser.Name || otherUser.name || otherUser.Email || otherUser.email;
     return name || 'Unknown User';
   }
+
+  // ✅ FIX: Handle group DMs
+  if (channel.type === 'group_dm' || channel.type === 'group') {
+    return channel.name || 'Group Conversation';
+  }
+
   return channel.name || 'Unknown Channel';
 }
-
 /**
  * Format full timestamp for tooltips
  */
@@ -1123,17 +1099,68 @@ export function getGroupedReactions(
 export const COMMON_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🎉', '🔥', '👀', '✅', '👏'];
 
 // Channel type labels
-export const CHANNEL_TYPE_LABELS: Record<ChatChannel['type'], string> = {
+export const CHANNEL_TYPE_LABELS: Record<string, string> = {
+  public: 'Public Channel',
+  private: 'Private Channel',
+  dm: 'Direct Message',
+  group_dm: 'Group Conversation',
+  // Legacy types
   project: 'Project Channel',
   space: 'Space Channel',
   team: 'Team Channel',
   direct: 'Direct Message',
+  group: 'Group Conversation',
 };
 
 // Channel type colors
 export const CHANNEL_TYPE_COLORS: Record<ChatChannel['type'], string> = {
-  project: '#6366f1', // Indigo
-  space: '#8b5cf6', // Purple
-  team: '#10b981', // Green
-  direct: '#ec4899', // Pink
+  project: '#6366f1', // Indigo – structured work
+  space: '#8b5cf6', // Purple – shared spaces
+  team: '#10b981', // Emerald – collaboration
+  direct: '#ec4899', // Pink – 1:1 personal chat
+  group: '#84cc16', // Lime – active group chat
+  public: '#0ea5e9', // Sky Blue – open/public
+  private: '#64748b', // Slate – restricted/private
+  dm: '#f97316', // Orange – quick direct message
+  group_dm: '#eab308', // Amber – multi-user DM
 };
+
+// Add after CHANNEL_TYPE_COLORS (around line 830)
+
+// ✅ NEW: Helper to check if channel is a DM type
+export function isDMChannel(channel: ChatChannel): boolean {
+  return channel.type === 'dm' || channel.type === 'direct';
+}
+
+// ✅ NEW: Helper to check if channel is a group DM
+export function isGroupDMChannel(channel: ChatChannel): boolean {
+  return channel.type === 'group_dm' || channel.type === 'group';
+}
+
+// ✅ NEW: Helper to check if channel can be left
+export function canLeaveChannel(channel: ChatChannel): boolean {
+  // Cannot leave 1:1 DMs
+  if (isDMChannel(channel)) return false;
+  // Can leave everything else
+  return true;
+}
+
+// ✅ NEW: Helper to check if user can delete channel
+export function canDeleteChannel(channel: ChatChannel, currentUserId: string): boolean {
+  // Cannot delete DMs or group DMs
+  if (isDMChannel(channel) || isGroupDMChannel(channel)) return false;
+  // Only creator can delete
+  return channel.createdBy === currentUserId;
+}
+
+// ✅ NEW: Helper to check if user can remove others from channel
+export function canRemoveMembers(channel: ChatChannel, currentUserId: string): boolean {
+  // Cannot remove from 1:1 DMs
+  if (isDMChannel(channel)) return false;
+  // Group DMs - can only leave yourself
+  if (isGroupDMChannel(channel)) return false;
+  // Private channels - any member can remove
+  if (channel.type === 'private') return true;
+  // Public channels - only creator
+  return channel.createdBy === currentUserId;
+}
