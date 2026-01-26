@@ -181,7 +181,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       <div
         className={`flex items-center justify-center w-10 h-10 rounded-lg ${config.bgColor} flex-shrink-0`}
       >
-        <Icon className={`w-5 h-5 ${config.color}`} />
+        {Icon && <Icon className={`w-5 h-5 ${config.color}`} />}
       </div>
 
       {/* Content */}
@@ -356,6 +356,8 @@ const INVITATION_NOTIFICATION_TYPES: NotificationType[] = [
   'WORKSPACE_INVITATION',
 ];
 
+const CHAT_NOTIFICATION_TYPES: NotificationType[] = ['CHAT_MESSAGE', 'CHAT_MENTION'];
+
 const FilterTabs: React.FC<FilterTabsProps> = ({ activeFilter, onChange, counts }) => {
   const tabs: { id: FilterType; label: string; icon: any }[] = [
     { id: 'all', label: 'All', icon: Bell },
@@ -426,7 +428,7 @@ export default function NotificationDropdown() {
 
   // ✅ FIX 2: Rename to avoid duplicate variable name
   const nonChatNotifications = useMemo(() => {
-    return notifications.filter((n) => n.type !== 'CHAT_MESSAGE');
+    return notifications.filter((n) => !CHAT_NOTIFICATION_TYPES.includes(n.type));
   }, [notifications]);
 
   // Use nonChatNotifications for unread count display
@@ -633,7 +635,7 @@ export default function NotificationDropdown() {
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <LoadingSkeleton />
-          ) : getFilteredNotifications.length === 0 ? (
+          ) : filteredByActiveFilter.length === 0 ? (
             <EmptyState />
           ) : (
             <div className="p-3">
