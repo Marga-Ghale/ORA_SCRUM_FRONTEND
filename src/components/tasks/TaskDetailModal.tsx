@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/tasks/TaskDetailModal.tsx - FIXED VERSION
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TaskStatus, Priority, TaskType, TASK_TYPE_CONFIG } from '../../types/project';
 import {
   CommentResponse,
@@ -81,13 +81,18 @@ const TaskDetailModal: React.FC = () => {
   const comments: CommentResponse[] = commentsData || [];
   const activities: ActivityResponse[] = activityData || [];
 
-  const users =
-    membersData?.map((m) => ({
-      id: m.userId,
-      name: m.user?.name || 'Unknown',
-      email: m.user?.email || '',
-      avatar: m.user?.avatar,
-    })) || [];
+  const users = useMemo(() => {
+    if (!membersData) return [];
+    // Filter out workspace-inherited members (they only have visibility, not content access)
+    return membersData
+      .filter((member: any) => !(member.isInherited && member.inheritedFrom === 'workspace'))
+      .map((member: any) => ({
+        id: member.userId,
+        name: member.user?.name || 'Unknown',
+        email: member.user?.email || '',
+        avatar: member.user?.avatar,
+      }));
+  }, [membersData]);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showDeleteTaskModal, setShowDeleteTaskModal] = useState(false);

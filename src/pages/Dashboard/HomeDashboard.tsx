@@ -28,6 +28,7 @@ import { ActivityFeed } from '../../components/common/ActivityFeed';
 import { useMyTasks } from '../../hooks/api/useTasks';
 import { useProjectContext } from '../../context/ProjectContext';
 import { navigateToProject } from '../../utils/navigationHelpers';
+import { useVelocityTrend } from '../../hooks/api/useSprints';
 
 // Status Badge Component
 const StatusBadge: React.FC<{ status?: string }> = ({ status = 'offline' }) => {
@@ -332,6 +333,10 @@ const HomeDashboard: React.FC = () => {
 
   const { data: myTasks } = useMyTasks();
 
+  const { data: velocityData } = useVelocityTrend(projects?.[0]?.id || '', {
+    enabled: !!projects?.[0]?.id,
+  });
+
   return (
     <>
       <PageMeta title="Dashboard | ORA SCRUM" description="Your project management dashboard" />
@@ -392,6 +397,19 @@ const HomeDashboard: React.FC = () => {
               value={stats.memberships}
               icon={Award}
               trend="Across all entities"
+            />
+            <StatsCard
+              title="Sprint Velocity"
+              value={velocityData?.averageVelocity?.toFixed(1) || '0'}
+              icon={TrendingUp}
+              trend={
+                velocityData?.trendDirection === 'up'
+                  ? 'Trending up'
+                  : velocityData?.trendDirection === 'down'
+                    ? 'Trending down'
+                    : 'Stable'
+              }
+              trendUp={velocityData?.trendDirection === 'up'}
             />
           </div>
         )}

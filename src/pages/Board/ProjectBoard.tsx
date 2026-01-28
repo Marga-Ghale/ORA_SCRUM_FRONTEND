@@ -10,6 +10,9 @@ import {
   X,
   UserPlus,
   ChevronDown,
+  Calendar,
+  TrendingUp,
+  Target,
 } from 'lucide-react';
 import { PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
 import KanbanBoard from '../../components/tasks/KanbanBoard';
@@ -19,6 +22,11 @@ import AddProjectMemberModal from '../../components/modals/AddProjectMemberModal
 import PageMeta from '../../components/common/PageMeta';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
 import { useProjectContext } from '../../context/ProjectContext';
+import GanttChart from '../../components/gantt/GanttChart';
+import { VelocityChart } from '../../components/sprint/VelocityChart';
+import { GoalsView } from '../../components/sprint/GoalsView';
+import { useActiveSprint } from '../../hooks/api/useSprints';
+import { CreateSprintModal } from '../../components/modals';
 
 const ProjectBoard: React.FC = () => {
   const {
@@ -34,19 +42,29 @@ const ProjectBoard: React.FC = () => {
     setCreateTaskInitialStatus,
   } = useProjectContext();
 
+  const [isCreateSprintModalOpen, setIsCreateSprintModalOpen] = useState(false);
+
+  const { data: activeSprint } = useActiveSprint(currentProject?.id || '', {
+    enabled: !!currentProject?.id,
+  });
+
+  // ✅ Current project members (for displaying avatars, filters, assignees)
   const { data: projectMembers } = useEffectiveMembers('project', currentProject?.id || '', {
     enabled: !!currentProject?.id,
   });
 
+  // ✅ Filter out workspace-inherited members (they only have visibility, not content access)
   const users = useMemo(() => {
     if (!projectMembers) return [];
-    return projectMembers.map((member) => ({
-      id: member.userId,
-      name: member.user?.name || 'Unknown',
-      email: member.user?.email || '',
-      avatar: member.user?.avatar,
-      role: member.role,
-    }));
+    return projectMembers
+      .filter((member) => !(member.isInherited && member.inheritedFrom === 'workspace'))
+      .map((member) => ({
+        id: member.userId,
+        name: member.user?.name || 'Unknown',
+        email: member.user?.email || '',
+        avatar: member.user?.avatar,
+        role: member.role,
+      }));
   }, [projectMembers]);
 
   const [showFilters, setShowFilters] = useState(false);
@@ -89,6 +107,10 @@ const ProjectBoard: React.FC = () => {
     { id: 'board' as const, label: 'Board', icon: LayoutGrid },
     { id: 'list' as const, label: 'List', icon: List },
     { id: 'table' as const, label: 'Table', icon: Table },
+    // ✅ ADD THESE 3 NEW TABS
+    { id: 'gantt' as const, label: 'Timeline', icon: Calendar },
+    { id: 'velocity' as const, label: 'Velocity', icon: TrendingUp },
+    { id: 'goals' as const, label: 'Goals', icon: Target },
   ];
 
   const activeFilterCount = useMemo(() => {
@@ -137,6 +159,16 @@ const ProjectBoard: React.FC = () => {
                 >
                   <UserPlus className="w-4 h-4" />
                   <span className="hidden sm:inline">Add Member</span>
+                </button>
+
+                <button
+                  onClick={() => setIsCreateSprintModalOpen(true)}
+                  className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {activeSprint ? activeSprint.name : 'New Sprint'}
+                  </span>
                 </button>
 
                 <button
@@ -452,10 +484,35 @@ const ProjectBoard: React.FC = () => {
               {viewMode === 'board' && <KanbanBoard tasks={displayTasks} />}
               {viewMode === 'list' && <TaskListView tasks={displayTasks as any} groupBy="status" />}
               {viewMode === 'table' && <TaskListView tasks={displayTasks as any} groupBy="none" />}
+              {viewMode === 'gantt' && (
+                <GanttChart projectId={currentProject.id} sprintId={activeSprint?.id} />
+              )}
+              {viewMode === 'velocity' && <VelocityChart projectId={currentProject.id} />}
+              {viewMode === 'goals' && activeSprint?.id && <GoalsView sprintId={activeSprint.id} />}
+              {viewMode === 'goals' && !activeSprint?.id && (
+                <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="text-center">
+                    <Target className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      No Active Sprint
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400">Create a sprint to set goals</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {currentProject && (
+        <CreateSprintModal
+          isOpen={isCreateSprintModalOpen}
+          onClose={() => setIsCreateSprintModalOpen(false)}
+          projectId={currentProject.id}
+          projectName={currentProject.name}
+        />
+      )}
 
       <TaskDetailModal />
 

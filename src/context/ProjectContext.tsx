@@ -143,8 +143,8 @@ interface ProjectContextType {
   deleteProject: (projectId: string) => Promise<void>;
 
   // View state
-  viewMode: 'board' | 'list' | 'table' | 'timeline';
-  setViewMode: (mode: 'board' | 'list' | 'table' | 'timeline') => void;
+  viewMode: 'board' | 'list' | 'table' | 'gantt' | 'velocity' | 'goals';
+  setViewMode: (mode: 'board' | 'list' | 'table' | 'gantt' | 'velocity' | 'goals') => void;
 
   // Filters
   filters: {
@@ -367,7 +367,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
   // ============================================
   // UI State
   // ============================================
-  const [viewMode, setViewMode] = useState<'board' | 'list' | 'table' | 'timeline'>('board');
+  const [viewMode, setViewMode] = useState<
+    'board' | 'list' | 'table' | 'gantt' | 'velocity' | 'goals'
+  >('board');
   const [filters, setFilters] = useState({
     search: '',
     assigneeIds: [] as User[],

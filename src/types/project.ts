@@ -42,9 +42,9 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: TaskStatus; // e.g., "todo", "in_progress", "done"
-  priority: Priority; // e.g., "low", "medium", "high"
-  type?: TaskType; // ✅ match Go response
+  status: TaskStatus;
+  priority: Priority;
+  type?: TaskType;
   projectId: string;
   sprintId?: string;
   parentTaskId?: string;
@@ -56,14 +56,19 @@ export interface Task {
   storyPoints?: number;
   estimatedHours?: number;
   actualHours?: number;
-  startDate?: string; // ISO string
-  dueDate?: string; // ISO string
-  completedAt?: string; // ISO string
+  startDate?: string;
+  dueDate?: string;
+  completedAt?: string;
   blocked?: boolean;
   position: number;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+
+  // ✅ ADD THESE 3 FIELDS FOR CYCLE TIME TRACKING
+  startedAt?: string;
+  cycleTimeSeconds?: number;
+  leadTimeSeconds?: number;
 }
 
 export interface Sprint {
@@ -86,6 +91,7 @@ export interface Project {
   lead?: User;
   members: User[];
   sprints: Sprint[];
+  activeSprintId?: string; // ADD THIS
   backlog?: Task[];
   createdAt?: Date;
 }

@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/CreateTaskModal/CreateTaskModal.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TaskStatus, Priority, TaskType } from '../../types/project';
 import { useCreateTask } from '../../hooks/api/useTasks';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
@@ -48,6 +48,19 @@ const CreateTaskModal: React.FC = () => {
     enabled: !!currentProject?.id,
   });
 
+  const users = useMemo(() => {
+    if (!membersData) return [];
+    // Filter out workspace-inherited members (they only have visibility, not content access)
+    return membersData
+      .filter((member: any) => !(member.isInherited && member.inheritedFrom === 'workspace'))
+      .map((member: any) => ({
+        id: member.userId,
+        name: member.user?.name || 'Unknown',
+        email: member.user?.email || '',
+        avatar: member.user?.avatar,
+      }));
+  }, [membersData]);
+
   const modalRef = useRef<HTMLDivElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
 
@@ -56,13 +69,6 @@ const CreateTaskModal: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const isCreating = createTaskMutation.isPending;
-
-  const users =
-    membersData?.map((m) => ({
-      id: m.userId,
-      name: m.user?.name || 'Unknown',
-      email: m.user?.email || '',
-    })) || [];
 
   // Reset form when modal opens
   useEffect(() => {
