@@ -164,6 +164,14 @@ export const queryKeys = {
 
     visibleSpaces: () => ['members', 'visible-spaces'] as const,
 
+    // In query-client.ts, add to members:
+    eligible: (entityType: string, entityId: string) => [
+      'members',
+      'eligible',
+      entityType,
+      entityId,
+    ],
+
     // ✅ ADD THESE NEW KEYS
     accessibleWorkspaces: () => ['members', 'my', 'accessible', 'workspaces'] as const,
     accessibleSpaces: () => ['members', 'my', 'accessible', 'spaces'] as const,
@@ -236,6 +244,45 @@ export const queryKeys = {
     all: ['users'] as const,
     me: () => [...queryKeys.users.all, 'me'] as const,
     search: (query: string) => [...queryKeys.users.all, 'search', query] as const,
+  },
+
+  // ============================================
+  // Sprints & Analytics
+  // ============================================
+  sprints: {
+    all: ['sprints'] as const,
+    report: (sprintId: string) => [...queryKeys.sprints.all, 'report', sprintId] as const,
+    velocity: (projectId: string) => [...queryKeys.sprints.all, 'velocity', projectId] as const,
+    cycleTime: (sprintId: string) => [...queryKeys.sprints.all, 'cycle-time', sprintId] as const,
+    analytics: (sprintId: string) => [...queryKeys.sprints.all, 'analytics', sprintId] as const,
+  },
+
+  // ============================================
+  // Goals (OKR)
+  // ============================================
+  goals: {
+    all: ['goals'] as const,
+    detail: (id: string) => [...queryKeys.goals.all, 'detail', id] as const,
+    byEntity: (entityType: string, entityId: string) =>
+      [...queryKeys.goals.all, entityType, entityId] as const,
+    byTask: (taskId: string) => [...queryKeys.goals.all, 'task', taskId] as const,
+    progress: (goalId: string) => [...queryKeys.goals.all, 'progress', goalId] as const,
+    summary: (entityType: string, entityId: string) =>
+      [...queryKeys.goals.all, 'summary', entityType, entityId] as const,
+  },
+
+  // ============================================
+  // Gantt Chart
+  // ============================================
+  gantt: {
+    all: ['gantt'] as const,
+    byProject: (projectId: string, sprintId?: string) =>
+      [
+        ...queryKeys.gantt.all,
+        'project',
+        projectId,
+        ...(sprintId ? ['sprint', sprintId] : []),
+      ] as const,
   },
 };
 

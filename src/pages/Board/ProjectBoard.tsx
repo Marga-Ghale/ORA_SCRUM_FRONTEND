@@ -10,6 +10,11 @@ import {
   X,
   UserPlus,
   ChevronDown,
+  Calendar,
+  TrendingUp,
+  Target,
+  CheckCircle2,
+  PlayCircle,
 } from 'lucide-react';
 import { PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
 import KanbanBoard from '../../components/tasks/KanbanBoard';
@@ -19,6 +24,13 @@ import AddProjectMemberModal from '../../components/modals/AddProjectMemberModal
 import PageMeta from '../../components/common/PageMeta';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
 import { useProjectContext } from '../../context/ProjectContext';
+import GanttChart from '../../components/gantt/GanttChart';
+import { VelocityChart } from '../../components/sprint/VelocityChart';
+import { GoalsView } from '../../components/sprint/GoalsView';
+import { Sprint, useActiveSprint, useSprintsByProject } from '../../hooks/api/useSprints';
+import { CreateSprintModal } from '../../components/modals';
+import { SprintSelector } from '../../components/sprint/SprintSelector';
+import SprintDetailModal from '../../components/modals/SprintDetailmodal ';
 
 const ProjectBoard: React.FC = () => {
   const {
@@ -34,23 +46,48 @@ const ProjectBoard: React.FC = () => {
     setCreateTaskInitialStatus,
   } = useProjectContext();
 
+  const [isCreateSprintModalOpen, setIsCreateSprintModalOpen] = useState(false);
+
+  const { data: activeSprint } = useActiveSprint(currentProject?.id || '', {
+    enabled: !!currentProject?.id,
+  });
+
+  // ✅ Current project members (for displaying avatars, filters, assignees)
   const { data: projectMembers } = useEffectiveMembers('project', currentProject?.id || '', {
     enabled: !!currentProject?.id,
   });
 
+  // ✅ Filter out workspace-inherited members (they only have visibility, not content access)
   const users = useMemo(() => {
     if (!projectMembers) return [];
-    return projectMembers.map((member) => ({
-      id: member.userId,
-      name: member.user?.name || 'Unknown',
-      email: member.user?.email || '',
-      avatar: member.user?.avatar,
-      role: member.role,
-    }));
+    return projectMembers
+      .filter((member) => !(member.isInherited && member.inheritedFrom === 'workspace'))
+      .map((member) => ({
+        id: member.userId,
+        name: member.user?.name || 'Unknown',
+        email: member.user?.email || '',
+        avatar: member.user?.avatar,
+        role: member.role,
+      }));
   }, [projectMembers]);
 
   const [showFilters, setShowFilters] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+
+  const [isSprintDetailOpen, setIsSprintDetailOpen] = useState(false);
+  const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
+  const [showSprintDropdown, setShowSprintDropdown] = useState(false);
+
+  const { data: sprints = [] } = useSprintsByProject(currentProject?.id || '', {
+    enabled: !!currentProject?.id,
+  });
+
+  const [selectedSprintFilter, setSelectedSprintFilter] = useState<string | null>(null);
+
+  const handleSprintClick = (sprint: Sprint) => {
+    setSelectedSprint(sprint);
+    setIsSprintDetailOpen(true);
+  };
 
   const displayTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -61,6 +98,9 @@ const ProjectBoard: React.FC = () => {
           task.description?.toLowerCase().includes(searchLower) ||
           task.id.toLowerCase().includes(searchLower);
         if (!matchesSearch) return false;
+      }
+      if (selectedSprintFilter && task.sprintId !== selectedSprintFilter) {
+        return false;
       }
 
       if (filters.assigneeIds.length > 0) {
@@ -83,12 +123,16 @@ const ProjectBoard: React.FC = () => {
 
       return true;
     });
-  }, [tasks, filters]);
+  }, [tasks, filters, selectedSprintFilter]);
 
   const viewOptions = [
     { id: 'board' as const, label: 'Board', icon: LayoutGrid },
     { id: 'list' as const, label: 'List', icon: List },
     { id: 'table' as const, label: 'Table', icon: Table },
+    // ✅ ADD THESE 3 NEW TABS
+    { id: 'gantt' as const, label: 'Timeline', icon: Calendar },
+    { id: 'velocity' as const, label: 'Velocity', icon: TrendingUp },
+    { id: 'goals' as const, label: 'Goals', icon: Target },
   ];
 
   const activeFilterCount = useMemo(() => {
@@ -140,6 +184,16 @@ const ProjectBoard: React.FC = () => {
                 </button>
 
                 <button
+                  onClick={() => setIsCreateSprintModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {activeSprint ? activeSprint.name : 'Create Sprint'}
+                  </span>
+                </button>
+
+                <button
                   onClick={() => {
                     setCreateTaskInitialStatus('backlog');
                     setIsCreateTaskModalOpen(true);
@@ -168,6 +222,7 @@ const ProjectBoard: React.FC = () => {
                     onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
                     className="pl-9 pr-8 py-2 w-64 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
                   />
+
                   {filters.search && (
                     <button
                       onClick={() => setFilters((prev) => ({ ...prev, search: '' }))}
@@ -177,7 +232,16 @@ const ProjectBoard: React.FC = () => {
                     </button>
                   )}
                 </div>
-
+                <div className="relative flex items-center gap-2 px-2 py-2 rounded-lg text-sm font-medium transition-all relative border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <SprintSelector
+                    projectId={currentProject?.id || ''}
+                    selectedSprintId={selectedSprintFilter}
+                    onSelect={setSelectedSprintFilter}
+                    onSprintClick={handleSprintClick} // ADD THIS
+                    size="sm"
+                    showClear={true}
+                  />
+                </div>
                 {/* Filter Button */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -306,6 +370,119 @@ const ProjectBoard: React.FC = () => {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Sprint Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSprintDropdown(!showSprintDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {activeSprint ? activeSprint.name : 'Sprints'}
+                  </span>
+                  <ChevronDown
+                    className={`w-3 h-3 transition-transform ${showSprintDropdown ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {showSprintDropdown && (
+                  <>
+                    {/* Backdrop */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowSprintDropdown(false)}
+                    />
+
+                    {/* Dropdown */}
+                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Project Sprints ({sprints.length})
+                        </p>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto">
+                        {sprints.length === 0 ? (
+                          <div className="px-4 py-6 text-center">
+                            <Calendar className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              No sprints yet
+                            </p>
+                          </div>
+                        ) : (
+                          sprints.map((sprint) => (
+                            <button
+                              key={sprint.id}
+                              onClick={() => {
+                                handleSprintClick(sprint);
+                                setShowSprintDropdown(false);
+                              }}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center justify-between gap-3 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div
+                                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                    sprint.status === 'active'
+                                      ? 'bg-green-500 animate-pulse'
+                                      : sprint.status === 'completed'
+                                        ? 'bg-blue-500'
+                                        : 'bg-gray-400'
+                                  }`}
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    {sprint.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {new Date(sprint.startDate).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })}{' '}
+                                    -{' '}
+                                    {new Date(sprint.endDate).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                              <span
+                                className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold ${
+                                  sprint.status === 'active'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : sprint.status === 'completed'
+                                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                }`}
+                              >
+                                {sprint.status === 'active' && <PlayCircle className="w-3 h-3" />}
+                                {sprint.status === 'completed' && (
+                                  <CheckCircle2 className="w-3 h-3" />
+                                )}
+                                {sprint.status}
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                        <button
+                          onClick={() => {
+                            setIsCreateSprintModalOpen(true);
+                            setShowSprintDropdown(false);
+                          }}
+                          className="w-full px-3 py-2 text-sm text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 rounded-lg flex items-center gap-2 font-medium transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Create New Sprint
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Type Filter */}
@@ -452,10 +629,45 @@ const ProjectBoard: React.FC = () => {
               {viewMode === 'board' && <KanbanBoard tasks={displayTasks} />}
               {viewMode === 'list' && <TaskListView tasks={displayTasks as any} groupBy="status" />}
               {viewMode === 'table' && <TaskListView tasks={displayTasks as any} groupBy="none" />}
+              {viewMode === 'gantt' && (
+                <GanttChart projectId={currentProject.id} sprintId={activeSprint?.id} />
+              )}
+              {viewMode === 'velocity' && <VelocityChart projectId={currentProject.id} />}
+              {viewMode === 'goals' && activeSprint?.id && <GoalsView sprintId={activeSprint.id} />}
+              {viewMode === 'goals' && !activeSprint?.id && (
+                <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="text-center">
+                    <Target className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      No Active Sprint
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400">Create a sprint to set goals</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {currentProject && (
+        <CreateSprintModal
+          isOpen={isCreateSprintModalOpen}
+          onClose={() => setIsCreateSprintModalOpen(false)}
+          projectId={currentProject.id}
+          projectName={currentProject.name}
+        />
+      )}
+      {currentProject && (
+        <SprintDetailModal
+          isOpen={isSprintDetailOpen}
+          onClose={() => {
+            setIsSprintDetailOpen(false);
+            setSelectedSprint(null);
+          }}
+          sprint={selectedSprint}
+        />
+      )}
 
       <TaskDetailModal />
 

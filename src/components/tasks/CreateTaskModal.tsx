@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/CreateTaskModal/CreateTaskModal.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TaskStatus, Priority, TaskType } from '../../types/project';
 import { useCreateTask } from '../../hooks/api/useTasks';
 import { useEffectiveMembers } from '../../hooks/api/useMembers';
@@ -18,6 +18,7 @@ import { useProjectContext } from '../../context/ProjectContext';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/api';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { SprintSelector } from '../sprint/SprintSelector';
 
 // ============================================
 // CREATE TASK MODAL - MAIN COMPONENT
@@ -38,6 +39,7 @@ const CreateTaskModal: React.FC = () => {
     type: 'task' as TaskType,
     assigneeIds: [] as string[],
     labelIds: [] as string[],
+    sprintId: '' as string | null,
     storyPoints: undefined as number | undefined,
     dueDate: '',
   });
@@ -48,6 +50,19 @@ const CreateTaskModal: React.FC = () => {
     enabled: !!currentProject?.id,
   });
 
+  const users = useMemo(() => {
+    if (!membersData) return [];
+    // Filter out workspace-inherited members (they only have visibility, not content access)
+    return membersData
+      .filter((member: any) => !(member.isInherited && member.inheritedFrom === 'workspace'))
+      .map((member: any) => ({
+        id: member.userId,
+        name: member.user?.name || 'Unknown',
+        email: member.user?.email || '',
+        avatar: member.user?.avatar,
+      }));
+  }, [membersData]);
+
   const modalRef = useRef<HTMLDivElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
 
@@ -56,13 +71,6 @@ const CreateTaskModal: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const isCreating = createTaskMutation.isPending;
-
-  const users =
-    membersData?.map((m) => ({
-      id: m.userId,
-      name: m.user?.name || 'Unknown',
-      email: m.user?.email || '',
-    })) || [];
 
   // Reset form when modal opens
   useEffect(() => {
@@ -77,6 +85,7 @@ const CreateTaskModal: React.FC = () => {
         labelIds: [],
         storyPoints: undefined,
         dueDate: '',
+        sprintId: null,
       });
       setSubtasks([]);
       setHasChanges(false);
@@ -180,6 +189,7 @@ const CreateTaskModal: React.FC = () => {
         assigneeIds: formData.assigneeIds,
         storyPoints: formData.storyPoints,
         dueDate: formData.dueDate ? dateToISO(formData.dueDate) : undefined,
+        sprintId: formData.sprintId || null,
         subtasks: subtasks
           .filter((s) => s.title.trim())
           .map((s) => ({
@@ -488,6 +498,17 @@ const CreateTaskModal: React.FC = () => {
                     className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
                     placeholder="Enter points"
                     min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Sprint
+                  </label>
+                  <SprintSelector
+                    projectId={currentProject.id}
+                    selectedSprintId={formData.sprintId}
+                    onSelect={(id) => setFormData({ ...formData, sprintId: id || '' })}
                   />
                 </div>
               </div>

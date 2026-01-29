@@ -34,6 +34,11 @@ export interface TaskResponse {
   updatedAt: string;
   subtaskCount: number;
   subtasks?: TaskResponse[];
+
+  // ✅ ADD THESE 3 FIELDS FOR CYCLE TIME TRACKING
+  startedAt?: string; // When moved to in_progress
+  cycleTimeSeconds?: number; // Time from in_progress to done
+  leadTimeSeconds?: number; // Time from created to done
 }
 
 export interface CreateTaskRequest {

@@ -3,3 +3,4 @@ export { default as CreateProjectModal } from './CreateProjectModal';
 export { default as CreateSprintModal } from './CreateSprintModal';
 export { default as InviteMemberModal } from './InviteMemberModalv1';
 export { default as CreateFolderModal } from './CreateFolderModal';
+export { default as SprintDetailModal } from './SprintDetailmodal ';

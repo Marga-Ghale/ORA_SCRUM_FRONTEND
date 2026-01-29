@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/tasks/TaskDetailModal.tsx - FIXED VERSION
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TaskStatus, Priority, TaskType, TASK_TYPE_CONFIG } from '../../types/project';
 import {
   CommentResponse,
@@ -34,6 +34,7 @@ import { useProjectContext } from '../../context/ProjectContext';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/api';
+import { SprintSelector } from '../sprint/SprintSelector';
 
 const TaskDetailModal: React.FC = () => {
   const { selectedTask, isTaskModalOpen, closeTaskModal } = useProjectContext();
@@ -81,13 +82,18 @@ const TaskDetailModal: React.FC = () => {
   const comments: CommentResponse[] = commentsData || [];
   const activities: ActivityResponse[] = activityData || [];
 
-  const users =
-    membersData?.map((m) => ({
-      id: m.userId,
-      name: m.user?.name || 'Unknown',
-      email: m.user?.email || '',
-      avatar: m.user?.avatar,
-    })) || [];
+  const users = useMemo(() => {
+    if (!membersData) return [];
+    // Filter out workspace-inherited members (they only have visibility, not content access)
+    return membersData
+      .filter((member: any) => !(member.isInherited && member.inheritedFrom === 'workspace'))
+      .map((member: any) => ({
+        id: member.userId,
+        name: member.user?.name || 'Unknown',
+        email: member.user?.email || '',
+        avatar: member.user?.avatar,
+      }));
+  }, [membersData]);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showDeleteTaskModal, setShowDeleteTaskModal] = useState(false);
@@ -263,6 +269,19 @@ const TaskDetailModal: React.FC = () => {
       return { ...prev, assigneeIds: newAssignees };
     });
     setHasChanges(true);
+  };
+
+  const handleSprintChange = async (sprintId: string | null) => {
+    if (!selectedTask) return;
+    try {
+      await updateTaskMutation.mutateAsync({
+        id: selectedTask.id,
+        data: { sprintId: sprintId || undefined },
+      });
+      toast.success(sprintId ? 'Added to sprint' : 'Removed from sprint');
+    } catch (error) {
+      toast.error('Failed to update sprint');
+    }
   };
 
   const typeConfig = TASK_TYPE_CONFIG[formData.type] || TASK_TYPE_CONFIG.task;
@@ -847,6 +866,17 @@ const TaskDetailModal: React.FC = () => {
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                     placeholder="0"
                     min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                    Sprint
+                  </label>
+                  <SprintSelector
+                    projectId={selectedTask.projectId}
+                    selectedSprintId={selectedTask.sprintId}
+                    onSelect={handleSprintChange}
                   />
                 </div>
 

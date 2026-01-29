@@ -127,6 +127,9 @@ const memberApi = {
       `/members/${entityType}/${entityId}/access-info${userId ? `?userId=${userId}` : ''}`
     ),
 
+  getEligibleUsers: (entityType: EntityType, entityId: string) =>
+    apiClient.get<UnifiedMemberResponse[]>(`/members/${entityType}/${entityId}/eligible`),
+
   getVisibleSpaces: () => apiClient.get<any[]>('/members/my/visible/spaces'),
 };
 
@@ -250,7 +253,6 @@ export const useAddMember = () => {
       data: AddMemberRequest;
     }) => memberApi.addMember(entityType, entityId, data),
     onSuccess: (_, variables) => {
-      // Invalidate direct/effective members for the specific entity
       toast.success('Member added successfully');
       queryClient.invalidateQueries({
         queryKey: queryKeys.members.direct(variables.entityType, variables.entityId),
@@ -260,11 +262,18 @@ export const useAddMember = () => {
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.members.myMemberships() });
 
+      // ✅ ADD: Invalidate eligible users
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.members.eligible(variables.entityType, variables.entityId),
+      });
+
       // Force refetch accessible entities based on entity type
       switch (variables.entityType) {
         case 'workspace':
           queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleWorkspaces() });
           queryClient.refetchQueries({ queryKey: queryKeys.members.visibleSpaces() });
+          // ✅ ADD: Invalidate space eligible users (workspace members changed)
+          queryClient.invalidateQueries({ queryKey: ['members', 'eligible', 'space'] });
           break;
 
         case 'space':
@@ -273,11 +282,19 @@ export const useAddMember = () => {
           queryClient.refetchQueries({ queryKey: queryKeys.members.visibleSpaces() });
           queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleFolders() });
           queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleProjects() });
+          // Invalidate eligible users
+          queryClient.invalidateQueries({ queryKey: ['members', 'eligible', 'folder'] });
+          queryClient.invalidateQueries({ queryKey: ['members', 'eligible', 'project'] });
+          // ✅ ADD: Invalidate child entity effective members (space members inherit to folders/projects)
+          queryClient.invalidateQueries({ queryKey: ['members', 'effective', 'folder'] });
+          queryClient.invalidateQueries({ queryKey: ['members', 'effective', 'project'] });
           break;
 
         case 'folder':
           queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleFolders() });
           queryClient.refetchQueries({ queryKey: queryKeys.members.accessibleProjects() });
+          // ✅ ADD: Invalidate project eligible users (folder members changed)
+          queryClient.invalidateQueries({ queryKey: ['members', 'eligible', 'project'] });
           break;
 
         case 'project':
@@ -290,7 +307,6 @@ export const useAddMember = () => {
     },
   });
 };
-
 export const useInviteMemberByEmail = () => {
   const queryClient = useQueryClient();
 
@@ -374,9 +390,42 @@ export const useRemoveMember = () => {
         queryKey: queryKeys.members.effective(variables.entityType, variables.entityId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.members.myMemberships() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.members.eligible(variables.entityType, variables.entityId),
+      });
+
+      // ✅ ADD: Invalidate child entity queries based on entity type
+      switch (variables.entityType) {
+        case 'workspace':
+          queryClient.invalidateQueries({ queryKey: ['members', 'eligible', 'space'] });
+          queryClient.invalidateQueries({ queryKey: ['members', 'effective', 'space'] });
+          break;
+        case 'space':
+          queryClient.invalidateQueries({ queryKey: ['members', 'eligible', 'folder'] });
+          queryClient.invalidateQueries({ queryKey: ['members', 'eligible', 'project'] });
+          queryClient.invalidateQueries({ queryKey: ['members', 'effective', 'folder'] });
+          queryClient.invalidateQueries({ queryKey: ['members', 'effective', 'project'] });
+          break;
+        case 'folder':
+          queryClient.invalidateQueries({ queryKey: ['members', 'eligible', 'project'] });
+          queryClient.invalidateQueries({ queryKey: ['members', 'effective', 'project'] });
+          break;
+      }
     },
     onError: (error) => {
       toast.error('❌ REMOVE MEMBER ERROR: ' + (error as Error).message);
     },
+  });
+};
+
+export const useEligibleUsers = (
+  entityType: EntityType,
+  entityId: string,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery({
+    queryKey: queryKeys.members.eligible(entityType, entityId),
+    queryFn: () => memberApi.getEligibleUsers(entityType, entityId),
+    enabled: options?.enabled ?? !!(entityType && entityId),
   });
 };

@@ -1,435 +1,448 @@
-// src/components/modals/CreateSprintModal.tsx
-import React, { useState, useRef, useEffect } from 'react';
-import { useProjectContext } from '../../context/ProjectContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Calendar, Target, Loader2, AlertCircle, Save, Clock } from 'lucide-react';
+import { useCreateSprint } from '../../hooks/api/useSprints';
+import { CustomCalendar } from '../common/Calender';
+import { ConfirmModal } from '../modals/ConfirmModal';
+import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../lib/api';
 
 interface CreateSprintModalProps {
   isOpen: boolean;
   onClose: () => void;
+  projectId: string;
+  projectName: string;
 }
 
-const DURATION_OPTIONS = [
-  { label: '1 week', days: 7, description: 'Short iteration' },
-  { label: '2 weeks', days: 14, description: 'Recommended' },
-  { label: '3 weeks', days: 21, description: 'Extended' },
-  { label: '4 weeks', days: 28, description: 'Monthly' },
-];
+const CreateSprintModal: React.FC<CreateSprintModalProps> = ({
+  isOpen,
+  onClose,
+  projectId,
+  projectName,
+}) => {
+  const createSprintMutation = useCreateSprint();
+  const [formData, setFormData] = useState({
+    name: '',
+    goal: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [hasChanges, setHasChanges] = useState(false);
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-const CreateSprintModal: React.FC<CreateSprintModalProps> = ({ isOpen, onClose }) => {
-  const { createSprint, currentProject } = useProjectContext();
-  const [name, setName] = useState('');
-  const [goal, setGoal] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [duration, setDuration] = useState<number>(14);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const startCalendarRef = useRef<HTMLDivElement>(null);
+  const endCalendarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
-      nameInputRef.current?.focus();
-      document.body.style.overflow = 'hidden';
-      setError(null);
-
-      // Set default dates
       const today = new Date();
-      const end = new Date(today.getTime() + duration * 24 * 60 * 60 * 1000);
-      setStartDate(today.toISOString().split('T')[0]);
-      setEndDate(end.toISOString().split('T')[0]);
+      const twoWeeksLater = new Date(today);
+      twoWeeksLater.setDate(today.getDate() + 14);
 
-      // Auto-generate sprint name
-      if (currentProject) {
-        const sprintCount = (currentProject.sprints?.length || 0) + 1;
-        setName(`Sprint ${sprintCount}`);
-      }
+      setFormData({
+        name: `Sprint ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+        goal: '',
+        startDate: today.toISOString().split('T')[0],
+        endDate: twoWeeksLater.toISOString().split('T')[0],
+      });
+      setErrors({});
+      setHasChanges(false);
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, currentProject]);
+  }, [isOpen]);
 
+  // ESC key handler
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isSubmitting) onClose();
+      if (e.key === 'Escape') {
+        if (hasChanges) {
+          setShowConfirmModal(true);
+        } else {
+          onClose();
+        }
+      }
     };
+
     if (isOpen) {
       document.addEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'hidden';
     }
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose, isSubmitting]);
 
-  // Update end date when start date or duration changes
-  const handleStartDateChange = (newStartDate: string) => {
-    setStartDate(newStartDate);
-    if (newStartDate) {
-      const start = new Date(newStartDate);
-      const end = new Date(start.getTime() + duration * 24 * 60 * 60 * 1000);
-      setEndDate(end.toISOString().split('T')[0]);
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose, hasChanges]);
+
+  // Click outside calendar handlers
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (startCalendarRef.current && !startCalendarRef.current.contains(e.target as Node)) {
+        setShowStartCalendar(false);
+      }
+      if (endCalendarRef.current && !endCalendarRef.current.contains(e.target as Node)) {
+        setShowEndCalendar(false);
+      }
+    };
+
+    if (showStartCalendar || showEndCalendar) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showStartCalendar, showEndCalendar]);
+
+  if (!isOpen) return null;
+
+  const updateField = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+    // Clear error for this field
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
-  const handleDurationChange = (newDuration: number) => {
-    setDuration(newDuration);
-    if (startDate) {
-      const start = new Date(startDate);
-      const end = new Date(start.getTime() + newDuration * 24 * 60 * 60 * 1000);
-      setEndDate(end.toISOString().split('T')[0]);
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = 'Sprint name is required';
+    if (!formData.startDate) newErrors.startDate = 'Start date is required';
+    if (!formData.endDate) newErrors.endDate = 'End date is required';
+    if (
+      formData.startDate &&
+      formData.endDate &&
+      new Date(formData.endDate) <= new Date(formData.startDate)
+    ) {
+      newErrors.endDate = 'End date must be after start date';
     }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!name.trim()) {
-      setError('Sprint name is required');
-      return;
-    }
-    if (!startDate || !endDate) {
-      setError('Start and end dates are required');
-      return;
-    }
-    if (new Date(endDate) <= new Date(startDate)) {
-      setError('End date must be after start date');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
+    if (!validateForm()) return;
 
     try {
-      createSprint({
-        name: name.trim(),
-        goal: goal.trim() || undefined,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        status: 'planning',
-        tasks: [],
+      await createSprintMutation.mutateAsync({
+        projectId,
+        data: {
+          name: formData.name.trim(),
+          goal: formData.goal.trim() || undefined,
+          startDate: new Date(formData.startDate).toISOString(),
+          endDate: new Date(formData.endDate).toISOString(),
+        },
       });
-
-      // Reset form
-      setName('');
-      setGoal('');
-      setDuration(14);
       onClose();
-    } catch (err) {
-      console.error('Failed to create sprint:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create sprint. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      toast.success('Sprint created successfully');
+    } catch (error) {
+      console.error('Failed to create sprint:', error);
+      toast.error(getErrorMessage(error));
     }
   };
 
-  const resetForm = () => {
-    setName('');
-    setGoal('');
-    setDuration(14);
-    setError(null);
-  };
-
-  const handleClose = () => {
-    if (!isSubmitting) {
-      resetForm();
+  const handleCancel = () => {
+    if (hasChanges) {
+      setShowConfirmModal(true);
+    } else {
       onClose();
     }
   };
 
-  // Format date range for display
-  const formatDateRange = () => {
-    if (!startDate || !endDate) return '';
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', { ...options, year: 'numeric' })}`;
+  const calculateDuration = () => {
+    if (!formData.startDate || !formData.endDate) return null;
+    const days = Math.ceil(
+      (new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+    const weeks = Math.floor(days / 7);
+    const remainingDays = days % 7;
+    if (weeks > 0 && remainingDays > 0) return `${weeks}w ${remainingDays}d`;
+    if (weeks > 0) return `${weeks} week${weeks > 1 ? 's' : ''}`;
+    return `${days} day${days > 1 ? 's' : ''}`;
   };
 
-  if (!isOpen) return null;
+  const formatDateDisplay = (dateStr: string) => {
+    if (!dateStr) return 'Select date';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999]" onClick={handleClose} />
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+        onClick={() => {
+          if (hasChanges) {
+            setShowConfirmModal(true);
+          } else {
+            onClose();
+          }
+        }}
+      />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
         <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+          ref={modalRef}
           onClick={(e) => e.stopPropagation()}
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-brand-600 dark:text-brand-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/30">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-lg flex-shrink-0">
+                <Target className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Create Sprint
-                </h2>
-                {currentProject && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{currentProject.name}</p>
-                )}
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create Sprint</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{projectName}</p>
               </div>
+              {hasChanges && (
+                <span className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Unsaved
+                </span>
+              )}
             </div>
             <button
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors disabled:opacity-50"
+              onClick={() => {
+                if (hasChanges) {
+                  setShowConfirmModal(true);
+                } else {
+                  onClose();
+                }
+              }}
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <div className="flex gap-3">
-                <svg
-                  className="w-5 h-5 text-red-500 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-              </div>
-            </div>
-          )}
-
           {/* Form */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Sprint Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Sprint Name <span className="text-red-500">*</span>
               </label>
               <input
-                ref={nameInputRef}
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Sprint 4 - User Authentication"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
-                required
-                disabled={isSubmitting}
-                maxLength={100}
+                value={formData.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                className={`w-full px-4 py-3 rounded-xl border-2 ${
+                  errors.name
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-gray-200 dark:border-gray-700 focus:border-brand-500'
+                } bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all placeholder:text-gray-400`}
+                placeholder="e.g., Sprint 1, Q1 Sprint, Feature Development"
               />
+              {errors.name && (
+                <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {errors.name}
+                </p>
+              )}
             </div>
 
             {/* Sprint Goal */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <Target className="w-4 h-4" />
                 Sprint Goal <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <textarea
-                value={goal}
-                onChange={(e) => setGoal(e.target.value)}
-                placeholder="What is the main objective of this sprint? What will be delivered?"
+                value={formData.goal}
+                onChange={(e) => updateField('goal', e.target.value)}
+                placeholder="What do you want to achieve in this sprint?"
                 rows={3}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
-                disabled={isSubmitting}
-                maxLength={300}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none transition-all placeholder:text-gray-400"
               />
-              <p className="text-xs text-gray-400 mt-1 text-right">{goal.length}/300</p>
-            </div>
-
-            {/* Duration Quick Select */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Duration
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {DURATION_OPTIONS.map((option) => (
-                  <button
-                    key={option.days}
-                    type="button"
-                    onClick={() => handleDurationChange(option.days)}
-                    disabled={isSubmitting}
-                    className={`px-3 py-3 rounded-xl text-sm font-medium transition-all flex flex-col items-center
-                      ${
-                        duration === option.days
-                          ? 'bg-brand-500 text-white ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-800'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }
-                    `}
-                  >
-                    <span>{option.label}</span>
-                    <span
-                      className={`text-xs mt-0.5 ${duration === option.days ? 'text-brand-100' : 'text-gray-400'}`}
-                    >
-                      {option.description}
-                    </span>
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Date Range */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Start Date */}
+              <div ref={startCalendarRef} className="relative">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <Calendar className="w-4 h-4" />
                   Start Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
-                  required
-                  disabled={isSubmitting}
-                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStartCalendar(!showStartCalendar);
+                    setShowEndCalendar(false);
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl border-2 ${
+                    errors.startDate
+                      ? 'border-red-500'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  } bg-white dark:bg-gray-800 text-left transition-all flex items-center justify-between group`}
+                >
+                  <span
+                    className={
+                      formData.startDate
+                        ? 'text-gray-900 dark:text-white font-medium'
+                        : 'text-gray-400'
+                    }
+                  >
+                    {formatDateDisplay(formData.startDate)}
+                  </span>
+                  <Calendar
+                    className={`w-4 h-4 ${
+                      formData.startDate ? 'text-brand-500' : 'text-gray-400'
+                    } group-hover:text-brand-500 transition-colors`}
+                  />
+                </button>
+                {errors.startDate && (
+                  <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {errors.startDate}
+                  </p>
+                )}
+                {showStartCalendar && (
+                  <CustomCalendar
+                    selectedDate={formData.startDate}
+                    onSelect={(date) => {
+                      updateField('startDate', date);
+                      setShowStartCalendar(false);
+                    }}
+                    onClose={() => setShowStartCalendar(false)}
+                  />
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+
+              {/* End Date */}
+              <div ref={endCalendarRef} className="relative">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <Calendar className="w-4 h-4" />
                   End Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
-                  required
-                  disabled={isSubmitting}
-                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEndCalendar(!showEndCalendar);
+                    setShowStartCalendar(false);
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl border-2 ${
+                    errors.endDate
+                      ? 'border-red-500'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  } bg-white dark:bg-gray-800 text-left transition-all flex items-center justify-between group`}
+                >
+                  <span
+                    className={
+                      formData.endDate
+                        ? 'text-gray-900 dark:text-white font-medium'
+                        : 'text-gray-400'
+                    }
+                  >
+                    {formatDateDisplay(formData.endDate)}
+                  </span>
+                  <Calendar
+                    className={`w-4 h-4 ${
+                      formData.endDate ? 'text-brand-500' : 'text-gray-400'
+                    } group-hover:text-brand-500 transition-colors`}
+                  />
+                </button>
+                {errors.endDate && (
+                  <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {errors.endDate}
+                  </p>
+                )}
+                {showEndCalendar && (
+                  <CustomCalendar
+                    selectedDate={formData.endDate}
+                    onSelect={(date) => {
+                      updateField('endDate', date);
+                      setShowEndCalendar(false);
+                    }}
+                    onClose={() => setShowEndCalendar(false)}
+                  />
+                )}
               </div>
             </div>
 
-            {/* Date Range Preview */}
-            {startDate && endDate && (
-              <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl">
-                <svg
-                  className="w-5 h-5 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">
-                  {formatDateRange()}
-                </span>
-                <span className="text-xs text-gray-400 ml-auto">{duration} days</span>
-              </div>
-            )}
-
-            {/* Info Box */}
-            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-              <div className="flex gap-3">
-                <svg
-                  className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                  />
-                </svg>
-                <div className="text-sm text-amber-700 dark:text-amber-300">
-                  <p className="font-medium">Sprint Tips</p>
-                  <ul className="mt-1.5 space-y-1 text-amber-600 dark:text-amber-400">
-                    <li className="flex items-start gap-2">
-                      <span className="w-1 h-1 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                      Keep sprints consistent in length for better velocity tracking
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1 h-1 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                      Define a clear, achievable sprint goal
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1 h-1 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                      Add tasks to the sprint after creating it
-                    </li>
-                  </ul>
+            {/* Duration Display */}
+            {calculateDuration() && (
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-blue-900 dark:text-blue-300">
+                      Sprint Duration
+                    </p>
+                    <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                      {calculateDuration()}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </form>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+          <div className="border-t border-gray-200 dark:border-gray-800 px-6 py-4 bg-gray-50 dark:bg-gray-800/50 flex flex-col-reverse sm:flex-row justify-end gap-3">
             <button
               type="button"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors disabled:opacity-50"
+              onClick={handleCancel}
+              disabled={createSprintMutation.isPending}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all border-2 border-gray-200 dark:border-gray-700"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
-              disabled={!name.trim() || !startDate || !endDate || isSubmitting}
-              className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 min-w-[130px] justify-center"
+              disabled={createSprintMutation.isPending}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
             >
-              {isSubmitting ? (
+              {createSprintMutation.isPending ? (
                 <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  <span>Creating...</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating...
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
-                  <span>Create Sprint</span>
+                  <Save className="w-4 h-4" />
+                  Create Sprint
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onConfirm={() => {
+          setShowConfirmModal(false);
+          onClose();
+        }}
+        onCancel={() => setShowConfirmModal(false)}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to close?"
+        confirmText="Close Anyway"
+        variant="warning"
+      />
     </>
   );
 };
