@@ -8,6 +8,7 @@ import GanttChart from '../gantt/GanttChart';
 interface SprintViewsProps {
   projectId: string;
   sprintId: string;
+  workspaceId?: string;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export const SprintViews: React.FC<SprintViewsProps> = ({
   projectId,
   sprintId,
   className = '',
+  workspaceId,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('gantt');
 
@@ -82,7 +84,10 @@ export const SprintViews: React.FC<SprintViewsProps> = ({
 
         {viewMode === 'velocity' && <VelocityChart projectId={projectId} />}
 
-        {viewMode === 'goals' && <GoalsView sprintId={sprintId} />}
+        {viewMode === 'goals' && ( // FIXED:
+          // FIXED:
+          <GoalsView sprintId={sprintId} projectId={projectId} workspaceId={workspaceId} />
+        )}
       </div>
     </div>
   );

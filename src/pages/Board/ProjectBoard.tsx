@@ -633,7 +633,13 @@ const ProjectBoard: React.FC = () => {
                 <GanttChart projectId={currentProject.id} sprintId={activeSprint?.id} />
               )}
               {viewMode === 'velocity' && <VelocityChart projectId={currentProject.id} />}
-              {viewMode === 'goals' && activeSprint?.id && <GoalsView sprintId={activeSprint.id} />}
+              {viewMode === 'goals' && activeSprint?.id && (
+                <GoalsView
+                  sprintId={activeSprint.id}
+                  projectId={currentProject.id}
+                  workspaceId={currentWorkspace?.id || ''}
+                />
+              )}
               {viewMode === 'goals' && !activeSprint?.id && (
                 <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="text-center">
