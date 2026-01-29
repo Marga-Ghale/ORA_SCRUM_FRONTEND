@@ -123,40 +123,48 @@ export interface TaskStatusHistoryResponse {
 // ============================================
 
 const sprintApi = {
-  // Sprint CRUD
+  // Sprint CRUD - MISSING IN MAIN.GO - These routes don't exist!
+  // You need to add these routes to main.go under projects group:
   listByProject: (projectId: string) => apiClient.get<Sprint[]>(`/projects/${projectId}/sprints`),
 
+  // MISSING - Add to main.go sprints group
   getById: (sprintId: string) => apiClient.get<Sprint>(`/sprints/${sprintId}`),
 
+  // MISSING - Add to main.go projects group
   getActive: (projectId: string) => apiClient.get<Sprint>(`/projects/${projectId}/sprints/active`),
 
+  // MISSING - Add to main.go projects group
   create: (projectId: string, data: CreateSprintRequest) =>
     apiClient.post<Sprint>(`/projects/${projectId}/sprints`, data),
 
+  // MISSING - Add to main.go sprints group
   update: (sprintId: string, data: UpdateSprintRequest) =>
     apiClient.put<Sprint>(`/sprints/${sprintId}`, data),
 
+  // MISSING - Add to main.go sprints group
   start: (sprintId: string) => apiClient.post<Sprint>(`/sprints/${sprintId}/start`),
 
+  // MISSING - Add to main.go sprints group
   complete: (sprintId: string) => apiClient.post<Sprint>(`/sprints/${sprintId}/complete`),
 
+  // MISSING - Add to main.go sprints group
   delete: (sprintId: string) => apiClient.delete(`/sprints/${sprintId}`),
 
-  // Sprint Reports
+  // Sprint Reports - THESE EXIST ✓
   getSprintReport: (sprintId: string) =>
     apiClient.get<SprintReportResponse>(`/sprints/${sprintId}/report`),
 
   generateSprintReport: (sprintId: string) =>
     apiClient.post<SprintReportResponse>(`/sprints/${sprintId}/report/generate`),
 
-  // Velocity
+  // Velocity - THESE EXIST ✓
   getVelocityHistory: (projectId: string) =>
     apiClient.get<VelocityHistoryResponse[]>(`/projects/${projectId}/velocity`),
 
   getVelocityTrend: (projectId: string) =>
     apiClient.get<VelocityTrendResponse>(`/projects/${projectId}/velocity/trend`),
 
-  // Cycle Time
+  // Cycle Time - THESE EXIST ✓
   getSprintCycleTime: (sprintId: string) =>
     apiClient.get<CycleTimeResponse[]>(`/sprints/${sprintId}/cycle-time`),
 
@@ -166,7 +174,7 @@ const sprintApi = {
   getTaskStatusHistory: (taskId: string) =>
     apiClient.get<TaskStatusHistoryResponse[]>(`/tasks/${taskId}/status-history`),
 
-  // Analytics Dashboards
+  // Analytics Dashboards - THESE EXIST ✓
   getSprintAnalytics: (sprintId: string) =>
     apiClient.get<SprintAnalyticsDashboardResponse>(`/sprints/${sprintId}/analytics`),
 

@@ -4,7 +4,15 @@ import { PRIORITY_CONFIG, TASK_TYPE_CONFIG, Priority, TaskType } from '../../typ
 import { TaskResponse } from '../../hooks/api/useTasks';
 import { formatDateDisplay } from '../../utils/dateUtils';
 import { useUserInitials } from '../../hooks/api/useUserInitials';
-import { MoreVertical, Edit2, Trash2, Clock, CornerDownRight, AlertTriangle } from 'lucide-react';
+import {
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Clock,
+  CornerDownRight,
+  AlertTriangle,
+  Target,
+} from 'lucide-react';
 import { useProjectContext } from '../../context/ProjectContext';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../modals/ConfirmModal';
@@ -310,6 +318,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-semibold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   📋 {task.subtaskCount}
                 </span>
+              )}
+
+              {task.sprintId && (
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-brand-50 dark:bg-brand-950/30 rounded text-[10px] font-medium text-brand-600 dark:text-brand-400">
+                  <Target className="w-2.5 h-2.5" />
+                  <span>Sprint</span>
+                </div>
               )}
             </div>
 

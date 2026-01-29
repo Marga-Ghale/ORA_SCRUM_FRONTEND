@@ -262,13 +262,13 @@ export const queryKeys = {
   // ============================================
   goals: {
     all: ['goals'] as const,
+    detail: (id: string) => [...queryKeys.goals.all, 'detail', id] as const,
     byEntity: (entityType: string, entityId: string) =>
       [...queryKeys.goals.all, entityType, entityId] as const,
-    detail: (id: string) => [...queryKeys.goals.all, 'detail', id] as const,
-    summary: (entityType: string, entityId: string) =>
-      [...queryKeys.goals.all, 'summary', entityType, entityId] as const,
     byTask: (taskId: string) => [...queryKeys.goals.all, 'task', taskId] as const,
     progress: (goalId: string) => [...queryKeys.goals.all, 'progress', goalId] as const,
+    summary: (entityType: string, entityId: string) =>
+      [...queryKeys.goals.all, 'summary', entityType, entityId] as const,
   },
 
   // ============================================
@@ -277,7 +277,12 @@ export const queryKeys = {
   gantt: {
     all: ['gantt'] as const,
     byProject: (projectId: string, sprintId?: string) =>
-      [...queryKeys.gantt.all, 'project', projectId, { sprintId }] as const,
+      [
+        ...queryKeys.gantt.all,
+        'project',
+        projectId,
+        ...(sprintId ? ['sprint', sprintId] : []),
+      ] as const,
   },
 };
 
