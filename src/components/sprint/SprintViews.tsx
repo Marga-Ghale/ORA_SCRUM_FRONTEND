@@ -78,17 +78,7 @@ export const SprintViews: React.FC<SprintViewsProps> = ({
 
       {/* View Content */}
       <div className="min-h-[400px]">
-        {viewMode === 'gantt' && (
-          <div className="h-full flex items-center justify-center bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12">
-            <div className="text-center">
-              <Calendar className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400 text-lg">Gantt view - Coming soon</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                <GanttChart projectId={projectId} sprintId={sprintId} />
-              </p>
-            </div>
-          </div>
-        )}
+        {viewMode === 'gantt' && <GanttChart projectId={projectId} sprintId={sprintId} />}
 
         {viewMode === 'velocity' && <VelocityChart projectId={projectId} />}
 

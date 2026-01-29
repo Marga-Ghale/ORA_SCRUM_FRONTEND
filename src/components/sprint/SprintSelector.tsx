@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Target, Check, X } from 'lucide-react';
-import { useSprintsByProject } from '../../hooks/api/useSprints';
+import { useSprintsByProject, Sprint } from '../../hooks/api/useSprints';
 
 interface SprintSelectorProps {
   projectId: string;
   selectedSprintId?: string | null;
   onSelect: (sprintId: string | null) => void;
+  onSprintClick?: (sprint: Sprint) => void;
   size?: 'sm' | 'md';
   showClear?: boolean;
 }
@@ -14,14 +15,19 @@ export const SprintSelector: React.FC<SprintSelectorProps> = ({
   projectId,
   selectedSprintId,
   onSelect,
+  onSprintClick,
   size = 'md',
   showClear = true,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const { data: sprints = [] } = useSprintsByProject(projectId, { enabled: !!projectId });
+  const { data: sprints = [], isLoading } = useSprintsByProject(projectId, {
+    enabled: !!projectId,
+  });
 
-  const selectedSprint = sprints.find((s) => s.id === selectedSprintId);
+  // FIX: Ensure sprints is always an array before calling .find()
+  const sprintsList = Array.isArray(sprints) ? sprints : [];
+  const selectedSprint = sprintsList.find((s) => s.id === selectedSprintId);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -53,16 +59,28 @@ export const SprintSelector: React.FC<SprintSelectorProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 ${sizeClasses} rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors w-full justify-between`}
+        disabled={isLoading}
+        className={`flex items-center gap-2 ${sizeClasses} rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors w-full justify-between disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         <div className="flex items-center gap-2 min-w-0">
           <Target
             className={`${size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'} text-gray-400 flex-shrink-0`}
           />
           <span
-            className={`truncate ${selectedSprint ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}
+            onClick={(e) => {
+              if (selectedSprint && onSprintClick) {
+                e.stopPropagation();
+                onSprintClick(selectedSprint);
+                setIsOpen(false);
+              }
+            }}
+            className={`truncate ${
+              selectedSprint
+                ? 'text-gray-900 dark:text-white cursor-pointer hover:text-brand-600 dark:hover:text-brand-400 hover:underline'
+                : 'text-gray-400'
+            }`}
           >
-            {selectedSprint ? selectedSprint.name : 'No Sprint'}
+            {isLoading ? 'Loading...' : selectedSprint ? selectedSprint.name : 'No Sprint'}
           </span>
         </div>
         <ChevronDown
@@ -85,10 +103,12 @@ export const SprintSelector: React.FC<SprintSelectorProps> = ({
             </button>
           )}
 
-          {sprints.length === 0 ? (
+          {isLoading ? (
+            <div className="px-3 py-2 text-sm text-gray-500">Loading sprints...</div>
+          ) : sprintsList.length === 0 ? (
             <div className="px-3 py-2 text-sm text-gray-500">No sprints available</div>
           ) : (
-            sprints.map((sprint) => (
+            sprintsList.map((sprint) => (
               <button
                 key={sprint.id}
                 onClick={() => {

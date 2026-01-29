@@ -13,6 +13,8 @@ import {
   Calendar,
   TrendingUp,
   Target,
+  CheckCircle2,
+  PlayCircle,
 } from 'lucide-react';
 import { PRIORITY_CONFIG, TASK_TYPE_CONFIG } from '../../types/project';
 import KanbanBoard from '../../components/tasks/KanbanBoard';
@@ -74,6 +76,7 @@ const ProjectBoard: React.FC = () => {
 
   const [isSprintDetailOpen, setIsSprintDetailOpen] = useState(false);
   const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
+  const [showSprintDropdown, setShowSprintDropdown] = useState(false);
 
   const { data: sprints = [] } = useSprintsByProject(currentProject?.id || '', {
     enabled: !!currentProject?.id,
@@ -180,78 +183,15 @@ const ProjectBoard: React.FC = () => {
                   <span className="hidden sm:inline">Add Member</span>
                 </button>
 
-                {/* Sprint Dropdown - REPLACE the existing sprint button */}
-                <div className="relative group">
-                  <button
-                    onClick={() => {
-                      if (sprints.length === 0) {
-                        setIsCreateSprintModalOpen(true);
-                      }
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    <span className="hidden sm:inline">
-                      {activeSprint ? activeSprint.name : 'Sprints'}
-                    </span>
-                    {sprints.length > 0 && <ChevronDown className="w-3 h-3" />}
-                  </button>
-
-                  {/* Dropdown */}
-                  {sprints.length > 0 && (
-                    <div className="absolute right-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-xl py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                      <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
-                          Sprints
-                        </p>
-                      </div>
-
-                      {sprints.map((sprint) => (
-                        <button
-                          key={sprint.id}
-                          onClick={() => handleSprintClick(sprint)}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`w-2 h-2 rounded-full ${
-                                sprint.status === 'active'
-                                  ? 'bg-green-500'
-                                  : sprint.status === 'completed'
-                                    ? 'bg-blue-500'
-                                    : 'bg-gray-400'
-                              }`}
-                            />
-                            <span className="text-sm text-gray-900 dark:text-white">
-                              {sprint.name}
-                            </span>
-                          </div>
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                              sprint.status === 'active'
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : sprint.status === 'completed'
-                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                            }`}
-                          >
-                            {sprint.status}
-                          </span>
-                        </button>
-                      ))}
-
-                      <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
-                        <button
-                          onClick={() => setIsCreateSprintModalOpen(true)}
-                          className="w-full px-3 py-2 text-left text-sm text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 flex items-center gap-2"
-                        >
-                          <Plus className="w-4 h-4" />
-                          Create New Sprint
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <button
+                  onClick={() => setIsCreateSprintModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {activeSprint ? activeSprint.name : 'Create Sprint'}
+                  </span>
+                </button>
 
                 <button
                   onClick={() => {
@@ -297,6 +237,7 @@ const ProjectBoard: React.FC = () => {
                     projectId={currentProject?.id || ''}
                     selectedSprintId={selectedSprintFilter}
                     onSelect={setSelectedSprintFilter}
+                    onSprintClick={handleSprintClick} // ADD THIS
                     size="sm"
                     showClear={true}
                   />
@@ -429,6 +370,119 @@ const ProjectBoard: React.FC = () => {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Sprint Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSprintDropdown(!showSprintDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {activeSprint ? activeSprint.name : 'Sprints'}
+                  </span>
+                  <ChevronDown
+                    className={`w-3 h-3 transition-transform ${showSprintDropdown ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {showSprintDropdown && (
+                  <>
+                    {/* Backdrop */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowSprintDropdown(false)}
+                    />
+
+                    {/* Dropdown */}
+                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Project Sprints ({sprints.length})
+                        </p>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto">
+                        {sprints.length === 0 ? (
+                          <div className="px-4 py-6 text-center">
+                            <Calendar className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              No sprints yet
+                            </p>
+                          </div>
+                        ) : (
+                          sprints.map((sprint) => (
+                            <button
+                              key={sprint.id}
+                              onClick={() => {
+                                handleSprintClick(sprint);
+                                setShowSprintDropdown(false);
+                              }}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center justify-between gap-3 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div
+                                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                    sprint.status === 'active'
+                                      ? 'bg-green-500 animate-pulse'
+                                      : sprint.status === 'completed'
+                                        ? 'bg-blue-500'
+                                        : 'bg-gray-400'
+                                  }`}
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    {sprint.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {new Date(sprint.startDate).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })}{' '}
+                                    -{' '}
+                                    {new Date(sprint.endDate).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                              <span
+                                className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold ${
+                                  sprint.status === 'active'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : sprint.status === 'completed'
+                                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                }`}
+                              >
+                                {sprint.status === 'active' && <PlayCircle className="w-3 h-3" />}
+                                {sprint.status === 'completed' && (
+                                  <CheckCircle2 className="w-3 h-3" />
+                                )}
+                                {sprint.status}
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                        <button
+                          onClick={() => {
+                            setIsCreateSprintModalOpen(true);
+                            setShowSprintDropdown(false);
+                          }}
+                          className="w-full px-3 py-2 text-sm text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 rounded-lg flex items-center gap-2 font-medium transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Create New Sprint
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Type Filter */}
