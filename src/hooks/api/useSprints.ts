@@ -19,6 +19,48 @@ export interface Sprint {
   updatedAt: string;
 }
 
+// Sprint Start Response (commitment snapshot)
+export interface SprintStartResponse {
+  sprint: Sprint;
+  committedTasks: number;
+  committedPoints: number;
+  warning?: string;
+}
+
+// Sprint Complete Options
+export interface SprintCompleteOptions {
+  moveIncompleteTo: 'backlog' | 'next_sprint' | string;
+}
+
+// Sprint Complete Response
+export interface SprintCompleteResponse {
+  sprint: Sprint;
+  completedTasks: number;
+  completedPoints: number;
+  incompleteTasks: number;
+  incompletePoints: number;
+  tasksMovedTo?: string;
+  movedTaskIds?: string[];
+}
+
+// Sprint Summary (for dashboard)
+export interface SprintSummaryResponse {
+  sprintId: string;
+  status: string;
+  committedTasks: number;
+  committedPoints: number;
+  completedTasks: number;
+  completedPoints: number;
+  incompleteTasks: number;
+  incompletePoints: number;
+  addedTasks: number;
+  addedPoints: number;
+  removedTasks: number;
+  removedPoints: number;
+  daysRemaining: number;
+  daysElapsed: number;
+}
+
 export interface CreateSprintRequest {
   name: string;
   goal?: string;
@@ -34,6 +76,7 @@ export interface UpdateSprintRequest {
 }
 
 export interface SprintReportResponse {
+  id: string;
   sprintId: string;
   committedTasks: number;
   committedPoints: number;
@@ -41,6 +84,10 @@ export interface SprintReportResponse {
   completedPoints: number;
   incompleteTasks: number;
   incompletePoints: number;
+  addedTasks: number;
+  addedPoints: number;
+  removedTasks: number;
+  removedPoints: number;
   carryoverTasks: number;
   carryoverPoints: number;
   totalEstimatedHours: number;
@@ -50,9 +97,12 @@ export interface SprintReportResponse {
   velocity: number;
   goalsCompleted: number;
   goalsTotal: number;
+  generatedAt: string;
 }
 
 export interface VelocityHistoryResponse {
+  id: string;
+  projectId: string;
   sprintId: string;
   sprintName: string;
   sprintNumber: number;
@@ -60,6 +110,7 @@ export interface VelocityHistoryResponse {
   completedPoints: number;
   startDate: string;
   endDate: string;
+  createdAt: string;
 }
 
 export interface VelocityTrendResponse {
@@ -72,10 +123,11 @@ export interface VelocityTrendResponse {
 export interface CycleTimeResponse {
   taskId: string;
   taskTitle: string;
-  cycleTimeHours?: number;
-  leadTimeHours?: number;
+  cycleTimeSeconds?: number;
+  leadTimeSeconds?: number;
   startedAt?: string;
   completedAt?: string;
+  createdAt: string;
 }
 
 export interface SprintAnalyticsDashboardResponse {
@@ -142,11 +194,17 @@ const sprintApi = {
     apiClient.put<Sprint>(`/sprints/${sprintId}`, data),
 
   // MISSING - Add to main.go sprints group
-  start: (sprintId: string) => apiClient.post<Sprint>(`/sprints/${sprintId}/start`),
+  start: (sprintId: string) => apiClient.post<SprintStartResponse>(`/sprints/${sprintId}/start`),
 
   // MISSING - Add to main.go sprints group
-  complete: (sprintId: string) => apiClient.post<Sprint>(`/sprints/${sprintId}/complete`),
+  complete: (sprintId: string) =>
+    apiClient.post<SprintCompleteResponse>(`/sprints/${sprintId}/complete`),
 
+  completeWithOptions: (sprintId: string, options: SprintCompleteOptions) =>
+    apiClient.post<SprintCompleteResponse>(`/sprints/${sprintId}/complete`, options),
+
+  getSummary: (sprintId: string) =>
+    apiClient.get<SprintSummaryResponse>(`/sprints/${sprintId}/summary`),
   // MISSING - Add to main.go sprints group
   delete: (sprintId: string) => apiClient.delete(`/sprints/${sprintId}`),
 
@@ -323,7 +381,8 @@ export const useStartSprint = () => {
     mutationFn: (sprintId: string) => sprintApi.start(sprintId),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(data.projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(data.sprint.projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
 };
@@ -335,9 +394,39 @@ export const useCompleteSprint = () => {
     mutationFn: (sprintId: string) => sprintApi.complete(sprintId),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(data.projectId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.velocity(data.projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(data.sprint.projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.sprints.velocity(data.sprint.projectId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.goals.all });
     },
+  });
+};
+
+export const useCompleteSprintWithOptions = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sprintId, options }: { sprintId: string; options: SprintCompleteOptions }) =>
+      sprintApi.completeWithOptions(sprintId, options),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sprints.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(data.sprint.projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.sprints.velocity(data.sprint.projectId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.goals.all });
+    },
+  });
+};
+
+export const useSprintSummary = (sprintId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: [...queryKeys.sprints.all, 'summary', sprintId],
+    queryFn: () => sprintApi.getSummary(sprintId),
+    enabled: options?.enabled ?? !!sprintId,
   });
 };
 

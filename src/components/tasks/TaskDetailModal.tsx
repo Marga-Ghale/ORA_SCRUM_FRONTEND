@@ -35,6 +35,12 @@ import { ConfirmModal } from '../modals/ConfirmModal';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/api';
 import { SprintSelector } from '../sprint/SprintSelector';
+import {
+  useGoalsBySprint,
+  useGoalsByTask,
+  useLinkTaskToGoal,
+  useUnlinkTaskFromGoal,
+} from '../../hooks/api/useGoals';
 
 const TaskDetailModal: React.FC = () => {
   const { selectedTask, isTaskModalOpen, closeTaskModal } = useProjectContext();
@@ -59,6 +65,20 @@ const TaskDetailModal: React.FC = () => {
   const deleteTaskMutation = useDeleteTask();
   const addCommentMutation = useAddComment();
   const deleteCommentMutation = useDeleteComment();
+
+  const { data: goalsByTask } = useGoalsByTask(selectedTask?.id ?? '', {
+    enabled: !!selectedTask?.id,
+  });
+
+  const { data: sprintGoals } = useGoalsBySprint(selectedTask?.sprintId ?? '', {
+    enabled: !!selectedTask?.sprintId,
+  });
+
+  const linkTaskToGoalMutation = useLinkTaskToGoal();
+  const unlinkTaskFromGoalMutation = useUnlinkTaskFromGoal();
+
+  // Assumption: one task → one goal
+  const linkedGoal = goalsByTask && goalsByTask.length > 0 ? goalsByTask[0] : null;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -350,6 +370,36 @@ const TaskDetailModal: React.FC = () => {
 
   const dueDateInfo = formatDueDate(formData.dueDate);
 
+  const handleLinkGoal = async (goalId: string) => {
+    if (!selectedTask) return;
+
+    try {
+      await linkTaskToGoalMutation.mutateAsync({
+        goalId,
+        taskId: selectedTask.id,
+      });
+      toast.success('Task linked to goal');
+    } catch {
+      toast.error('Failed to link task to goal');
+    }
+  };
+
+  const handleUnlinkGoal = async () => {
+    if (!selectedTask || !linkedGoal) return;
+
+    try {
+      await unlinkTaskFromGoalMutation.mutateAsync({
+        goalId: linkedGoal.id,
+        taskId: selectedTask.id,
+      });
+      toast.success('Task unlinked from goal');
+    } catch {
+      toast.error('Failed to unlink task from goal');
+    }
+  };
+
+  const sprintGoalsSafe = sprintGoals ?? [];
+
   return (
     <>
       {/* Backdrop */}
@@ -560,6 +610,50 @@ const TaskDetailModal: React.FC = () => {
                     min="0"
                   />
                 </div>
+              </div>
+
+              {/* Goal Linking */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                  Goal
+                </label>
+
+                {linkedGoal ? (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                        {linkedGoal.title}
+                      </p>
+                      <p className="text-[10px] text-gray-400">Progress: {linkedGoal.progress}%</p>
+                    </div>
+
+                    <button
+                      onClick={handleUnlinkGoal}
+                      className="text-[10px] text-red-500 hover:text-red-600 font-medium"
+                    >
+                      Unlink
+                    </button>
+                  </div>
+                ) : sprintGoalsSafe.length === 0 ? (
+                  <p className="text-[10px] text-gray-400">No goals in this sprint</p>
+                ) : (
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) handleLinkGoal(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>
+                      Link to a goal
+                    </option>
+                    {sprintGoalsSafe.map((goal) => (
+                      <option key={goal.id} value={goal.id}>
+                        {goal.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Tabs */}

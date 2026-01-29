@@ -88,23 +88,14 @@ export interface UpdateKeyResultRequest {
 
 export interface GoalProgressResponse {
   goalId: string;
-  overallProgress: number;
-  keyResultsProgress: Array<{
-    keyResultId: string;
-    title: string;
-    progress: number;
-    weight: number;
-  }>;
-  linkedTasksCompleted: number;
-  linkedTasksTotal: number;
+  progress: number;
 }
 
 export interface SprintGoalsSummaryResponse {
   sprintId: string;
-  totalGoals: number;
-  completedGoals: number;
-  atRiskGoals: number;
-  overallProgress: number;
+  goalsCompleted: number;
+  goalsTotal: number;
+  completionRate: number;
   goals: GoalResponse[];
 }
 
